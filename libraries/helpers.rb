@@ -1,8 +1,10 @@
 module Opscode
   module Aixtoolbox
-    module Helper
-    
-      @pkgmap = {
+    module Helpers
+   
+      def url_for(pkg, base_url = 'ftp://ftp.software.ibm.com/aix/freeSoftware/aixtoolbox/RPMS/ppc')
+
+        pkgmap = {
         'a2ps' => { :version => '4.13-2', :rpm => 'a2ps/a2ps-4.13-2.aix4.3.ppc.rpm' },
         'aalib-devel' => { :version => '1.2-1', :rpm => 'aalib/aalib-devel-1.2-1.aix4.3.ppc.rpm' },
         'aalib' => { :version => '1.2-1', :rpm => 'aalib/aalib-1.2-1.aix4.3.ppc.rpm' },
@@ -368,11 +370,10 @@ module Opscode
         'zlib' => { :version => '1.2.7-1', :rpm => 'zlib/zlib-1.2.7-1.aix6.1.ppc.rpm' },
         'zoo' => { :version => '2.10-5', :rpm => 'zoo/zoo-2.10-5.aix5.1.ppc.rpm' },
         'zsh' => { :version => '4.0.4-3', :rpm => 'zsh/zsh-4.0.4-3.aix5.1.ppc.rpm' }
-      }
+        }
 
-      def url_for(pkg, base_url = 'ftp://ftp.software.ibm.com/aix/freeSoftware/aixtoolbox/RPMS/ppc')
-        if @pkgmap.key?(pkg)
-          "#{base_url}/#{@pkgmap[pkg][:rpm]}"
+        if pkgmap.key?(pkg)
+          "#{base_url}/#{pkgmap[pkg][:rpm]}"
         else
           nil
         end
