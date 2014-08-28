@@ -1,5 +1,5 @@
 module Opscode
-  module Aixtoolbox
+  module Aix
     module Helpers
    
       def url_for(pkg, base_url = 'ftp://ftp.software.ibm.com/aix/freeSoftware/aixtoolbox/RPMS/ppc')

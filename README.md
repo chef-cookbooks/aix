@@ -1,4 +1,6 @@
-# IBM AIX Toolbox for Linux Cookbook
+# AIX Cookbook
+
+This cookbook contains useful resources for using Chef with AIX systems.
 
 ## Supported Platforms
 
@@ -7,10 +9,16 @@
 
 ## Usage
 
-This cookbook has no recipes. To install packages from the IBM AIX Toolbox for Linux, use the LWRPs in this cookbook like so:
+This cookbook has no recipes.
+
+## Resources
+
+### toolboxpackage
+
+To install packages from the IBM AIX Toolbox for Linux, use the LWRPs in this cookbook like so:
 
 ```ruby
-aixtoolbox_package "a2ps" do
+aix_toolboxpackage "a2ps" do
   action :install
 end
 ```

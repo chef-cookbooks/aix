@@ -1,7 +1,7 @@
 require 'chef/provider'
 require 'chef/provider/lwrp_base'
 
-include Opscode::Aixtoolbox::Helpers
+include Opscode::Aix::Helpers
 
 class Chef
   class Provider
@@ -42,4 +42,4 @@ class Chef
   end
 end
 
-Chef::Platform.set :platform => :aix, :resource => :aixtoolbox_package, :provider => Chef::Provider::AixtoolboxPackage
+Chef::Platform.set :platform => :aix, :resource => :aix_toolboxpackage, :provider => Chef::Provider::AixtoolboxPackage
