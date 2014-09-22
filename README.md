@@ -26,6 +26,29 @@ aix_inittab 'my-awesome-aix-daemon' do
 end
 ```
 
+Parameters:
+
+* `runlevel` - the runlevel of the inittab entry
+* `processaction` - the action of the process (e.g. "once", "boot", etc.)
+* `command` - the command to run
+
+### tcpservice
+
+To manage the services started by `/etc/rc.tcpip`. Example:
+
+```ruby
+aix_tcpservice 'xntpd' do
+  action :enabled
+end
+```
+
+Parameters:
+
+* `immediate` (optional) - whether to start/stop the TCP/IP service
+  immediately by contacting the SRC. It's much better to declaratively
+  specify this separately using the built-in `service` resource in
+  Chef.
+
 ### toolboxpackage
 
 To install packages from the IBM AIX Toolbox for Linux off the IBM FTP
@@ -36,6 +59,13 @@ aix_toolboxpackage "a2ps" do
   action :install
 end
 ```
+
+Parameters:
+
+* `base_url` (optional) - the base URL to use to retrieve the package.
+  If you are behind a firewall or your AIX system doesn't have access
+  to the Internet, you can override this to an HTTP/FTP server where
+  you have stored the RPMs.
 
 ## License and Authors
 
