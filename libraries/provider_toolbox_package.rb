@@ -16,25 +16,21 @@ class Chef
       action :install do
         package_url = url_for(new_resource.package_name, new_resource.base_url)
         unless package_url.nil?
-          converge_by "install AIX toolbox package #{new_resource.package_name}" do
-            remote_file "#{Chef::Config[:file_cache_path]}/#{::File.basename(package_url)}" do
-              source package_url
-              action :create
-            end
+          remote_file "#{Chef::Config[:file_cache_path]}/#{::File.basename(package_url)}" do
+            source package_url
+            action :create
+          end
 
-            rpm_package new_resource.package_name do
-              source "#{Chef::Config[:file_cache_path]}/#{::File.basename(package_url)}"
-              action :install
-            end
+          rpm_package new_resource.package_name do
+            source "#{Chef::Config[:file_cache_path]}/#{::File.basename(package_url)}"
+            action :install
           end
         end
       end
 
       action :remove do
-        converge_by 'remove AIX toolbox package #{new_resource.package_name}' do
-          rpm_package new_resource.package_name do
-            action :remove
-          end
+        rpm_package new_resource.package_name do
+          action :remove
         end
       end
 
