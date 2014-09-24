@@ -31,22 +31,26 @@ def load_current_resource
   @current_resource = Chef::Resource::AixSubserver.new(@new_resource.name)
   @current_resource.enabled = false
 
-  inetd = File.open('/etc/inetd.conf')
-  inetd.lines.each do |line|
-    next if line =~ /^##/  # standard IBM comment
-    if line =~ /^(#?)(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(.*)$/
-      @current_resource.enabled = ($1 == '#')
-      # Assume that servicename and protocol are sufficient as a unique identifier
-      if @new_resource.servicename == $2 && @new_resource.protocol == $4
-        @current_resource.servicename($2)
-        @current_resource.type($3)
-        @current_resource.protocol($4)
-        @current_resource.wait($5)
-        @current_resource.user($6)
-        @current_resource.program($7)
-        @current_resource.args($8)
+  begin
+    inetd = File.open('/etc/inetd.conf')
+    inetd.lines.each do |line|
+      next if line =~ /^##/  # standard IBM comment
+      if line =~ /^(#?)(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(.*)$/
+        @current_resource.enabled = ($1 == '#')
+        # Assume that servicename and protocol are sufficient as a unique identifier
+        if @new_resource.servicename == $2 && @new_resource.protocol == $4
+          @current_resource.servicename($2)
+          @current_resource.type($3)
+          @current_resource.protocol($4)
+          @current_resource.wait($5)
+          @current_resource.user($6)
+          @current_resource.program($7)
+          @current_resource.args($8)
+        end
       end
     end
+  ensure
+    inetd.close
   end
 end
 
