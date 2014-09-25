@@ -15,7 +15,7 @@ This cookbook has no recipes.
 
 ### inittab
 
-To manage the inittab entries. Example:
+Manage the inittab entries. Example:
 
 ```ruby
 aix_inittab 'my-awesome-aix-daemon' do
@@ -32,9 +32,30 @@ Parameters:
 * `processaction` - the action of the process (e.g. "once", "boot", etc.)
 * `command` - the command to run
 
+### subserver
+
+Manage the services started by `inetd` by editing `/etc/inetd.conf`. Example:
+
+```ruby
+aix_subserver 'tftp' do
+  protocol 'udp'
+  action :disable
+end
+```
+
+Parameters:
+
+* `servicename` - name of the service as it appears in the first field of `/etc/inetd.conf`
+* `type` - type of service. Valid values: `dgram stream sunrpc_udp sunrpc_tcp`
+* `protocol` - protocol of service. Valid values: `tcp udp tcp6 udp6`
+* `wait` - blocking, nonblocking, or SRC. Valid values: `wait nowait SRC`
+* `user` - user to the run the service under. Default: `root`
+* `program` - program to run (typically specified by full path)
+* `args` - program, with arguments
+
 ### tcpservice
 
-To manage the services started by `/etc/rc.tcpip`. Example:
+Manage the services started by `/etc/rc.tcpip`. Example:
 
 ```ruby
 aix_tcpservice 'xntpd' do
