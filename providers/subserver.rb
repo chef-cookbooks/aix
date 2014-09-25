@@ -32,7 +32,7 @@ def load_current_resource
   @current_resource.enabled = false
 
   begin
-    inetd = File.open('/etc/inetd.conf')
+    inetd = ::File.open('/etc/inetd.conf')
     inetd.lines.each do |line|
       next if line =~ /^##/  # standard IBM comment
       if line =~ /^(#?)(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(.*)$/
@@ -50,7 +50,7 @@ def load_current_resource
       end
     end
   ensure
-    inetd.close
+    inetd.close unless inetd.nil?
   end
 end
 
