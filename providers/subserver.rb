@@ -33,7 +33,7 @@ def load_current_resource
 
   begin
     inetd = ::File.open('/etc/inetd.conf')
-    inetd.lines.each do |line|
+    inetd.each_line do |line|
       next if line =~ /^##/  # standard IBM comment
       if line =~ /^(#?)(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(.*)$/
         @current_resource.enabled = ($1 == '#')
