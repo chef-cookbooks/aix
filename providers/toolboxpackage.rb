@@ -18,6 +18,8 @@
 # limitations under the License.
 #
 
+include Opscode::Aix::Helpers
+
 use_inline_resources if defined?(use_inline_resources)
 
 def whyrun_supported?
