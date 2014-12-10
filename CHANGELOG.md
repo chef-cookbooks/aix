@@ -1,9 +1,9 @@
-# 0.1.0
+# 0.0.2
 
-Initial release of aixtoolbox
+* Remove deprecated #each from providers; replace with #each_line
+* Upgrade some packages, particularly bash to remediate shellshock
+* Fix missing include in provider
 
-* Enhancements
-  * an enhancement
+# 0.0.1
 
-* Bug Fixes
-  * a bug fix
+Initial release 
