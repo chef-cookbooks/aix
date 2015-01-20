@@ -91,6 +91,7 @@ Parameters:
 ## License and Authors
 
 * Author:: Julian C. Dunn (<jdunn@getchef.com>)
+* Author:: Christoph Hartmann (<chris@lollyrock.com>)
 
 ```text
 Copyright:: 2014 Chef Software, Inc.

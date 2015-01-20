@@ -327,7 +327,7 @@ module Opscode
           'vnc' => { :version => '3.3.3r2-6', :rpm => 'vnc/vnc-3.3.3r2-6.aix5.1.ppc.rpm' },
           'vte-devel' => { :version => '0.11.10-1', :rpm => 'vte/vte-devel-0.11.10-1.aix5.1.ppc.rpm' },
           'vte' => { :version => '0.11.10-1', :rpm => 'vte/vte-0.11.10-1.aix5.1.ppc.rpm' },
-          'wget' => { :version => '1.9.1-1', :rpm => 'wget/wget-1.9.1-1.aix5.1.ppc.rpm' },
+          'wget' => { :version => '1.9.1-1', :rpm => 'wget/wget-1.9.1-3.aix6.1.ppc.rpm' },
           'which' => { :version => '2.14-1', :rpm => 'which/which-2.14-1.aix5.1.ppc.rpm' },
           'wu-ftpd' => { :version => '2.6.2-6', :rpm => 'wu-ftpd/wu-ftpd-2.6.2-6.aix5.1.ppc.rpm' },
           'Xaw3d-devel' => { :version => '1.5-4', :rpm => 'Xaw3d/Xaw3d-devel-1.5-4.aix5.1.ppc.rpm' },
