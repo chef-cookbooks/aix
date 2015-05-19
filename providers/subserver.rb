@@ -35,8 +35,8 @@ def load_current_resource
     inetd = ::File.open('/etc/inetd.conf')
     inetd.each_line do |line|
       next if line =~ /^##/  # standard IBM comment
-      if line =~ /^(#?)(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(.*)$/
-        @current_resource.enabled = ($1 == '#')
+      if line =~ /^(#?)(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+((.){0,})$/
+        @current_resource.enabled = ($1 != '#')
         # Assume that servicename and protocol are sufficient as a unique identifier
         if @new_resource.servicename == $2 && @new_resource.protocol == $4
           @current_resource.servicename($2)
@@ -88,7 +88,7 @@ end
 action :disable do
   if @current_resource.enabled
     converge_by('disable subserver') do
-      shell_out("chsubserver -d -v #{@current_resource.servicename} -p #{@current_resource.protocol}")
+      shell_out("chsubserver -d -v #{@current_resource.servicename} -p #{@current_resource.protocol} -r inetd")
     end
   end
 end
