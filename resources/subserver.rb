@@ -8,7 +8,7 @@ attribute :user, :kind_of => String, :default => 'root', :required => true
 attribute :program, :kind_of => String
 attribute :args, :kind_of => String
 
-attr_accessor :enabled
+attr_accessor :enabled, :exists, :already_exists_with_new_name
 
 default_action :enable
 
