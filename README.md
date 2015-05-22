@@ -226,6 +226,7 @@ Parameters:
 
 * Author:: Julian C. Dunn (<jdunn@getchef.com>)
 * Author:: Christoph Hartmann (<chris@lollyrock.com>)
+* Author:: Vianney Foucault (<vianney.foucault@gmail.com>)
 
 ```text
 Copyright:: 2014 Chef Software, Inc.
