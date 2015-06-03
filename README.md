@@ -13,98 +13,6 @@ This cookbook has no recipes.
 
 ## Resources
 
-### user
-
-```ruby
-aix_user 'root' do
-  action :update
-  crypt "root's new crypt"
-end
-```
-valid actions : 
-
-* :create
-* :update
-* :delete
-
-Parameters:
-
-* `:name` :kind_of => String 
-* `:uid` :kind_of => Integer 
-* `:pgrp` :kind_of => String 
-* `:groups` :kind_of => [Array, String] 
-* `:home` :kind_of => String 
-* `:shell` :kind_of => String 
-* `:gecos` :kind_of => String 
-* `:login` :kind_of => [TrueClass, FalseClass] 
-* `:su` :kind_of => [TrueClass, FalseClass]
-* `:rlogin` :kind_of => [TrueClass, FalseClass]
-* `:daemon` :kind_of => [TrueClass, FalseClass]
-* `:admin` :kind_of => [TrueClass, FalseClass]
-* `:sugroups` :kind_of => String
-* `:admgroups` :kind_of => String
-* `:tpath` :kind_of => String
-* `:ttys` :kind_of => String
-* `:expires` :kind_of => Integer
-* `:auth1` :kind_of => String
-* `:auth2` :kind_of => String
-* `:umask` :kind_of => Integer
-* `:registry` :kind_of => String
-* `:SYSTEM` :kind_of => String
-* `:logintimes` :kind_of => String
-* `:loginretries` :kind_of => Integer
-* `:pwdwarntime` :kind_of => Integer
-* `:account_locked` :kind_of => [TrueClass, FalseClass]
-* `:minage` :kind_of => Integer
-* `:maxage` :kind_of => Integer
-* `:maxexpired` :kind_of => Integer
-* `:minalpha` :kind_of => Integer
-* `:minloweralpha` :kind_of => Integer
-* `:minupperalpha` :kind_of => Integer
-* `:minother` :kind_of => Integer
-* `:mindigit` :kind_of => Integer
-* `:minspecialchar` :kind_of => Integer
-* `:mindiff` :kind_of => Integer
-* `:maxrepeats` :kind_of => Integer
-* `:minlen` :kind_of => Integer
-* `:histexpire` :kind_of => Integer
-* `:histsize` :kind_of => Integer
-* `:pwdchecks` :kind_of => String
-* `:dictionlist` :kind_of => String
-* `:default_roles` :kind_of => String
-* `:fsize` :kind_of => Integer
-* `:cpu` :kind_of => Integer
-* `:data` :kind_of => Integer
-* `:stack` :kind_of => Integer
-* `:core` :kind_of => Integer
-* `:rss` :kind_of => Integer
-* `:nofiles` :kind_of => Integer
-* `:roles` :kind_of => String
-* `:crypt` :kind_of => String
-
-### group
-
-```ruby
-aix_group 'aixgroup1' do
-  action :update
-  gid 800
-end
-```
-valid actions : 
-
-* :create
-* :update
-* :delete
-
-Parameters:
-
-* `:name`:kind_of => String`:name_attribute `=> true
-* `:gid`:kind_of => Integer
-* `:admin`:kind_of => [TrueClass, FalseClass]
-* `:users`:kind_of => [Array, String]
-* `:adms`:kind_of => String
-* `:registry`:kind_of => String
-
 ### chdev
 
 ```ruby
@@ -135,7 +43,7 @@ end
 ```
 valid actions : 
 
-* :rezie
+* :resize
 
 Parameters:
 

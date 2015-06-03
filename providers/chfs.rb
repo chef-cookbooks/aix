@@ -1,9 +1,9 @@
 #
 # Author:: Vianney Foucault (<vianney.foucault@gmail.com>)
-# Cookbook Name:: idp-aix
-# Provider:: aixchfs
+# Cookbook Name:: aix
+# Provider:: chfs
 #
-# Copyright:: 2014, The Author
+# Copyright:: 2015, The Author
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -130,4 +130,3 @@ def fs_exists?(name)
   cmd.run_command
   !cmd.error?
 end
-

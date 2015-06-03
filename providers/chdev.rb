@@ -1,9 +1,9 @@
 #
 # Author:: Vianney Foucault (<vianney.foucault@gmail.com>)
-# Cookbook Name:: idp-aix
-# Provider:: aixchdev
+# Cookbook Name:: aix
+# Provider:: chdev
 #
-# Copyright:: 2014, The Author
+# Copyright:: 2015, The Author
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,8 +33,8 @@ action :update do
   else
     attributes = Hash.new
     @new_resource.attributes.each do |attrname,value|
-      if not @current_resource.attributes[attrname] == value 
-         attributes[attrname.to_s] = @new_resource.attributes[attrname]
+      if not @current_resource.attributes[attrname] == value
+        attributes[attrname.to_s] = @new_resource.attributes[attrname]
       end
     end
     if attributes.length != 0
@@ -42,20 +42,20 @@ action :update do
       attributes.each do |k,v|
         cmd << "-a #{k}=#{v}" if not v.nil?
       end
-      
+
       if @new_resource.atreboot
         cmd << " -P "
       end
-        converge_by("Updating device #{@current_resource.name}") do
-          cmd = Mixlib::ShellOut.new(cmd)
-          cmd.valid_exit_codes = 0
-          cmd.run_command
-          cmd.error!
-          cmd.error?
-        end
+      converge_by("Updating device #{@current_resource.name}") do
+        cmd = Mixlib::ShellOut.new(cmd)
+        cmd.valid_exit_codes = 0
+        cmd.run_command
+        cmd.error!
+        cmd.error?
       end
     end
   end
+end
 def load_current_resource
   @current_resource = Chef::Resource::AixChdev.new(@new_resource.name)
   @current_resource.name(@new_resource.name)
@@ -82,4 +82,3 @@ def device_exists?(name)
   cmd.run_command
   !cmd.error?
 end
-

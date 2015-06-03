@@ -43,7 +43,6 @@ def load_current_resource
     ## => followed by a multiple suite of space OR non whitespace chars at least 0 times (args)
     ## => followed by the end of the line
     line = inetd.grep(/^(#){0,1}(#{@current_resource.servicename}|#{@new_resource.servicename})((\s+|\w+){9})((\s+|\w+){9})((\S+)(\s+|\S+){0,}$)/)
-    #line = inetd.grep(/^(#){0,1}(#{@current_resource.servicename}|#{@new_resource.servicename})\s+\w+\s+\w+\s+\w+\s+\w+((.){1,})$/)
     if line.length != 0
       #€ if line is larger than 0, it means that we've found something
       subserver = line[0].split(/\s+/)
