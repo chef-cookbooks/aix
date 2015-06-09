@@ -5,5 +5,7 @@ license          'Apache 2.0'
 description      'Custom resources useful for AIX systems'
 long_description 'Custom resources useful for AIX systems'
 version          '0.0.2'
+source_url       'https://github.com/opscode-cookbooks/aix'
+issues_url       'https://github.com/opscode-cookbooks/aix/issues'
 
 supports 'aix', '>= 6.1'
