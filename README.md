@@ -13,6 +13,48 @@ This cookbook has no recipes.
 
 ## Resources
 
+### chdev
+
+```ruby
+aix_chdev 'sys0' do
+  action :update
+  attributes(:maxuproc => 16384, :iostat => true )
+  atreboot false
+end
+```
+valid actions : 
+
+* :update
+
+Parameters:
+
+* `:name` :kind_of => String, :name_attribute => true
+* `:attributes` :kind_of => Hash
+* `:atreboot` :kind_of => [TrueClass, FalseClass], :default => true
+
+### chfs
+
+```ruby
+aix_chfs "/tmp" do
+  action :resize
+  size 4
+  unit "G"
+end
+```
+valid actions : 
+
+* :resize
+
+Parameters:
+
+* `:name` :kind_of => String, :name_attribute => true
+* `:size` :kind_of => Integer
+* `:unit` :kind_of => String, :equal_to => ["G", "M", "K"], :default => "G"
+* `:sign` :kind_of => String, :equal_to => ["+", "-", ""]
+* `:mountpoint` :kind_of => String / not yet implemented
+* `:options` :kind_of => [String, Array] / not yet implemented
+* `:automount` :kind_of => [TrueClass, FalseClass] / not yet implemented
+ 
 ### inittab
 
 Manage the inittab entries. Example:
@@ -92,6 +134,7 @@ Parameters:
 
 * Author:: Julian C. Dunn (<jdunn@getchef.com>)
 * Author:: Christoph Hartmann (<chris@lollyrock.com>)
+* Author:: Vianney Foucault (<vianney.foucault@gmail.com>)
 
 ```text
 Copyright:: 2014 Chef Software, Inc.
