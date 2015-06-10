@@ -1,5 +1,6 @@
 #
 # Author:: Julian Dunn (<jdunn@chef.io>)
+# Author:: Vianney Foucault (<vianney.foucault@gmail.com>)
 # Cookbook Name:: aix
 # Provider:: subserver
 #
@@ -44,7 +45,7 @@ def load_current_resource
     ## => followed by the end of the line
     line = inetd.grep(/^(#){0,1}(#{@current_resource.servicename}|#{@new_resource.servicename})((\s+|\w+){9})((\s+|\w+){9})((\S+)(\s+|\S+){0,}$)/)
     if line.length != 0
-      #€ if line is larger than 0, it means that we've found something
+      ## if line is larger than 0, it means that we've found something
       subserver = line[0].split(/\s+/)
       ## if the servicename extracted from the file equals the new service name and not the current one, it means that our service is already renamed
       if subserver[0].gsub(/^#/,'') == @new_resource.servicename && @new_resource.servicename != @current_resource.servicename
@@ -68,21 +69,71 @@ def load_current_resource
   end
 end
 
+def check_basic_settings()
+  if @new_resource.type and @new_resource.type == "stream"
+    if @new_resource.wait and not @new_resource.wait == "nowait" or not @current_resource.wait == "nowait"
+      Chef::Log.error "A Stream socket can only be set to \"nowait\""
+      raise "A Stream socket can only be set to \"nowait\""
+    end
+  end
+  if @new_resource.type and @new_resource.type =~ /udp/
+    if @new_resource.protocol and not @new_resource.protocol =~ /udp/ or not @current_resource.protocol =~ /udp/
+      Chef::Log.error "A sunrpc_udp socket can only be set to a udp protocol"
+      raise "A sunrpc_udp socket can only be set to a udp protocol"
+    end
+  end
+  if @new_resource.type and @new_resource.type =~ /tcp/
+    if @new_resource.protocol and not @new_resource.protocol =~ /tcp/ or not @current_resource.protocol =~ /tcp/
+      Chef::Log.error "A sunrpc_tcp socket can only be set to a tcp protocol"
+      raise "A sunrpc_tcp socket can only be set to a tcp protocol"
+    end
+  end
+  return true
+end
+
+
+def check_basic_settings()
+  if @new_resource.type and @new_resource.type == "stream"
+    if @new_resource.wait and @new_resource.wait != "nowait" or @current_resource.wait != "nowait"
+      Chef::Log.error "A Stream socket can only be set to \"nowait\""
+      raise "A Stream socket can only be set to \"nowait\""
+    end
+  end
+  if @new_resource.type and @new_resource.type =~ /udp/
+    if @new_resource.protocol and not @new_resource.protocol =~ /udp/ or not @current_resource.protocol =~ /udp/
+      Chef::Log.error "A sunrpc_udp socket can only be set to a udp protocol"
+      raise "A sunrpc_udp socket can only be set to a udp protocol"
+    end
+  end
+  if @new_resource.type and @new_resource.type =~ /tcp/
+    if @new_resource.protocol and not @new_resource.protocol =~ /tcp/ or not @current_resource.protocol =~ /tcp/
+      Chef::Log.error "A sunrpc_tcp socket can only be set to a tcp protocol"
+      raise "A sunrpc_tcp socket can only be set to a tcp protocol"
+    end
+  end
+  return true
+end
+
+
 action :enable do
   if not @current_resource.exists and not @current_resource.already_exists_with_new_name
-    cmd = "chsubserver -a -v #{@new_resource.servicename} -p #{@new_resource.protocol}"
-    cmd << " -t #{@new_resource.type}" if not @new_resource.type.nil?
-    cmd << " -p #{@new_resource.protocol}" if not @new_resource.protocol.nil?
-    cmd << " -w #{@new_resource.wait}" if not @new_resource.wait.nil?
-    cmd << " -u #{@new_resource.user}" if not @new_resource.user.nil?
-    cmd << " -g #{@new_resource.program}" if not @new_resource.program.nil?
-    cmd << " #{@new_resource.args}" if @new_resource.args
-    converge_by("Creating subserver #{@new_resource.servicename}") do
-      shell_out(cmd)
+    if  @new_resource.type.nil? || @new_resource.protocol.nil? || @new_resource.wait.nil? || @new_resource.user.nil? || @new_resource.program.nil?
+      Chef::Log.error "Not enough settings provided to create the subserver"
+      raise "Not enough settings provided to create the subserver"
+    elsif check_basic_settings
+      cmd = "chsubserver -a -v #{@new_resource.servicename} -p #{@new_resource.protocol}"
+      cmd << " -t #{@new_resource.type}"
+      cmd << " -p #{@new_resource.protocol}"
+      cmd << " -w #{@new_resource.wait}"
+      cmd << " -u #{@new_resource.user}"
+      cmd << " -g #{@new_resource.program}"
+      cmd << " #{@new_resource.args}" if @new_resource.args
+      converge_by("Creating subserver #{@new_resource.servicename}") do
+        shell_out(cmd)
+      end
     end
-  elsif not @current_resource.already_exists_with_new_name
-    cmd = ""
-    if  @current_resource.type != @new_resource.type || @current_resource.wait != @new_resource.wait || @current_resource.user != @new_resource.user || @current_resource.program != @new_resource.program || @current_resource.protocol != @new_resource.protocol || @current_resource.args != @new_resource.args || @current_resource.servicename != @new_resource.servicename
+  elsif @current_resource.exists and @new_resource.type || @new_resource.wait || @new_resource.user || @new_resource.program || @new_resource.protocol || @new_resource.args ||  @new_resource.servicename and check_basic_settings
+    if @current_resource.type != @new_resource.type or @current_resource.servicename != @new_resource.servicename or @current_resource.wait != @new_resource.wait or @current_resource.user != @new_resource.user or @current_resource.program != @new_resource.program or @current_resource.protocol != @new_resource.protocol or @current_resource.args != @new_resource.args
       cmd = "chsubserver -c -v #{@current_resource.servicename} -p #{@current_resource.protocol}"
       cmd << " -T #{@new_resource.type}" if @current_resource.type != @new_resource.type
       cmd << " -V #{@new_resource.servicename}" if @current_resource.servicename != @new_resource.servicename
@@ -91,10 +142,14 @@ action :enable do
       cmd << " -G #{@new_resource.program}" if @current_resource.program != @new_resource.program
       cmd << " -P #{@new_resource.protocol}" if @current_resource.protocol != @new_resource.protocol
       cmd << " #{@new_resource.args}" if @current_resource.args != @new_resource.args
-    else
-      cmd = "chsubserver -a -v #{@current_resource.servicename} -p #{@current_resource.protocol}"
+      converge_by("Update subserver #{@new_resource.servicename}") do
+        shell_out(cmd)
+      end
     end
+  else
+    cmd = "chsubserver -a -v #{@new_resource.servicename} -p #{@new_resource.protocol}"
     converge_by("Enable subserver #{@new_resource.servicename}") do
+      puts cmd
       shell_out(cmd)
     end
   end
@@ -107,3 +162,4 @@ action :disable do
     end
   end
 end
+
