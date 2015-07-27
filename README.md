@@ -92,6 +92,7 @@ Parameters:
 
 Change any AIX device attribute.Example:
 
+```ruby
 aix_chdev "sys0" do
   attributes(:maxuproc => 1026, ncargs: => 1024)
   need_reboot false
@@ -109,6 +110,7 @@ aix_chdev "ent0" do
   need_reboot true
   action :update
 end
+```
 
 Parameters:
 
@@ -118,6 +120,7 @@ Parameters:
 
 Change any AIX no tunables. Example:
 
+```ruby
 aix_no "changing no tunables" do
   tunables(:udp_recv_perf => 0, :udprecvspace => 42083, :psetimers => 23)
   set_default 
@@ -137,6 +140,7 @@ end
 aix_no "reseting all no tunables reboot needed" do
   action: reset_all_with_reboot
 end
+```
 
 Parameters:
 
@@ -154,6 +158,7 @@ Actions:
 
 Create,remove or update multibos on AIX. Example:
 
+```ruby
 aix_multibos "create a multibos no bootlist" do
   action :create
   bootlist true
@@ -180,6 +185,7 @@ end
 aix_multibos "mount a bos" do
   action :umount
 end
+```
 
 Parameters:
 
@@ -187,16 +193,17 @@ Parameters:
 
 Actions:
 
-* create: create (and update if needed) a bos instance
-* remove: remove a standby bos
-* update: update all already create bos
-* mount: mount a standby bos
-* umount: umount a standby bos
+*  create - create (and update if needed) a bos instance
+*  remove - remove a standby bos
+*  update - update all already create bos
+*  mount - mount a standby bos
+*  umount - umount a standby bos
 
 ## License and Authors
 
 * Author:: Julian C. Dunn (<jdunn@getchef.com>)
 * Author:: Christoph Hartmann (<chris@lollyrock.com>)
+* Author:: Benoit Creau (<benoit.creau@chmod666.org>)
 
 ```text
 Copyright:: 2014 Chef Software, Inc.
