@@ -88,6 +88,111 @@ Parameters:
   to the Internet, you can override this to an HTTP/FTP server where
   you have stored the RPMs.
 
+### chdev
+
+Change any AIX device attribute.Example:
+
+aix_chdev "sys0" do
+  attributes(:maxuproc => 1026, ncargs: => 1024)
+  need_reboot false
+  action :update
+end
+
+aix_chdev "fcs0" do
+  attributes(:num_cmd_elems => 200, :max_xfer_size => "0x800000")
+  need_reboot true
+  action :update
+end
+
+aix_chdev "ent0" do
+  attributes(:poll_uplin => "yes")
+  need_reboot true
+  action :update
+end
+
+Parameters:
+
+* `need_reboot` (optional) - Add -P to the chdev command if device is busy
+
+### no
+
+Change any AIX no tunables. Example:
+
+aix_no "changing no tunables" do
+  tunables(:udp_recv_perf => 0, :udprecvspace => 42083, :psetimers => 23)
+  set_default 
+  action :update
+end
+
+aix_no "reseting no tunables" do
+  tunables(:udp_recv_perf => 0, :udprecvspace => 0)
+  set_default false
+  action :reset
+end
+
+aix_no "reseting all no tunables" do
+  action: reset_all
+end
+
+aix_no "reseting all no tunables reboot needed" do
+  action: reset_all_with_reboot
+end
+
+Parameters:
+
+* `set_default` (optional) (default true) - All change are persistant to reboot (/etc/tunables/nextboot)
+* `bootlist` (optional) (default false) - If set to true, the bootlist is not changed
+
+Actions:
+
+*  update - update a list of tunables
+*  reset - reset a list of tunabes
+*  reset_all - reset all tunables to default
+*  reset_all_with_reboot - reset all tunables to default even if the ones that need a reboot
+
+### multibos
+
+Create,remove or update multibos on AIX. Example:
+
+aix_multibos "create a multibos no bootlist" do
+  action :create
+  bootlist true
+end
+
+aix_multibos "create and update a multibos" do
+  action :create
+  update_device "/mnt/7100-03-05-1524"
+end
+
+aix_multibos "remove standby multibos" do
+  action :remove
+end
+ 
+aix_multibos "update a multibos" do
+  action :update
+  update_device "/mnt/7100-03-05-1524"
+end
+
+aix_multibos "mount a bos" do
+  action :mount
+end
+
+aix_multibos "mount a bos" do
+  action :umount
+end
+
+Parameters:
+
+*  update_device (optional) - mount point used for update
+
+Actions:
+
+* create: create (and update if needed) a bos instance
+* remove: remove a standby bos
+* update: update all already create bos
+* mount: mount a standby bos
+* umount: umount a standby bos
+
 ## License and Authors
 
 * Author:: Julian C. Dunn (<jdunn@getchef.com>)
