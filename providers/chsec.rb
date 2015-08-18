@@ -38,7 +38,7 @@ def load_current_resource
     # if the stanza does not exists the resource does not exists
     stanza_to_check = @new_resource.stanza
     if ! ::File.readlines(@new_resource.name).grep(/#{@new_resource.stanza}:/)
-      Chef::Log.info("chsec: no stanza found (#{@new_resource.stanza})")
+      Chef::Log.debug("chsec: no stanza found (#{@new_resource.stanza})")
       @current_resource.exists = false
     end
   else
@@ -60,7 +60,7 @@ def load_current_resource
     current_attributes = Hash.new
     ::File.open("#{@new_resource.name}").each_line do |line|
       if "#{line}".chomp == "#{@new_resource.stanza}:"
-        Chef::Log.info("chsec: found stanza (#{@new_resource.stanza})")
+        Chef::Log.debug("chsec: found stanza (#{@new_resource.stanza})")
         found_stanza = true
         next
       end
@@ -76,7 +76,7 @@ def load_current_resource
         value = "#{line_attribute[1]}".chomp.strip
         # to_sym very important
         current_attributes[key.to_sym] = value
-        Chef::Log.info("chsec: #{@new_resource.stanza} -> [#{key}],[#{value}])")
+        Chef::Log.debug("chsec: #{@new_resource.stanza} -> [#{key}],[#{value}])")
       end
       # if we found the stanza, and we match another stanza found_stanza=0
       if found_stanza && line =~ /\w:/
@@ -100,7 +100,7 @@ action :update do
       current_attr = @current_resource.attributes[key]
       new_attr = @new_resource.attributes[key]
       if "#{@new_resource.attributes[key]}" == "#{@current_resource.attributes[key]}"
-        Chef::Log.info("chsec: value of #{key} already set to #{value} for stanza #{@new_resource.stanza}")
+        Chef::Log.debug("chsec: value of #{key} already set to #{value} for stanza #{@new_resource.stanza}")
       else
         change = true  
         chsec_s = chsec_s << " -a #{key}=#{@new_resource.attributes[key]}"
@@ -109,7 +109,7 @@ action :update do
     if change
       # we converge if the is a change to do
       converge_by("chsec: changing #{@new_resource.name} for stanza #{@new_resource.stanza}") do
-        Chef::Log.info("chsec: command #{chsec_s}")
+        Chef::Log.debug("chsec: command #{chsec_s}")
         chsec = Mixlib::ShellOut.new(chsec_s)
         chsec.valid_exit_codes = 0
         chsec.run_command

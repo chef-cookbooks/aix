@@ -78,12 +78,12 @@ def load_current_resource
       else
         tunable_hash['dtunable']="none" 
       end
-      #Chef::Log.info("no: #{@current_resource.name}->#{current_tunable[0]} = #{tunable_hash}")
+      #Chef::Log.debug("no: #{@current_resource.name}->#{current_tunable[0]} = #{tunable_hash}")
       all_no_tunables[current_tunable[0]] = tunable_hash
     end
     # set this hash to the current resource attribute
     @current_resource.tunables(all_no_tunables)
-    #Chef::Log.info("no: tunables : #{@current_resource.tunables(all_no_tunables)}")
+    #Chef::Log.debug("no: tunables : #{@current_resource.tunables(all_no_tunables)}")
   end
 end
 
@@ -98,19 +98,19 @@ action :update do
       string_shell_out = string_shell_out << "-p "
     end
     # for each tunables ...
-    Chef::Log.info(@new_resource.tunables)
+    Chef::Log.debug(@new_resource.tunables)
     @new_resource.tunables.each do |tunable,value|
       # check if attribute exists for current device, if not raising error
       if @current_resource.tunables.has_key?("#{tunable}") 
-        Chef::Log.info("no: setting tunable #{tunable} with value #{value}")
+        Chef::Log.debug("no: setting tunable #{tunable} with value #{value}")
         # ... if this one is already set to the desired value do nothing
         current_resource_tunable=@current_resource.tunables["#{tunable}"]['current']
-        Chef::Log.info("comparing current tunable #{tunable}=#{current_resource_tunable} to value #{value}") 
+        Chef::Log.debug("comparing current tunable #{tunable}=#{current_resource_tunable} to value #{value}") 
         if "#{current_resource_tunable}" == "#{value}"
-          Chef::Log.info("no: tunable #{tunable} is already set to value #{value}")
+          Chef::Log.debug("no: tunable #{tunable} is already set to value #{value}")
         # ... if this one is not set to the desired value add it to the no command
         else
-          Chef::Log.info("no: #{tunable} will be set to value #{value}")
+          Chef::Log.debug("no: #{tunable} will be set to value #{value}")
           old_string_shell_out = string_shell_out
           string_shell_out = string_shell_out << " -o #{tunable}=#{value} "
           converge_by("no: setting tunable #{tunable}=#{value}") do
@@ -119,7 +119,7 @@ action :update do
               string_shell_out.sub! "-p", "-r"  
             end
             # TODO here if type == B do a bosboot. Did not find any tunables with B type not implementing this
-            Chef::Log.info("command: #{string_shell_out}")
+            Chef::Log.debug("command: #{string_shell_out}")
             so = shell_out(string_shell_out)
             # if the command fails raise and exception 
             if so.exitstatus != 0
@@ -146,11 +146,11 @@ action :reset do
       string_shell_out = string_shell_out << "-p "
     end
     # for each tunables ...
-    Chef::Log.info(@new_resource.tunables)
+    Chef::Log.debug(@new_resource.tunables)
     @new_resource.tunables.each do |tunable,value|
       # check if attribute exists for current device, if not raising error
       if @current_resource.tunables.has_key?("#{tunable}")
-        Chef::Log.info("no: reseting tunable #{tunable}")
+        Chef::Log.debug("no: reseting tunable #{tunable}")
         old_string_shell_out = string_shell_out
         string_shell_out = string_shell_out << " -d #{tunable}"
         converge_by("no: reseting tunable #{tunable}") do
@@ -159,7 +159,7 @@ action :reset do
             string_shell_out.sub! "-p", "-r"
           end
           # TODO here if type == B do a bosboot. Did not find any tunables with B type not implementing this
-          Chef::Log.info("command: #{string_shell_out}")
+          Chef::Log.debug("command: #{string_shell_out}")
           so = shell_out(string_shell_out)
           # if the command fails raise and exception
           if so.exitstatus != 0

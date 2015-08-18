@@ -37,28 +37,28 @@ def load_current_resource
   hostent.valid_exit_codes = 0
   hostent.run_command
   if !hostent.error? 
-    Chef::Log.info("etchosts: resource exists")
+    Chef::Log.debug("etchosts: resource exists")
     @current_resource.exists = true
   else
-    Chef::Log.info("etchosts: resource does not exists")
+    Chef::Log.debug("etchosts: resource does not exists")
   end
 
   # if resource exists loads its attributes
   if @current_resource.exists
-    Chef::Log.info("etchosts: resource exists loading attributes")
+    Chef::Log.debug("etchosts: resource exists loading attributes")
     hostent_array = hostent.stdout.split(" ") 
-    Chef::Log.info("etchosts: current resource ip address: #{hostent_array[0]}")
+    Chef::Log.debug("etchosts: current resource ip address: #{hostent_array[0]}")
     @current_resource.ip_address(hostent_array[0])
     @current_resource.name(hostent_array[1])
-    Chef::Log.info("etchosts: current resource name: #{hostent_array[1]}")
+    Chef::Log.debug("etchosts: current resource name: #{hostent_array[1]}")
     # filling the array with the aliases if there are aliases
     if !@current_resource.aliases.nil?
       (2 .. hostent_array.length).each do |i|
-        Chef::Log.info("etchosts: current adding alias: #{hostent_array[i]}")
+        Chef::Log.debug("etchosts: current adding alias: #{hostent_array[i]}")
         @current_resource.aliases.push(hostent_array[i])
       end
     end
-    Chef::Log.info("etchosts: current resource aliases : @current_resource.aliases")
+    Chef::Log.debug("etchosts: current resource aliases : @current_resource.aliases")
   end
 end
 
@@ -79,7 +79,7 @@ action :add do
       hostent_add_s = hostent_add_s << "\""
     end
     converge_by("hostent: add #{@new_resource.name} in /etc/hosts file") do
-      Chef::Log.info("etchosts: running #{hostent_add_s}")
+      Chef::Log.debug("etchosts: running #{hostent_add_s}")
       hostent_add = Mixlib::ShellOut.new(hostent_add_s)
       hostent_add.valid_exit_codes = 0
       hostent_add.run_command
@@ -94,7 +94,7 @@ action :delete do
   if @current_resource.exists
     hostent_del_s="hostent -d #{@new_resource.ip_address}"
     converge_by("hostent: delete #{@new_resource.ip_address}") do
-      Chef::Log.info("etchosts: running #{hostent_del_s}")
+      Chef::Log.debug("etchosts: running #{hostent_del_s}")
       hostent_del = Mixlib::ShellOut.new(hostent_del_s)
       hostent_del.valid_exit_codes = 0
       hostent_del.run_command
@@ -150,7 +150,7 @@ action :change do
     end
     if change
       converge_by("etchost: modifying #{@new_resource.name} in /etc/hosts") do
-        Chef::Log.info("etchosts: running #{hostent_change_s}")
+        Chef::Log.debug("etchosts: running #{hostent_change_s}")
         hostent_change = Mixlib::ShellOut.new(hostent_change_s)
         hostent_change.valid_exit_codes = 0
         hostent_change.run_command
@@ -165,7 +165,7 @@ end
 action :delete_all do
   hostent_del_all_s = "hostent -X"
   converge_by("etchost: removing all entries") do
-    Chef::Log.info("etchosts: running #{hostent_del_all_s}")
+    Chef::Log.debug("etchosts: running #{hostent_del_all_s}")
     hostent_del_all = Mixlib::ShellOut.new(hostent_del_all_s)
     hostent_del_all.valid_exit_codes = 0
     hostent_del_all.run_command
