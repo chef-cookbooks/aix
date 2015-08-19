@@ -149,10 +149,10 @@ Parameters:
 
 Actions:
 
-*  update - update a list of tunables
-*  reset - reset a list of tunabes
-*  reset_all - reset all tunables to default
-*  reset_all_with_reboot - reset all tunables to default even if the ones that need a reboot
+* `update` - update a list of tunables
+* `reset` - reset a list of tunabes
+* `reset_all` - reset all tunables to default
+* `reset_all_with_reboot` - reset all tunables to default even if the ones that need a reboot
 
 ### multibos
 
@@ -189,15 +189,242 @@ end
 
 Parameters:
 
-*  update_device (optional) - mount point used for update
+*  `update_device` (optional) - mount point used for update
 
 Actions:
 
-*  create - create (and update if needed) a bos instance
-*  remove - remove a standby bos
-*  update - update all already create bos
-*  mount - mount a standby bos
-*  umount - umount a standby bos
+* `create` - create (and update if needed) a bos instance
+* `remove` - remove a standby bos
+* `update` - update all already create bos
+* `mount` - mount a standby bos
+* `umount` - umount a standby bos
+
+### chsec
+Changes the attributes in the security stanza files.
+
+```ruby
+aix_chsec "/etc/security/login.cfg" do
+  attributes(:maxlogins => 16000, :maxroles => 7, :shells => "/bin/sh,/usr/bin/ksh")
+  stanza "usw"
+  action :update
+end
+```
+
+Parameters:
+
+* `file_name` (name_attribute) - security file to change
+* `attribute` - array of attribut to change
+* `stanza` - stanza to change
+
+### etchosts
+Add, change or remove entries in /etc/hosts file
+
+```ruby
+aix_etchosts "test" do
+  ip_address "1.1.1.1"
+  action :add
+end
+
+aix_etchosts "test" do
+  ip_address "2.2.2.2"
+  action :change
+end
+
+aix_etchosts "test" do
+  new_hostname "test2"
+  action :change
+end
+
+aix_etchosts "test" do
+  ip_address "1.1.1.1"
+  aliases ["test2", "test3"]
+  action :add
+end
+
+aix_etchosts "test" do
+  action :delete
+end
+
+aix_etchosts "delete all entries" do
+  action :delete_all
+end
+```
+
+Parameters:
+
+* `name` - name of the host to change/add/delete
+* `ip_address` - ip address
+* `new_hostname` - new_hostame (use with change action)
+* `aliases` - aliases
+
+Actions:
+* `add`  - add an entrie in /etc/hosts
+* `delete` - remove an entrie in /etc/hosts
+* `delete_all` - remove all entries in /etc/hosts
+* `change` - change an entrie in /etc/hosts
+
+### niminit
+
+Use niminit to configure the nimclient package.
+This will look if /etc/niminfo exists and create it if it does not exists.
+You can the use nimclient provider after niminiting the client.
+
+```ruby
+niminit_niminit node[:hostname] do
+  master "nimmaster"
+  connect "nimsh"
+  pif_name node[:network][:default_interface]
+  action :setup
+end
+
+aix_niminit node[:hostname] do
+  action :remove
+end
+
+aix_niminit node[:hostname] do
+  master "nimmaster"
+  connect "nimsh"
+  pif_name "en1"
+  action :setup
+end
+```
+Parameters:
+
+* `name` - hostname of the nimclient
+* `master` - hostname of the nim master
+* `pif_name` - interface name
+* `connect` - nimsh or shell
+
+Actions:
+* `setup` - setup the nimclient
+* `remove` - remove nimclient configuration
+
+### nimclient
+
+Use nimclient to install packages, update service pack, or technology level.
+Your NIM server should meet these requirements to work with the nimclient provider:
+* All resources name must end with the type of the resource (check example below):
+ * 7100-03-05-1514-lpp_source
+ * 7100-03-05-1514-spot
+ * myinstallpbundle-installp_bundle
+* All spot and lpp_source must match the exact oslevel output. To find the next available lpp_source or spot the provider is checking for your oslevel and comparing it with the lpp_source name
+ * 7100-03-01-1341-lpp_source
+ * 7100-03-02-1412-lpp_source
+ * 7100-03-03-1415-lpp_source
+ * 7100-03-04-1441-lpp_source
+ * 7100-03-05-1524-lpp_source
+ * 7100-03-01-1341-spot
+ * 7100-03-02-1412-spot
+ * 7100-03-03-1415-spot
+ * 7100-03-04-1441-spot
+ * 7100-03-05-1524-spot
+To don't have any problem my advice is to create all the lpp_source with the simage attribute
+```
+$ lsnim -l 7100-03-05-1524-lpp_source
+7100-03-05-1524-lpp_source:
+   class       = resources
+   type        = lpp_source
+   arch        = power
+   Rstate      = ready for use
+   prev_state  = unavailable for use
+   location    = /export/nim/lpp_source/7100-03-05-1524
+   simages     = yes
+   alloc_count = 1
+   server      = master
+```
+
+Here are a few examples of recipe using nimclient: 
+
+```ruby
+aix_nimclient "updating to latest available sp" do
+  installp_flags "aXYg"
+  lpp_source "latest_sp"
+  fixes "update_all"
+  action :cust
+end
+
+aix_nimclient "installing filesets from the lastest available tl" do
+  installp_flags "aXYg"
+  lpp_source "latest_tl"
+  filesets ["openssh.base.client","openssh.base.server","openssh.license"]
+  action :cust
+end
+
+aix_nimclient "installing filesets from the next sp" do
+  installp_flags "aXYg"
+  lpp_source "next_sp"
+  filesets ["security.pkcs11.tools"]
+  action :cust
+end
+
+aix_nimclient "installing filesets" do
+  installp_flags "aXYg"
+  lpp_source "latest_sp"
+  filesets ["Java6_64.samples"]
+  action :cust
+end
+
+aix_nimclient "reset" do
+  action :reset
+end
+
+aix_nimclient "deallocate" do
+  action :deallocate
+end
+
+aix_nimclient "set date to nimmaster value" do
+  action :set_date
+end
+
+aix_nimclient "disable push operations" do
+  action :disable_push
+end
+
+aix_nimclient "enable push operations" do
+  action :enable_push
+end
+
+aix_nimclient "maintbooting client" do
+  spot "7100-03-01-1341-spot"
+  action :maint_boot
+end
+
+aix_nimclient "bos_inst client" do
+  spot "7100-03-01-1341-spot"
+  lpp_source "7100-03-01-1341-lpp_source"
+  action :bos_inst
+end
+
+aix_nimclient "allocating resources" do
+  installp_bundle "toolbox-installp_bundle"
+  lpp_source "7100-03-01-1341-lpp_source"
+  spot "7100-03-01-1341-spot"
+  action :allocate
+end
+```
+
+Parameters:
+
+* `spot` (optional) - name of the spot 
+* `lpp_source` (optional) - name of the lpp_source 
+* `installp_bundle` (optional) - name of the installp_bundle
+* `filesets` - list of filesets to install
+* `fixes` - fixe to install 
+* `installp_flags` - flags used for installp
+
+Actions:
+
+* `allocate` - create (and update if needed) a bos instance
+* `deallocate` - remove a standby bos
+* `cust` - update all already create bos
+* `enable_push` - allow push operation from client
+* `disable_push` -  disable push operation from client
+* `set_date` - set date to that of the nim master
+* `enable_crypto` - enable secure nimsh
+* `disable_crypto` - disable secure nimsh 
+* `reset` - reset the client
+* `bos_inst` - enable bos_install installation (you need to reboot the virtual machine after that) 
+* `maint_boot` - ennable maintenance boot (you need to reboot the virtual machine after that)
 
 ## License and Authors
 
