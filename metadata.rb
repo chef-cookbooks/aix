@@ -4,7 +4,7 @@ maintainer_email 'jdunn@chef.io'
 license          'Apache 2.0'
 description      'Custom resources useful for AIX systems'
 long_description 'Custom resources useful for AIX systems'
-version          '0.0.2'
+version          '0.1.0'
 source_url       'https://github.com/opscode-cookbooks/aix'
 issues_url       'https://github.com/opscode-cookbooks/aix/issues'
 
