@@ -1,6 +1,6 @@
 name             'aix'
 maintainer       'Chef Software, Inc.'
-maintainer_email 'jdunn@getchef.com'
+maintainer_email 'jdunn@chef.io'
 license          'Apache 2.0'
 description      'Custom resources useful for AIX systems'
 long_description 'Custom resources useful for AIX systems'

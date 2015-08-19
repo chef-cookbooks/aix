@@ -90,7 +90,7 @@ Parameters:
 
 ### chdev
 
-Change any AIX device attribute.Example:
+Change any AIX device attribute. Example:
 
 ```ruby
 aix_chdev "sys0" do

@@ -1,3 +1,7 @@
+# 0.1.0
+
+* Added significantly more resources to the cookbook (@chmod666)
+
 # 0.0.2
 
 * Remove deprecated #each from providers; replace with #each_line
