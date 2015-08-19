@@ -36,7 +36,7 @@ def load_current_resource
 
   so = shell_out("no -x")
   if so.exitstatus != 0
-    raise("no: error can run no -x")
+    raise("no: error running no -x")
   end
 
   # loading the tunables
@@ -129,7 +129,7 @@ action :update do
           end
         end
       else
-        raise "no: #{tunable} does not exists"
+        raise "no: #{tunable} does not exist"
       end
     end
   end
@@ -168,7 +168,7 @@ action :reset do
           string_shell_out = "no -p "
         end
       else
-        raise "no: #{tunable} does not exists"
+        raise "no: #{tunable} does not exist"
       end
     end
   end
@@ -177,7 +177,7 @@ end
 action :reset_all do
   # resource always exists
   if @current_resource.exists
-    converge_by("no : reseting all") do
+    converge_by("no : resetting all") do
       string_shell_out = "no -D"
       so = shell_out(string_shell_out)
     end
@@ -187,7 +187,7 @@ end
 action :reset_all_with_reboot do
   # resource always exists
   if @current_resource.exists
-    converge_by("no : reseting all with reboot") do
+    converge_by("no : resetting all with reboot") do
       string_shell_out = "yes | no -r -D "
       so = shell_out(string_shell_out)
     end
