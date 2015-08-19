@@ -118,7 +118,7 @@ Parameters:
 
 ### no
 
-Change any AIX no tunables. Example:
+Change any AIX no (network) tunables. Example:
 
 ```ruby
 aix_no "changing no tunables" do
@@ -156,7 +156,7 @@ Actions:
 
 ### multibos
 
-Create,remove or update multibos on AIX. Example:
+Create, remove or update multibos on AIX. Example:
 
 ```ruby
 aix_multibos "create a multibos no bootlist" do
@@ -217,7 +217,8 @@ Parameters:
 * `stanza` - stanza to change
 
 ### etchosts
-Add, change or remove entries in /etc/hosts file
+
+Add, change or remove entries in the /etc/hosts file.
 
 ```ruby
 aix_etchosts "test" do
@@ -258,19 +259,19 @@ Parameters:
 * `aliases` - aliases
 
 Actions:
-* `add`  - add an entrie in /etc/hosts
-* `delete` - remove an entrie in /etc/hosts
+* `add`  - add an entry in /etc/hosts
+* `delete` - remove an entry in /etc/hosts
 * `delete_all` - remove all entries in /etc/hosts
-* `change` - change an entrie in /etc/hosts
+* `change` - change an entry in /etc/hosts
 
 ### niminit
 
 Use niminit to configure the nimclient package.
-This will look if /etc/niminfo exists and create it if it does not exists.
+This will look if /etc/niminfo exists and create it if it does not exist.
 You can the use nimclient provider after niminiting the client.
 
 ```ruby
-niminit_niminit node[:hostname] do
+aix_niminit node[:hostname] do
   master "nimmaster"
   connect "nimsh"
   pif_name node[:network][:default_interface]
@@ -318,7 +319,9 @@ Your NIM server should meet these requirements to work with the nimclient provid
  * 7100-03-03-1415-spot
  * 7100-03-04-1441-spot
  * 7100-03-05-1524-spot
-To don't have any problem my advice is to create all the lpp_source with the simage attribute
+
+Recommendation: create all the lpp_source with the simage attribute to avoid ambiguity.
+
 ```
 $ lsnim -l 7100-03-05-1524-lpp_source
 7100-03-05-1524-lpp_source:
@@ -333,7 +336,7 @@ $ lsnim -l 7100-03-05-1524-lpp_source
    server      = master
 ```
 
-Here are a few examples of recipe using nimclient: 
+Here are a few examples of recipes using nimclient: 
 
 ```ruby
 aix_nimclient "updating to latest available sp" do
@@ -343,7 +346,7 @@ aix_nimclient "updating to latest available sp" do
   action :cust
 end
 
-aix_nimclient "installing filesets from the lastest available tl" do
+aix_nimclient "installing filesets from the latest available tl" do
   installp_flags "aXYg"
   lpp_source "latest_tl"
   filesets ["openssh.base.client","openssh.base.server","openssh.license"]
@@ -433,7 +436,7 @@ Actions:
 * Author:: Benoit Creau (<benoit.creau@chmod666.org>)
 
 ```text
-Copyright:: 2014 Chef Software, Inc.
+Copyright:: 2014-2015 Chef Software, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
