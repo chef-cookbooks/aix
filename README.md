@@ -123,7 +123,7 @@ Change any AIX no (network) tunables. Example:
 ```ruby
 aix_no "changing no tunables" do
   tunables(:udp_recv_perf => 0, :udprecvspace => 42083, :psetimers => 23)
-  set_default 
+  set_default
   action :update
 end
 
@@ -172,7 +172,7 @@ end
 aix_multibos "remove standby multibos" do
   action :remove
 end
- 
+
 aix_multibos "update a multibos" do
   action :update
   update_device "/mnt/7100-03-05-1524"
@@ -336,7 +336,7 @@ $ lsnim -l 7100-03-05-1524-lpp_source
    server      = master
 ```
 
-Here are a few examples of recipes using nimclient: 
+Here are a few examples of recipes using nimclient:
 
 ```ruby
 aix_nimclient "updating to latest available sp" do
@@ -408,11 +408,11 @@ end
 
 Parameters:
 
-* `spot` (optional) - name of the spot 
-* `lpp_source` (optional) - name of the lpp_source 
+* `spot` (optional) - name of the spot
+* `lpp_source` (optional) - name of the lpp_source
 * `installp_bundle` (optional) - name of the installp_bundle
 * `filesets` - list of filesets to install
-* `fixes` - fixe to install 
+* `fixes` - fixe to install
 * `installp_flags` - flags used for installp
 
 Actions:
@@ -424,9 +424,9 @@ Actions:
 * `disable_push` -  disable push operation from client
 * `set_date` - set date to that of the nim master
 * `enable_crypto` - enable secure nimsh
-* `disable_crypto` - disable secure nimsh 
+* `disable_crypto` - disable secure nimsh
 * `reset` - reset the client
-* `bos_inst` - enable bos_install installation (you need to reboot the virtual machine after that) 
+* `bos_inst` - enable bos_install installation (you need to reboot the virtual machine after that)
 * `maint_boot` - ennable maintenance boot (you need to reboot the virtual machine after that)
 
 ## License and Authors
