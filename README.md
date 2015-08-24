@@ -116,6 +116,7 @@ Parameters:
 
 * `need_reboot` (optional) - Add -P to the chdev command if device is busy
 
+
 ### no
 
 Change any AIX no (network) tunables. Example:
@@ -153,6 +154,47 @@ Actions:
 * `reset` - reset a list of tunabes
 * `reset_all` - reset all tunables to default
 * `reset_all_with_reboot` - reset all tunables to default even if the ones that need a reboot
+
+### tunables
+
+Change any AIX unrestricted tunables(vmo, ioo, schedo). Example:
+
+```ruby
+aix_tunables "reset schedo values" do
+  mode :schedo
+  action :reset_all
+  permanent
+end
+
+aix_tunables "change vpm_throughput_mode" do
+  mode :schedo
+  tunables(:vpm_throughput_mode => 2)
+  permanent
+end
+
+aix_tunables "change posix AIO servers" do
+  mode :ioo
+  tunables(posix_aio_minservers: 6, posix_aio_maxservers: 36)
+end
+
+aix_tunables "tune minperm%" do
+  mode :vmo
+  tunables( :"minperm%" => 6)
+  permanent
+end
+```
+
+Parameters:
+
+* `mode` (mandatory) (no default) - must be :ioo, :vmo or :schedo
+* `permament` (optional) (default false) - All changes are persistent
+* `nextboot` (optional) (default false) - All changes applied on next boot only
+
+Actions:
+
+* `update` - update a list of tunables
+* `reset` - reset a list of tunabes
+* `reset_all` - reset all tunables to default
 
 ### multibos
 
