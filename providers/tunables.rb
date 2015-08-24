@@ -152,3 +152,5 @@ action :reset_all do
     so = shell_out(string_shell_out)
   end
 end
+
+private :cmd, :gen_shell_out
