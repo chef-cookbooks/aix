@@ -116,6 +116,7 @@ Parameters:
 
 * `need_reboot` (optional) - Add -P to the chdev command if device is busy
 
+
 ### no
 
 Change any AIX no (network) tunables. Example:
@@ -123,7 +124,7 @@ Change any AIX no (network) tunables. Example:
 ```ruby
 aix_no "changing no tunables" do
   tunables(:udp_recv_perf => 0, :udprecvspace => 42083, :psetimers => 23)
-  set_default 
+  set_default
   action :update
 end
 
@@ -154,6 +155,53 @@ Actions:
 * `reset_all` - reset all tunables to default
 * `reset_all_with_reboot` - reset all tunables to default even if the ones that need a reboot
 
+### tunables
+
+Change any AIX unrestricted tunables(vmo, ioo, schedo). Example:
+
+```ruby
+aix_tunables "reset schedo values" do
+  mode :schedo
+  action :reset_all
+  permanent
+end
+
+aix_tunables "change vpm_throughput_mode" do
+  mode :schedo
+  tunables(:vpm_throughput_mode => 2)
+  permanent
+end
+
+aix_tunables "change posix AIO servers" do
+  mode :ioo
+  tunables(posix_aio_minservers: 6, posix_aio_maxservers: 36)
+end
+
+aix_tunables "tune minperm%" do
+  mode :vmo
+  tunables( :"minperm%" => 6)
+  permanent
+end
+
+aix_tunables "tune tcp buffers" do
+  mode :vmo
+  tunables( :udp_recvspace => 655360, :udp_sendspace => 65536 )
+  permanent
+end
+```
+
+Parameters:
+
+* `mode` (mandatory) (no default) - must be :ioo, :vmo or :schedo
+* `permament` (optional) (default false) - All changes are persistent
+* `nextboot` (optional) (default false) - All changes applied on next boot only
+
+Actions:
+
+* `update` - update a list of tunables
+* `reset` - reset a list of tunabes
+* `reset_all` - reset all tunables to default
+
 ### multibos
 
 Create, remove or update multibos on AIX. Example:
@@ -172,7 +220,7 @@ end
 aix_multibos "remove standby multibos" do
   action :remove
 end
- 
+
 aix_multibos "update a multibos" do
   action :update
   update_device "/mnt/7100-03-05-1524"
@@ -336,7 +384,7 @@ $ lsnim -l 7100-03-05-1524-lpp_source
    server      = master
 ```
 
-Here are a few examples of recipes using nimclient: 
+Here are a few examples of recipes using nimclient:
 
 ```ruby
 aix_nimclient "updating to latest available sp" do
@@ -408,11 +456,11 @@ end
 
 Parameters:
 
-* `spot` (optional) - name of the spot 
-* `lpp_source` (optional) - name of the lpp_source 
+* `spot` (optional) - name of the spot
+* `lpp_source` (optional) - name of the lpp_source
 * `installp_bundle` (optional) - name of the installp_bundle
 * `filesets` - list of filesets to install
-* `fixes` - fixe to install 
+* `fixes` - fixe to install
 * `installp_flags` - flags used for installp
 
 Actions:
@@ -424,9 +472,9 @@ Actions:
 * `disable_push` -  disable push operation from client
 * `set_date` - set date to that of the nim master
 * `enable_crypto` - enable secure nimsh
-* `disable_crypto` - disable secure nimsh 
+* `disable_crypto` - disable secure nimsh
 * `reset` - reset the client
-* `bos_inst` - enable bos_install installation (you need to reboot the virtual machine after that) 
+* `bos_inst` - enable bos_install installation (you need to reboot the virtual machine after that)
 * `maint_boot` - ennable maintenance boot (you need to reboot the virtual machine after that)
 
 ## License and Authors
@@ -434,6 +482,7 @@ Actions:
 * Author:: Julian C. Dunn (<jdunn@getchef.com>)
 * Author:: Christoph Hartmann (<chris@lollyrock.com>)
 * Author:: Benoit Creau (<benoit.creau@chmod666.org>)
+* Author:: Alain Dejoux (<adejoux@djouxtech.net>)
 
 ```text
 Copyright:: 2014-2015 Chef Software, Inc.
