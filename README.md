@@ -182,6 +182,12 @@ aix_tunables "tune minperm%" do
   tunables( :"minperm%" => 6)
   permanent
 end
+
+aix_tunables "tune tcp buffers" do
+  mode :vmo
+  tunables( :udp_recvspace => 655360, :udp_sendspace => 65536 )
+  permanent
+end
 ```
 
 Parameters:
@@ -476,6 +482,7 @@ Actions:
 * Author:: Julian C. Dunn (<jdunn@getchef.com>)
 * Author:: Christoph Hartmann (<chris@lollyrock.com>)
 * Author:: Benoit Creau (<benoit.creau@chmod666.org>)
+* Author:: Alain Dejoux (<adejoux@djouxtech.net>)
 
 ```text
 Copyright:: 2014-2015 Chef Software, Inc.
