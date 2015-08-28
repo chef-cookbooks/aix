@@ -184,7 +184,7 @@ aix_tunables "tune minperm%" do
 end
 
 aix_tunables "tune tcp buffers" do
-  mode :vmo
+  mode :no
   tunables( :udp_recvspace => 655360, :udp_sendspace => 65536 )
   permanent
 end
