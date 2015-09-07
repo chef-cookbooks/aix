@@ -1,3 +1,7 @@
+aix Cookbook CHANGELOG
+======================
+This file is used to list changes made in each version of the aix cookbook.
+
 # 0.1.0
 
 * Added significantly more resources to the cookbook (@chmod666)
