@@ -27,25 +27,23 @@ def whyrun_supported?
   true
 end
 
-# loading current resource 
+# loading current resource
 def load_current_resource
   @current_resource = Chef::Resource::AixNo.new(@new_resource.name)
-  
+
   # no can always be modified so resource always exists
   @current_resource.exists = true
 
-  so = shell_out("no -x")
-  if so.exitstatus != 0
-    raise("no: error running no -x")
-  end
+  so = shell_out('no -x')
+  fail('no: error running no -x') if so.exitstatus != 0
 
   # loading the tunables
-  all_no_tunables = Hash.new
+  all_no_tunables = {}
   if @current_resource.exists
     # for each tunable build an hash
     # with key => value (where value is an hash)
     so.stdout.each_line do |line|
-      # info:tunable,current,default,reboot,min,max,unit,type,{dtunable } 
+      # info:tunable,current,default,reboot,min,max,unit,type,{dtunable }
       # current = current value
       # default = default value
       # reboot = reboot value
@@ -63,27 +61,27 @@ def load_current_resource
       #  * d (for Deprecated)
       #  * dtunable = space separated list of dependent tunable parameters
       # no output is separted with ','
-      current_tunable = line.split(",")
-      tunable_hash = Hash.new
-      tunable_hash['current']="#{current_tunable[1]}"
-      tunable_hash['default']="#{current_tunable[2]}"
-      tunable_hash['reboot']="#{current_tunable[3]}"
-      tunable_hash['min']="#{current_tunable[4]}"
-      tunable_hash['max']="#{current_tunable[5]}"
-      tunable_hash['unit']="#{current_tunable[6]}"
-      tunable_hash['type']="#{current_tunable[7]}"
+      current_tunable = line.split(',')
+      tunable_hash = {}
+      tunable_hash['current'] = "#{current_tunable[1]}"
+      tunable_hash['default'] = "#{current_tunable[2]}"
+      tunable_hash['reboot'] = "#{current_tunable[3]}"
+      tunable_hash['min'] = "#{current_tunable[4]}"
+      tunable_hash['max'] = "#{current_tunable[5]}"
+      tunable_hash['unit'] = "#{current_tunable[6]}"
+      tunable_hash['type'] = "#{current_tunable[7]}"
       # the dtunable tunable is not there for each tunable
       if !"#{current_tunable[8]}".chomp.empty?
-        tunable_hash['dtunable']="#{current_tunable[8]}".chomp
+        tunable_hash['dtunable'] = "#{current_tunable[8]}".chomp
       else
-        tunable_hash['dtunable']="none" 
+        tunable_hash['dtunable'] = 'none'
       end
-      #Chef::Log.debug("no: #{@current_resource.name}->#{current_tunable[0]} = #{tunable_hash}")
+      # Chef::Log.debug("no: #{@current_resource.name}->#{current_tunable[0]} = #{tunable_hash}")
       all_no_tunables[current_tunable[0]] = tunable_hash
     end
     # set this hash to the current resource attribute
     @current_resource.tunables(all_no_tunables)
-    #Chef::Log.debug("no: tunables : #{@current_resource.tunables(all_no_tunables)}")
+    # Chef::Log.debug("no: tunables : #{@current_resource.tunables(all_no_tunables)}")
   end
 end
 
@@ -92,20 +90,18 @@ action :update do
   # resource always exists
   if @current_resource.exists
     # the command will always begin with no
-    string_shell_out = "no " 
-    # setting -p if set_default is true 
-    if @new_resource.set_default 
-      string_shell_out = string_shell_out << "-p "
-    end
+    string_shell_out = 'no '
+    # setting -p if set_default is true
+    string_shell_out = string_shell_out << '-p ' if @new_resource.set_default
     # for each tunables ...
     Chef::Log.debug(@new_resource.tunables)
-    @new_resource.tunables.each do |tunable,value|
+    @new_resource.tunables.each do |tunable, value|
       # check if attribute exists for current device, if not raising error
-      if @current_resource.tunables.has_key?("#{tunable}") 
+      if @current_resource.tunables.key?("#{tunable}")
         Chef::Log.debug("no: setting tunable #{tunable} with value #{value}")
         # ... if this one is already set to the desired value do nothing
-        current_resource_tunable=@current_resource.tunables["#{tunable}"]['current']
-        Chef::Log.debug("comparing current tunable #{tunable}=#{current_resource_tunable} to value #{value}") 
+        current_resource_tunable = @current_resource.tunables["#{tunable}"]['current']
+        Chef::Log.debug("comparing current tunable #{tunable}=#{current_resource_tunable} to value #{value}")
         if "#{current_resource_tunable}" == "#{value}"
           Chef::Log.debug("no: tunable #{tunable} is already set to value #{value}")
         # ... if this one is not set to the desired value add it to the no command
@@ -115,21 +111,19 @@ action :update do
           string_shell_out = string_shell_out << " -o #{tunable}=#{value} "
           converge_by("no: setting tunable #{tunable}=#{value}") do
             # if type is bosboot or reboot
-            if @current_resource.tunables["#{tunable}"]["type"] == "R" ||  @current_resource.tunables["#{tunable}"]["type"] == "B"
-              string_shell_out.sub! "-p", "-r"  
+            if @current_resource.tunables["#{tunable}"]['type'] == 'R' || @current_resource.tunables["#{tunable}"]['type'] == 'B'
+              string_shell_out.sub! '-p', '-r'
             end
-            # TODO here if type == B do a bosboot. Did not find any tunables with B type not implementing this
+            # TODO: here if type == B do a bosboot. Did not find any tunables with B type not implementing this
             Chef::Log.debug("command: #{string_shell_out}")
             so = shell_out(string_shell_out)
-            # if the command fails raise and exception 
-            if so.exitstatus != 0
-              raise "no: #{string_shell_out} failed"
-            end 
-            string_shell_out = "no -p "
+            # if the command fails raise and exception
+            fail "no: #{string_shell_out} failed" if so.exitstatus != 0
+            string_shell_out = 'no -p '
           end
         end
       else
-        raise "no: #{tunable} does not exist"
+        fail "no: #{tunable} does not exist"
       end
     end
   end
@@ -140,35 +134,31 @@ action :reset do
   # resource always exists
   if @current_resource.exists
     # the command will always begin with no
-    string_shell_out = "no "
+    string_shell_out = 'no '
     # setting -p if set_default is true
-    if @new_resource.set_default
-      string_shell_out = string_shell_out << "-p "
-    end
+    string_shell_out = string_shell_out << '-p ' if @new_resource.set_default
     # for each tunables ...
     Chef::Log.debug(@new_resource.tunables)
-    @new_resource.tunables.each do |tunable,value|
+    @new_resource.tunables.each do |tunable, _value|
       # check if attribute exists for current device, if not raising error
-      if @current_resource.tunables.has_key?("#{tunable}")
+      if @current_resource.tunables.key?("#{tunable}")
         Chef::Log.debug("no: reseting tunable #{tunable}")
         old_string_shell_out = string_shell_out
         string_shell_out = string_shell_out << " -d #{tunable}"
         converge_by("no: reseting tunable #{tunable}") do
           # if type is bosboot or reboot or incremental
-          if @current_resource.tunables["#{tunable}"]["type"] == "R" ||  @current_resource.tunables["#{tunable}"]["type"] == "B" || @current_resource.tunables["#{tunable}"]["type"] == "I"
-            string_shell_out.sub! "-p", "-r"
+          if @current_resource.tunables["#{tunable}"]['type'] == 'R' || @current_resource.tunables["#{tunable}"]['type'] == 'B' || @current_resource.tunables["#{tunable}"]['type'] == 'I'
+            string_shell_out.sub! '-p', '-r'
           end
-          # TODO here if type == B do a bosboot. Did not find any tunables with B type not implementing this
+          # TODO: here if type == B do a bosboot. Did not find any tunables with B type not implementing this
           Chef::Log.debug("command: #{string_shell_out}")
           so = shell_out(string_shell_out)
           # if the command fails raise and exception
-          if so.exitstatus != 0
-            raise "no: #{string_shell_out} failed"
-          end
-          string_shell_out = "no -p "
+          fail "no: #{string_shell_out} failed" if so.exitstatus != 0
+          string_shell_out = 'no -p '
         end
       else
-        raise "no: #{tunable} does not exist"
+        fail "no: #{tunable} does not exist"
       end
     end
   end
@@ -177,19 +167,19 @@ end
 action :reset_all do
   # resource always exists
   if @current_resource.exists
-    converge_by("no : resetting all") do
-      string_shell_out = "no -D"
+    converge_by('no : resetting all') do
+      string_shell_out = 'no -D'
       so = shell_out(string_shell_out)
     end
-  end 
+  end
 end
 
 action :reset_all_with_reboot do
   # resource always exists
   if @current_resource.exists
-    converge_by("no : resetting all with reboot") do
-      string_shell_out = "yes | no -r -D "
+    converge_by('no : resetting all with reboot') do
+      string_shell_out = 'yes | no -r -D '
       so = shell_out(string_shell_out)
     end
-  end 
+  end
 end

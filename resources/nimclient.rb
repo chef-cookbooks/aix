@@ -15,13 +15,13 @@ default_action :cust
 attr_accessor :exists
 
 # Generaly use the current oslevel to find the spot name
-attribute :spot, :kind_of => String
+attribute :spot, kind_of: String
 # I assume here that your lppsource are named 7100-03-05-1524-lppsource, 6100-09-05-1524-lppsource (change this to fit you nim naming convention)
 # if you want to put anything here you can just leave this to string
-attribute :lpp_source, :kind_of => String, :regex => [/next_sp/, /latest_sp/, /next_tl/, /latest_tl/, /[7100,6100,5300]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]-lpp_source/, /.*-lpp_source/]
-attribute :installp_bundle, :kind_of => String, :regex => [ /.*-installp_bundle/ ]
+attribute :lpp_source, kind_of: String, regex: [/next_sp/, /latest_sp/, /next_tl/, /latest_tl/, /[7100,6100,5300]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]-lpp_source/, /.*-lpp_source/]
+attribute :installp_bundle, kind_of: String, regex: [/.*-installp_bundle/]
 # Lists of filesets to install
-attribute :filesets, :kind_of => Array
+attribute :filesets, kind_of: Array
 # fixes to install can be update_all for all
-attribute :fixes, :kind_of => String
-attribute :installp_flags, :kind_of =>String
+attribute :fixes, kind_of: String
+attribute :installp_flags, kind_of: String

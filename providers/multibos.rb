@@ -32,15 +32,15 @@ def load_current_resource
 
   # if bos_hd5 and hd5 exists there is a standby bos
   so = shell_out("lsvg -l rootvg | grep -iEw \"bos_hd5|hd5\" | wc -l | awk '{print $1}'")
-  Chef::Log.debug("multibos: searching for bos")
+  Chef::Log.debug('multibos: searching for bos')
   Chef::Log.debug(so.stdout)
   # if there are two lines there is a bos
   Chef::Log.debug("multibos: comparing #{so.stdout.chomp} with 2")
-  if "#{so.stdout.chomp}" == "2"
-    Chef::Log.debug("multibos: there is a bos")
+  if "#{so.stdout.chomp}" == '2'
+    Chef::Log.debug('multibos: there is a bos')
     @current_resource.exists = true
   else
-    Chef::Log.debug("multibos: there is no bos")
+    Chef::Log.debug('multibos: there is no bos')
     @current_resource.exists = false
   end
 end
@@ -48,20 +48,18 @@ end
 # create a multibos
 action :create do
   # if there is no bos we can create one
-  if !@current_resource.exists
-    converge_by("multibos: creating standby multibos") do
-      string_shell_out="multibos -Xs"
+  unless @current_resource.exists
+    converge_by('multibos: creating standby multibos') do
+      string_shell_out = 'multibos -Xs'
       # if bootlist is set to true do not change the bootlist (-t option)
-      if @new_resource.bootlist
-        string_shell_out="#{string_shell_out}t"
-      end
+      string_shell_out = "#{string_shell_out}t" if @new_resource.bootlist
       unless @new_resource.update_device.nil?
-        string_shell_out= string_shell_out << "a -l " << @new_resource.update_device
+        string_shell_out = string_shell_out << 'a -l ' << @new_resource.update_device
       end
       Chef::Log.debug("multibos: creating standby bos with command #{string_shell_out}")
-      so = shell_out(string_shell_out, :timeout => 7200)
+      so = shell_out(string_shell_out, timeout: 7200)
       if so.exitstatus != 0 || !so.stderr.empty?
-        raise("multibos: error creating standby bos")
+        fail('multibos: error creating standby bos')
       end
     end
   end
@@ -71,11 +69,11 @@ end
 action :remove do
   # we can remove a multibos only if this one exists
   if @current_resource.exists
-   converge_by("multibos: removing standby multibos") do
-      Chef::Log.debug("multibos: removing standby multibos with command multibos -RX")
-      so = shell_out("multibos -RX")
+    converge_by('multibos: removing standby multibos') do
+      Chef::Log.debug('multibos: removing standby multibos with command multibos -RX')
+      so = shell_out('multibos -RX')
       if so.exitstatus != 0 || !so.stderr.empty?
-        raise("multibos: error removing multibos")
+        fail('multibos: error removing multibos')
       end
     end
   end
@@ -85,12 +83,12 @@ end
 action :update do
   # we can update a multibos only if this one exists
   if @current_resource.exists
-    converge_by("mutlibos: updating standby multibos") do
-      string_shell_out = "multibos -ac -l " << @new_resource.update_device
+    converge_by('mutlibos: updating standby multibos') do
+      string_shell_out = 'multibos -ac -l ' << @new_resource.update_device
       Chef::Log.debug("multibos: updating standby multibos with command #{string_shell_out}")
-      so = shell_out(string_shell_out, :timeout => 7200)
+      so = shell_out(string_shell_out, timeout: 7200)
       if so.exitstatus != 0 || !so.stderr.empty?
-        raise("multibos: error updating multibos")
+        fail('multibos: error updating multibos')
       end
     end
   end
@@ -102,37 +100,37 @@ action :mount do
   if @current_resource.exists
     # check if multibos is already mounted
     # is the standby bos prefixed by bos or not
-    lvs = Array.new
-    blv = shell_out("bootinfo -v")
+    lvs = []
+    blv = shell_out('bootinfo -v')
     Chef::Log.debug("multibos: blv is #{blv.stdout}")
-    if blv.stdout.include? "bos"
-      Chef::Log.debug("multibos: multibos is not prefixed by bos")
-      lvs = [ "hd4", "hd2", "hd9var", "hd10opt" ]
+    if blv.stdout.include? 'bos'
+      Chef::Log.debug('multibos: multibos is not prefixed by bos')
+      lvs = %w(hd4 hd2 hd9var hd10opt)
     else
-      Chef::Log.debug("multibos: multibos is prefixed by bos")
-      lvs = [ "bos_hd4", "bos_hd2", "bos_hd9var", "bos_hd10opt" ]
+      Chef::Log.debug('multibos: multibos is prefixed by bos')
+      lvs = %w(bos_hd4 bos_hd2 bos_hd9var bos_hd10opt)
     end
     mounted = true
     lvs.each do |lv|
       is_mounted = shell_out("lsvg -l rootvg | awk '$1 == \"#{lv}\" {print $6}'")
       Chef::Log.debug("multibos: checking #{lv} is closed (#{is_mounted.stdout.chomp})")
-      if is_mounted.stdout.chomp == "closed/syncd"
+      if is_mounted.stdout.chomp == 'closed/syncd'
         Chef::Log.debug("multibos: #{lv} is not mounted")
         mounted = false
       end
     end
     # we need to run multibos -m only if there is one lv not mounted
     if !mounted
-      Chef::Log.debug("multibos: mounting multibos")
-      converge_by("multibos: mounting standby bos") do
-        stby_bos = shell_out("multibos -m")
+      Chef::Log.debug('multibos: mounting multibos')
+      converge_by('multibos: mounting standby bos') do
+        stby_bos = shell_out('multibos -m')
         if stby_bos.exitstatus != 0 || !stby_bos.stderr.empty?
-          Chef::Log.debug("multibos: error while multibos -m")
-          raise("multibos: error while multibos -m")
+          Chef::Log.debug('multibos: error while multibos -m')
+          fail('multibos: error while multibos -m')
         end
       end
     else
-      Chef::Log.debug("multibos: bos already mounted")
+      Chef::Log.debug('multibos: bos already mounted')
     end
   end
 end
@@ -143,38 +141,37 @@ action :umount do
   if @current_resource.exists
     # check if multibos is already mounted
     # is the standby bos prefixed by bos or not
-    lvs = Array.new
-    blv = shell_out("bootinfo -v")
+    lvs = []
+    blv = shell_out('bootinfo -v')
     Chef::Log.debug("multibos: blv is #{blv.stdout}")
-    if blv.stdout.include? "bos"
-      Chef::Log.debug("multibos: multibos is not prefixed by bos")
-      lvs = [ "hd4", "hd2", "hd9var", "hd10opt" ]
+    if blv.stdout.include? 'bos'
+      Chef::Log.debug('multibos: multibos is not prefixed by bos')
+      lvs = %w(hd4 hd2 hd9var hd10opt)
     else
-      Chef::Log.debug("multibos: multibos is prefixed by bos")
-      lvs = [ "bos_hd4", "bos_hd2", "bos_hd9var", "bos_hd10opt" ]
+      Chef::Log.debug('multibos: multibos is prefixed by bos')
+      lvs = %w(bos_hd4 bos_hd2 bos_hd9var bos_hd10opt)
     end
     mounted = false
     lvs.each do |lv|
       is_mounted = shell_out("lsvg -l rootvg | awk '$1 == \"#{lv}\" {print $6}'")
       Chef::Log.debug("multibos: checking #{lv} is open (#{is_mounted.stdout.chomp})")
-      if is_mounted.stdout.chomp == "open/syncd"
+      if is_mounted.stdout.chomp == 'open/syncd'
         Chef::Log.debug("multibos: #{lv} is not mounted")
         mounted = true
       end
     end
     # we need to run multibos -u only if there is one lv mounted
     if mounted
-      Chef::Log.debug("multibos: umounting multibos")
-      converge_by("multibos: umounting standby bos") do
-        stby_bos = shell_out("multibos -u")
+      Chef::Log.debug('multibos: umounting multibos')
+      converge_by('multibos: umounting standby bos') do
+        stby_bos = shell_out('multibos -u')
         if stby_bos.exitstatus != 0 || !stby_bos.stderr.empty?
-          Chef::Log.debug("multibos: error while multibos -m")
-          raise("multibos: error while multibos -u")
+          Chef::Log.debug('multibos: error while multibos -m')
+          fail('multibos: error while multibos -u')
         end
       end
     else
-      Chef::Log.debug("multibos: bos already umounted")
+      Chef::Log.debug('multibos: bos already umounted')
     end
   end
 end
-

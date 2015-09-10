@@ -45,14 +45,12 @@ end
 
 action :install do
   if !@current_resource.exists || (@current_resource.runlevel != @new_resource.runlevel || @current_resource.processaction != @new_resource.processaction || @current_resource.command != @new_resource.command)
-    
-    converge_by("Install or update inittab") do
+
+    converge_by('Install or update inittab') do
       if @current_resource.exists
         shell_out("rmitab #{@current_resource.identifier}")
       end
-      if @new_resource.follows
-        follow = "-i #{@new_resource.follows} "
-      end
+      follow = "-i #{@new_resource.follows} " if @new_resource.follows
       shell_out("mkitab \"#{follow}#{[@new_resource.identifier, @new_resource.runlevel, @new_resource.processaction, @new_resource.command].join(':')}\"")
     end
   end
@@ -60,7 +58,7 @@ end
 
 action :remove do
   if @current_resource.exists
-    converge_by("Remove inittab entry") do
+    converge_by('Remove inittab entry') do
       shell_out("rmitab #{@current_resource.identifier}")
     end
   end

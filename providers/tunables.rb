@@ -35,8 +35,8 @@ end
 # generate command line
 def gen_shell_out(params: nil, tunable: nil)
   params = " -p #{params}" if @new_resource.permanent
-  if tunable and [ "R", "B", "I"].include? @current_resource.tunables[tunable][:type]
-    params.sub! "-p", "-r"
+  if tunable && %w(R B I).include?(@current_resource.tunables[tunable][:type])
+    params.sub! '-p', '-r'
   end
   "#{cmd} #{params}"
 end
@@ -46,12 +46,10 @@ def load_current_resource
   @current_resource = Chef::Resource::AixTunables.new(@new_resource.name)
 
   so = shell_out("#{cmd} -x")
-  if so.exitstatus != 0
-    raise("#{cmd}: error running #{cmd} -x")
-  end
+  fail("#{cmd}: error running #{cmd} -x") if so.exitstatus != 0
 
   # initializing tunables attribute
-  all_tunables = Hash.new
+  all_tunables = {}
   so.stdout.each_line do |line|
     # info:tunable,current,default,reboot,min,max,unit,type,{dtunable }
     # current = current value
@@ -71,16 +69,16 @@ def load_current_resource
     #  * d (for Deprecated)
     #  * dtunable = space separated list of dependent tunable parameters
     # no output is separted with ','
-    current_tunable = line.split(",")
+    current_tunable = line.split(',')
     all_tunables[current_tunable[0].to_sym] = {
-      :current => current_tunable[1],
-      :default => current_tunable[2],
-      :reboot => current_tunable[3],
-      :min => current_tunable[4],
-      :max => current_tunable[5],
-      :unit => current_tunable[6],
-      :type => current_tunable[7],
-      :dtunable => current_tunable[8] || "none"
+      current: current_tunable[1],
+      default: current_tunable[2],
+      reboot: current_tunable[3],
+      min: current_tunable[4],
+      max: current_tunable[5],
+      unit: current_tunable[6],
+      type: current_tunable[7],
+      dtunable: current_tunable[8] || 'none'
     }
   end
   @current_resource.tunables(all_tunables)
@@ -91,26 +89,24 @@ end
 action :update do
   # for each tunables ...
   Chef::Log.debug(@new_resource.tunables)
-  @new_resource.tunables.each do |tunable,value|
+  @new_resource.tunables.each do |tunable, value|
     # raise error if tunable doesn't exist
-    unless @current_resource.tunables.has_key?(tunable.intern)
-      raise "#{cmd}: #{tunable} does not exist"
+    unless @current_resource.tunables.key?(tunable.to_sym)
+      fail "#{cmd}: #{tunable} does not exist"
     end
 
     Chef::Log.debug("#{cmd}: setting tunable #{tunable} with value #{value}")
     # next if value already set
-    if @current_resource.tunables[tunable.intern][:current] == value.to_s
+    if @current_resource.tunables[tunable.to_sym][:current] == value.to_s
       Chef::Log.info("#{cmd}: tunable #{tunable} is already set to value #{value}")
     else
       Chef::Log.debug("#{cmd}: #{tunable} will be set to value #{value}")
       converge_by("#{cmd}: setting tunable #{tunable}=#{value}") do
-        string_shell_out = gen_shell_out params: "-o #{tunable}=#{value} ", tunable: tunable.intern
+        string_shell_out = gen_shell_out params: "-o #{tunable}=#{value} ", tunable: tunable.to_sym
         Chef::Log.debug("command: #{string_shell_out}")
         so = shell_out(string_shell_out)
         # if the command fails raise and exception
-        if so.exitstatus != 0
-          raise "no: #{string_shell_out} failed"
-        end
+        fail "no: #{string_shell_out} failed" if so.exitstatus != 0
       end
     end
   end
@@ -120,24 +116,22 @@ end
 action :reset do
   # for each tunables ...
   Chef::Log.debug(@new_resource.tunables)
-  @new_resource.tunables.each do |tunable,value|
+  @new_resource.tunables.each do |tunable, value|
     # raise error if tunable doesn't exist
-    unless @current_resource.tunables.has_key?(tunable.intern)
-      raise "#{cmd}: #{tunable} does not exist"
+    unless @current_resource.tunables.key?(tunable.to_sym)
+      fail "#{cmd}: #{tunable} does not exist"
     end
 
-    if @current_resource.tunables[tunable.intern][:current] == value.to_s
+    if @current_resource.tunables[tunable.to_sym][:current] == value.to_s
       Chef::Log.info("#{cmd}: tunable #{tunable} is already set to default value #{value}")
     else
       Chef::Log.debug("#{cmd}: reseting tunable #{tunable}")
       converge_by("#{cmd}: reseting tunable #{tunable}") do
-        string_shell_out = gen_shell_out params: " -d #{tunable}", tunable: tunable.intern
+        string_shell_out = gen_shell_out params: " -d #{tunable}", tunable: tunable.to_sym
         Chef::Log.debug("command: #{string_shell_out}")
         so = shell_out(string_shell_out)
         # if the command fails raise and exception
-        if so.exitstatus != 0
-          raise "#{cmd}: #{string_shell_out} failed"
-        end
+        fail "#{cmd}: #{string_shell_out} failed" if so.exitstatus != 0
       end
     end
   end
@@ -146,9 +140,7 @@ end
 action :reset_all do
   converge_by("#{cmd} : resetting all") do
     string_shell_out = "#{cmd} -D"
-    if @new_resource.nextboot
-      string_shell_out = "yes | #{cmd} -r -D"
-    end
+    string_shell_out = "yes | #{cmd} -r -D" if @new_resource.nextboot
     so = shell_out(string_shell_out)
   end
 end

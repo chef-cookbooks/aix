@@ -26,53 +26,53 @@ def whyrun_supported?
   true
 end
 
-# loading current resource 
+# loading current resource
 def load_current_resource
   @current_resource = Chef::Resource::AixEtchosts.new(@new_resource.name)
-  
-  # we say by default that the entry is no in the /etc/hosts file 
+
+  # we say by default that the entry is no in the /etc/hosts file
   @current_resource.exists = false
 
   hostent = Mixlib::ShellOut.new("hostent -s #{@new_resource.name}")
   hostent.valid_exit_codes = 0
   hostent.run_command
-  if !hostent.error? 
-    Chef::Log.debug("etchosts: resource exists")
+  if !hostent.error?
+    Chef::Log.debug('etchosts: resource exists')
     @current_resource.exists = true
   else
-    Chef::Log.debug("etchosts: resource does not exists")
+    Chef::Log.debug('etchosts: resource does not exists')
   end
 
   # if resource exists loads its attributes
   if @current_resource.exists
-    Chef::Log.debug("etchosts: resource exists loading attributes")
-    hostent_array = hostent.stdout.split(" ") 
+    Chef::Log.debug('etchosts: resource exists loading attributes')
+    hostent_array = hostent.stdout.split(' ')
     Chef::Log.debug("etchosts: current resource ip address: #{hostent_array[0]}")
     @current_resource.ip_address(hostent_array[0])
     @current_resource.name(hostent_array[1])
     Chef::Log.debug("etchosts: current resource name: #{hostent_array[1]}")
     # filling the array with the aliases if there are aliases
-    if !@current_resource.aliases.nil?
-      (2 .. hostent_array.length).each do |i|
+    unless @current_resource.aliases.nil?
+      (2..hostent_array.length).each do |i|
         Chef::Log.debug("etchosts: current adding alias: #{hostent_array[i]}")
         @current_resource.aliases.push(hostent_array[i])
       end
     end
-    Chef::Log.debug("etchosts: current resource aliases : @current_resource.aliases")
+    Chef::Log.debug('etchosts: current resource aliases : @current_resource.aliases')
   end
 end
 
-# add 
+# add
 action :add do
-  if !@current_resource.exists
-    hostent_add_s="hostent -a #{@new_resource.ip_address} -h \"#{@new_resource.name}"
+  unless @current_resource.exists
+    hostent_add_s = "hostent -a #{@new_resource.ip_address} -h \"#{@new_resource.name}"
     # add aliases if there are aliases
     if @new_resource.aliases.nil?
       # no aliases, closing the command line
       hostent_add_s = hostent_add_s << "\""
     else
       # add each aliases to the command line
-      (0 .. @new_resource.aliases.length).each do |i|
+      (0..@new_resource.aliases.length).each do |i|
         hostent_add_s = hostent_add_s << " #{@new_resource.aliases[i]}"
       end
       # close last double quote
@@ -92,7 +92,7 @@ end
 # delete
 action :delete do
   if @current_resource.exists
-    hostent_del_s="hostent -d #{@new_resource.ip_address}"
+    hostent_del_s = "hostent -d #{@new_resource.ip_address}"
     converge_by("hostent: delete #{@new_resource.ip_address}") do
       Chef::Log.debug("etchosts: running #{hostent_del_s}")
       hostent_del = Mixlib::ShellOut.new(hostent_del_s)
@@ -108,7 +108,7 @@ end
 action :change do
   if @current_resource.exists
     change = false
-    hostent_change_s="hostent -c #{@current_resource.ip_address} "
+    hostent_change_s = "hostent -c #{@current_resource.ip_address} "
     # if new_hostname attribute exists, we need to change hostname
     # CASE1 hostname is changing
     if !@new_resource.new_hostname.nil?
@@ -116,9 +116,9 @@ action :change do
         change = true
         hostent_change_s = hostent_change_s << "-h \"#{@new_resource.new_hostname} "
         # CASE2 hostname and aliases are changing
-        if !@new_resource.aliases.nil?
+        unless @new_resource.aliases.nil?
           # add each aliases to the command line
-          (0 .. @new_resource.aliases.length).each do |i|
+          (0..@new_resource.aliases.length).each do |i|
             hostent_change_s = hostent_change_s << " #{@new_resource.aliases[i]}"
           end
         end
@@ -126,18 +126,18 @@ action :change do
         hostent_change_s = hostent_change_s << "\" "
       end
     else
-        hostent_change_s = hostent_change_s << "-h \"#{@new_resource.name}\" "
+      hostent_change_s = hostent_change_s << "-h \"#{@new_resource.name}\" "
     end
     # CASE3 ip is changing
     # if ip_address are different change them
-    if !@new_resource.ip_address.nil?
+    unless @new_resource.ip_address.nil?
       if "#{@new_resource.ip_address}" != "#{@current_resource.ip_address}"
         # CASE4 ip and aliases are changing
-        if !@new_resource.aliases.nil?
+        unless @new_resource.aliases.nil?
           hostent_change_s = hostent_change_s << "-h \"#{@current_resource.name} "
-          if !@new_resource.aliases.nil?
+          unless @new_resource.aliases.nil?
             # add each aliases to the command line
-            (0 .. @new_resource.aliases.length).each do |i|
+            (0..@new_resource.aliases.length).each do |i|
               hostent_change_s = hostent_change_s << " #{@new_resource.aliases[i]}"
             end
           end
@@ -163,8 +163,8 @@ end
 
 # delete_all
 action :delete_all do
-  hostent_del_all_s = "hostent -X"
-  converge_by("etchost: removing all entries") do
+  hostent_del_all_s = 'hostent -X'
+  converge_by('etchost: removing all entries') do
     Chef::Log.debug("etchosts: running #{hostent_del_all_s}")
     hostent_del_all = Mixlib::ShellOut.new(hostent_del_all_s)
     hostent_del_all.valid_exit_codes = 0

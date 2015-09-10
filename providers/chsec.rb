@@ -27,7 +27,7 @@ def whyrun_supported?
   true
 end
 
-# loading current resource 
+# loading current resource
 def load_current_resource
   @current_resource = Chef::Resource::AixChsec.new(@new_resource.name)
 
@@ -37,7 +37,7 @@ def load_current_resource
     # check if the stanza exists
     # if the stanza does not exists the resource does not exists
     stanza_to_check = @new_resource.stanza
-    if ! ::File.readlines(@new_resource.name).grep(/#{@new_resource.stanza}:/)
+    unless ::File.readlines(@new_resource.name).grep(/#{@new_resource.stanza}:/)
       Chef::Log.debug("chsec: no stanza found (#{@new_resource.stanza})")
       @current_resource.exists = false
     end
@@ -57,7 +57,7 @@ def load_current_resource
   if @current_resource.exists
     # Searching for the stanza
     found_stanza = false
-    current_attributes = Hash.new
+    current_attributes = {}
     ::File.open("#{@new_resource.name}").each_line do |line|
       if "#{line}".chomp == "#{@new_resource.stanza}:"
         Chef::Log.debug("chsec: found stanza (#{@new_resource.stanza})")
@@ -67,10 +67,8 @@ def load_current_resource
       # filling the hash table
       if found_stanza
         # if the line is empty we skip it
-        if line.chomp.empty?
-          next
-        end
-        line_attribute = line.split("=")
+        next if line.chomp.empty?
+        line_attribute = line.split('=')
         # chomp and strip here
         key = "#{line_attribute[0]}".chomp.strip
         value = "#{line_attribute[1]}".chomp.strip
@@ -79,10 +77,8 @@ def load_current_resource
         Chef::Log.debug("chsec: #{@new_resource.stanza} -> [#{key}],[#{value}])")
       end
       # if we found the stanza, and we match another stanza found_stanza=0
-      if found_stanza && line =~ /\w:/
-        found_stanza = false
-      end
-    end 
+      found_stanza = false if found_stanza && line =~ /\w:/
+    end
     # loading the attributes
     @current_resource.attributes(current_attributes)
   end
@@ -95,14 +91,14 @@ action :update do
     chsec_s = "chsec -f #{@new_resource.name} -s #{new_resource.stanza}"
     change = false
     # iterating trough the hash table of sec attributes
-    @new_resource.attributes.each do |key,value|
+    @new_resource.attributes.each do |key, value|
       # checking if value has to be changed
       current_attr = @current_resource.attributes[key]
       new_attr = @new_resource.attributes[key]
       if "#{@new_resource.attributes[key]}" == "#{@current_resource.attributes[key]}"
         Chef::Log.debug("chsec: value of #{key} already set to #{value} for stanza #{@new_resource.stanza}")
       else
-        change = true  
+        change = true
         chsec_s = chsec_s << " -a #{key}=#{@new_resource.attributes[key]}"
       end
     end

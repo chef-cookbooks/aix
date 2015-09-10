@@ -34,18 +34,18 @@ def load_current_resource
   begin
     inetd = ::File.open('/etc/inetd.conf')
     inetd.each_line do |line|
-      next if line =~ /^##/  # standard IBM comment
+      next if line =~ /^##/ # standard IBM comment
       if line =~ /^(#?)(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(.*)$/
-        @current_resource.enabled = ($1 == '#')
+        @current_resource.enabled = (Regexp.last_match(1) == '#')
         # Assume that servicename and protocol are sufficient as a unique identifier
-        if @new_resource.servicename == $2 && @new_resource.protocol == $4
-          @current_resource.servicename($2)
-          @current_resource.type($3)
-          @current_resource.protocol($4)
-          @current_resource.wait($5)
-          @current_resource.user($6)
-          @current_resource.program($7)
-          @current_resource.args($8)
+        if @new_resource.servicename == Regexp.last_match(2) && @new_resource.protocol == Regexp.last_match(4)
+          @current_resource.servicename(Regexp.last_match(2))
+          @current_resource.type(Regexp.last_match(3))
+          @current_resource.protocol(Regexp.last_match(4))
+          @current_resource.wait(Regexp.last_match(5))
+          @current_resource.user(Regexp.last_match(6))
+          @current_resource.program(Regexp.last_match(7))
+          @current_resource.args(Regexp.last_match(8))
         end
       end
     end
@@ -57,10 +57,10 @@ end
 action :enable do
   if @current_resource.enabled
     if @current_resource.type != @new_resource.type ||
-        @current_resource.wait != @new_resource.wait ||
-        @current_resource.user != @new_resource.user ||
-        @current_resource.program != @new_resource.program ||
-        @current_resource.args != @new_resource.args
+       @current_resource.wait != @new_resource.wait ||
+       @current_resource.user != @new_resource.user ||
+       @current_resource.program != @new_resource.program ||
+       @current_resource.args != @new_resource.args
       cmd = "chsubserver -c -v #{@current_resource.servicename} -p #{@current_resource.protocol}"
       cmd << " -T #{@new_resource.type}" if @current_resource.type != @new_resource.type
       cmd << " -W #{@new_resource.wait}" if @current_resource.wait != @new_resource.wait

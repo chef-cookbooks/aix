@@ -27,7 +27,7 @@ def whyrun_supported?
   true
 end
 
-# loading current resource 
+# loading current resource
 def load_current_resource
   @current_resource = Chef::Resource::AixChdev.new(@new_resource.name)
   @current_resource.exists = false
@@ -37,19 +37,18 @@ def load_current_resource
   Chef::Log.debug("command: #{so}")
   if so.exitstatus == 0
     @current_resource.exists = true
-    
   else
     @current_resource.exists = false
-    raise("device #{@current_resource.name} does not exists")
+    fail("device #{@current_resource.name} does not exists")
   end
 
   # loading the attributes
-  all_device_attr = Hash.new
+  all_device_attr = {}
   if @current_resource.exists
     # for each attribute of the device build an hash
     # with key => value
     so.stdout.each_line do |line|
-      current_attr_a = line.split(" ")
+      current_attr_a = line.split(' ')
       Chef::Log.debug("#{@current_resource.name}->#{current_attr_a[0]} = #{current_attr_a[1]}")
       all_device_attr[current_attr_a[0]] = current_attr_a[1]
     end
@@ -61,22 +60,22 @@ end
 
 # update action
 action :update do
-  if not @current_resource.exists
+  if !@current_resource.exists
     Chef::Log.debug("chdev: device #{@current_resource.name} does not exists")
-    raise "chdev: device #{@current_resource.name} does not exists"
+    fail "chdev: device #{@current_resource.name} does not exists"
   else
     set_attr = false
     # the command will always begin with chdev -l
-    string_shell_out = "chdev -l " <<  @current_resource.name
+    string_shell_out = 'chdev -l ' << @current_resource.name
     # for each attributes ...
     Chef::Log.debug(@new_resource.attributes)
-    @new_resource.attributes.each do |attribute,value|
+    @new_resource.attributes.each do |attribute, value|
       # check if attribute exists for current device, if not raising error
-      if @current_resource.attributes.has_key?("#{attribute}") 
+      if @current_resource.attributes.key?("#{attribute}")
         Chef::Log.debug("chdev #{@current_resource.name} attribute #{attribute} with value #{value}")
         # ... if this one is already set to the desired value do nothing
-        current_resource_attr=@current_resource.attributes["#{attribute}"]
-        Chef::Log.debug("comparing current resource #{attribute}=#{current_resource_attr} to value #{value}") 
+        current_resource_attr = @current_resource.attributes["#{attribute}"]
+        Chef::Log.debug("comparing current resource #{attribute}=#{current_resource_attr} to value #{value}")
         if "#{current_resource_attr}" == "#{value}"
           Chef::Log.debug("chdev: device #{@current_resource.name}.attribute is already set to value #{value}")
         # ... if this one is not set to the desired value add it to the chdev command
@@ -86,21 +85,19 @@ action :update do
           string_shell_out = string_shell_out << " -a #{attribute}=#{value}"
         end
       else
-        raise "chdev device #{@current_resource.name} has not attribute #{attribute}"
+        fail "chdev device #{@current_resource.name} has not attribute #{attribute}"
       end
     end
     # if attributes needs a reboot add -P (for permanent to the command)
-    if @new_resource.need_reboot
-      string_shell_out = string_shell_out << " -P"
-    end
+    string_shell_out = string_shell_out << ' -P' if @new_resource.need_reboot
     if set_attr
       converge_by("chdev device #{@new_resource.name} with #{@new_resource.attributes}") do
         Chef::Log.debug("command: #{string_shell_out}")
         so = shell_out(string_shell_out)
-        # if the command fails raise and exception 
+        # if the command fails raise and exception
         if so.exitstatus != 0
-          raise "chdev: device #{@current_resource.name} failed"
-        end 
+          fail "chdev: device #{@current_resource.name} failed"
+        end
       end
     end
   end
