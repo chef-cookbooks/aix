@@ -482,7 +482,7 @@ Actions:
 
 ## License and Authors
 
-* Author:: Julian C. Dunn (<jdunn@getchef.com>)
+* Author:: Julian C. Dunn (<jdunn@chef.io>)
 * Author:: Christoph Hartmann (<chris@lollyrock.com>)
 * Author:: Benoit Creau (<benoit.creau@chmod666.org>)
 * Author:: Alain Dejoux (<adejoux@djouxtech.net>)
