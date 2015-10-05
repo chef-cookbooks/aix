@@ -187,7 +187,7 @@ aix_tunables "tune minperm%" do
 end
 
 aix_tunables "tune tcp buffers" do
-  mode :vmo
+  mode :no
   tunables( :udp_recvspace => 655360, :udp_sendspace => 65536 )
   permanent
 end
@@ -479,6 +479,39 @@ Actions:
 * `reset` - reset the client
 * `bos_inst` - enable bos_install installation (you need to reboot the virtual machine after that)
 * `maint_boot` - ennable maintenance boot (you need to reboot the virtual machine after that)
+
+### bootlist
+
+Change AIX bootlist. Example:
+
+```ruby
+aix_bootlist 'invalidate normal mode bootlist' do
+  action :invalidate
+  mode :normal
+end
+
+aix_bootlist 'set normal and service bootlist on hdisk0' do
+  mode :both
+  devices ["hdisk0"]
+end
+
+aix_bootlist 'set bootlist for normal mode' do
+  mode :normal
+  devices ["hdisk0","hdisk1"]
+  device_options("hdisk0" => "pathid=0", "hdisk1" => "pathid=0,1")
+end
+```
+
+Parameters:
+
+* `mode` (mandatory) (no default) - must be :both, :normal or :service
+* `devices` (no default) - List boot devices to setup
+* `device_options` (optional) (default false) - Specify boot options for specific device
+
+Actions:
+
+* `update` - update bootlist
+* `invalidate` - invalidate the bootlist
 
 ## License and Authors
 
