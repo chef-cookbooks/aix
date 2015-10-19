@@ -18,11 +18,11 @@ attribute :standard_output, kind_of: String
 attribute :standard_input, kind_of: String
 attribute :standard_error, kind_of: String
 attribute :user, kind_of: String, default: 'root'
-attribute :use_signals kind_of: [TrueClass, FalseClass], default: true
+attribute :use_signals, kind_of: [TrueClass, FalseClass], default: true
 # default force_stop_signal is SIGKILL
-attribute :force_stop_signal kind_of: Fixnum, default: 9, equal_to: (1..34).to_a
+attribute :force_stop_signal, kind_of: Fixnum, default: 9, equal_to: (1..34).to_a
 # default normal_stop_signal is SIGTERM
-attribute :normal_stop_signal kind_of: Fixnum, default: 15, equal_to: (1..34).to_a
-attribute :wait_time kind_of: Fixnum
+attribute :normal_stop_signal, kind_of: Fixnum, default: 15, equal_to: (1..34).to_a
+attribute :wait_time, kind_of: Fixnum
 
 attr_accessor :exists
