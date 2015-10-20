@@ -11,12 +11,13 @@ default_action :create
 
 attribute :subsystem_name, name_attribute: true, kind_of: String
 attribute :subsystem_synonym, kind_of: String
-attribute :arguments, kind_of: Array
+attribute :arguments, kind_of: String
 attribute :program, kind_of: String, required: true
 attribute :user, kind_of: String, default: 'root'
 attribute :standard_output, kind_of: String
 attribute :standard_input, kind_of: String
 attribute :standard_error, kind_of: String
+attribute :auto_restart, kind_of: [TrueClass, FalseClass], default: false
 attribute :multiple_instances, kind_of: [TrueClass, FalseClass], default: false
 attribute :use_signals, kind_of: [TrueClass, FalseClass], default: true
 attribute :use_sockets, kind_of: [TrueClass, FalseClass], default: false
@@ -28,7 +29,7 @@ attribute :priority, kind_of: Fixnum
 attribute :normal_stop_signal, kind_of: Fixnum, default: 15, equal_to: (1..34).to_a
 # default force_stop_signal is SIGKILL
 attribute :force_stop_signal, kind_of: Fixnum, default: 9, equal_to: (1..34).to_a
-attribute :display, kind_of: [TrueClass, FalseClass], default: false
+attribute :show_inactive, kind_of: [TrueClass, FalseClass], default: true
 attribute :wait_time, kind_of: Fixnum
 attribute :subsystem_group, kind_of: String
 
