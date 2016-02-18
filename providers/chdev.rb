@@ -71,12 +71,12 @@ action :update do
     Chef::Log.debug(@new_resource.attributes)
     @new_resource.attributes.each do |attribute, value|
       # check if attribute exists for current device, if not raising error
-      if @current_resource.attributes.key?("#{attribute}")
+      if @current_resource.attributes.key?(attribute)
         Chef::Log.debug("chdev #{@current_resource.name} attribute #{attribute} with value #{value}")
         # ... if this one is already set to the desired value do nothing
-        current_resource_attr = @current_resource.attributes["#{attribute}"]
+        current_resource_attr = @current_resource.attributes[attribute]
         Chef::Log.debug("comparing current resource #{attribute}=#{current_resource_attr} to value #{value}")
-        if "#{current_resource_attr}" == "#{value}"
+        if current_resource_attr == value
           Chef::Log.debug("chdev: device #{@current_resource.name}.attribute is already set to value #{value}")
         # ... if this one is not set to the desired value add it to the chdev command
         else

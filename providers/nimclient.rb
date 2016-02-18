@@ -18,6 +18,7 @@
 require 'chef/mixin/shell_out'
 
 include Chef::Mixin::ShellOut
+use_inline_resources
 
 # nim client reminder
 # nimclient -o allocate -a lpp_source=<lpp_source_name>                              # allocate a resource
@@ -170,14 +171,14 @@ action :maint_boot do
   # converging by default
   do_not_converge = false
 
-  standalone = shell_out("nimclient -ll #{node[:hostname]}").stdout
+  standalone = shell_out("nimclient -ll #{node['hostname']}").stdout
   standalone.each_line do |standalone_l|
     standalone_a = standalone_l.split('=')
     stanza = standalone_a[0].to_s.strip
     value = standalone_a[1].to_s.strip
     Chef::Log.debug("nimclient: compare |#{stanza}| vs |Cstate|, |#{value}| vs |maintenance boot has been enabled|")
-    if "#{stanza}" == 'Cstate'
-      if "#{value}" == 'maintenance boot has been enabled'
+    if stanza == 'Cstate'
+      if value == 'maintenance boot has been enabled'
         do_not_converge = true
         break
       end
@@ -208,14 +209,14 @@ action :bos_inst do
   # converging by default
   do_not_converge = false
 
-  standalone = shell_out("nimclient -ll #{node[:hostname]}").stdout
+  standalone = shell_out("nimclient -ll #{node['hostname']}").stdout
   standalone.each_line do |standalone_l|
     standalone_a = standalone_l.split('=')
     stanza = standalone_a[0].to_s.strip
     value = standalone_a[1].to_s.strip
     Chef::Log.debug("nimclient: compare |#{stanza}| vs |Cstate|, |#{value}| vs |maintenance boot has been enabled|")
-    if "#{stanza}" == 'Cstate'
-      if "#{value}" == 'BOS installation has been enabled'
+    if stanza == 'Cstate'
+      if value == 'BOS installation has been enabled'
         do_not_converge = true
         break
       end
@@ -265,7 +266,7 @@ action :cust do
       lpp_source_array = lpp_source.split('_')
       time = lpp_source_array[0]
       type = lpp_source_array[1]
-      lpp_source = find_resource("#{type}", "#{time}")
+      lpp_source = find_resource(type, time)
     end
     if resource_exists(lpp_source)
       nimclient_s = nimclient_s << ' -a lpp_source=' << lpp_source
@@ -325,7 +326,7 @@ action :cust do
     # slincing to remove -lpp_source string
     lpp_source_oslevel = lpp_source.slice!(0..14)
     Chef::Log.debug("nimclient: checking oslevel #{current_oslevel} vs lpp_source oslevel #{lpp_source_oslevel}")
-    do_not_converge = true if "#{lpp_source_oslevel}" == "#{current_oslevel}"
+    do_not_converge = true if lpp_source_oslevel == current_oslevel
   end
 
   # converge here
@@ -343,7 +344,7 @@ end
 # action deallocate
 # for reset and deallocate we always use the force option (-F)
 action :deallocate do
-  converge_by("nimclient: deallocating all resources for client #{node[:hostname]}") do
+  converge_by("nimclient: deallocating all resources for client #{node['hostname']}") do
     nimclient_s = 'nimclient -Fo deallocate -a subclass=all'
     nimclient = Mixlib::ShellOut.new(nimclient_s)
     nimclient.valid_exit_codes = 0
@@ -356,7 +357,7 @@ end
 # action reset
 # for reset and deallocate we always use the force option (-F)
 action :reset do
-  converge_by("nimclient: reseting client #{node[:hostname]}") do
+  converge_by("nimclient: reseting client #{node['hostname']}") do
     nimclient_s = 'nimclient -Fo reset'
     nimclient = Mixlib::ShellOut.new(nimclient_s)
     nimclient.valid_exit_codes = 0
@@ -423,7 +424,7 @@ def resource_exists(name)
   resources.each_line do |resource|
     resource = resource.chomp
     Chef::Log.debug("nimclient: compare |#{name}| vs |#{resource}|")
-    if "#{name}" == "#{resource.chomp}"
+    if name == resource.chomp
       found = true
       break
     end
@@ -444,7 +445,7 @@ def check_filesets(filesets, resource)
   all_filesets = []
   filesets.each do |a_fileset|
     showres.each_line do |s_fileset|
-      if s_fileset.include? "#{a_fileset}"
+      if s_fileset.include? a_fileset
         # don't include the "master" fileset
         if s_fileset.include? '_all_filesets'
           next
@@ -467,7 +468,7 @@ def check_filesets(filesets, resource)
     else
       lpp_version = lslpp.stdout.split(':')[2]
       showres.each_line do |s_fileset|
-        if s_fileset.include? "#{a_fileset}"
+        if s_fileset.include? a_fileset
           next if s_fileset.include? '_all_filesets'
           version_i = s_fileset.split(' ')[-1].tr('.', '')
           showres_i = showres_version.tr('.', '')
@@ -479,7 +480,7 @@ def check_filesets(filesets, resource)
       end
       Chef::Log.debug("nimclient: checking #{a_fileset} version #{lpp_version} vs showres version #{showres_version}")
       # checking the current version versus lpp_source version
-      if "#{lpp_version}" == "#{showres_version}"
+      if lpp_version == showres_version
         Chef::Log.debug("nimclient: #{a_fileset} is already to the #{resource} version")
       else
         filesets_return.push(a_fileset)
@@ -492,14 +493,14 @@ end
 # check if a resource is already allocated to the client
 def is_resource_allocated(resource, type)
   allocated = false
-  standalone = shell_out("nimclient -ll #{node[:hostname]}").stdout
+  standalone = shell_out("nimclient -ll #{node['hostname']}").stdout
   standalone.each_line do |standalone_l|
     standalone_a = standalone_l.split('=')
     type_s = standalone_a[0].to_s.strip
     resource_s = standalone_a[1].to_s.strip
     Chef::Log.debug("nimclient: compare |#{type_s}| vs |#{type}|, |#{resource_s}| vs |#{resource}|")
-    if "#{type_s}" == "#{type}"
-      if "#{resource_s}" == "#{resource}"
+    if type_s == type
+      if resource_s == resource
         allocated = true
         break
       end

@@ -19,6 +19,7 @@
 require 'chef/mixin/shell_out'
 
 include Chef::Mixin::ShellOut
+use_inline_resources
 
 # Support whyrun
 def whyrun_supported?
@@ -36,7 +37,7 @@ def load_current_resource
   Chef::Log.debug(so.stdout)
   # if there are two lines there is a bos
   Chef::Log.debug("multibos: comparing #{so.stdout.chomp} with 2")
-  if "#{so.stdout.chomp}" == '2'
+  if so.stdout.chomp == '2'
     Chef::Log.debug('multibos: there is a bos')
     @current_resource.exists = true
   else

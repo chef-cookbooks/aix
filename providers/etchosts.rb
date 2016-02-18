@@ -112,7 +112,7 @@ action :change do
     # if new_hostname attribute exists, we need to change hostname
     # CASE1 hostname is changing
     if !@new_resource.new_hostname.nil?
-      if "#{@new_resource.new_hostname}" != "#{@current_resource.name}"
+      if @new_resource.new_hostname != @current_resource.name
         change = true
         hostent_change_s = hostent_change_s << "-h \"#{@new_resource.new_hostname} "
         # CASE2 hostname and aliases are changing
@@ -131,7 +131,7 @@ action :change do
     # CASE3 ip is changing
     # if ip_address are different change them
     unless @new_resource.ip_address.nil?
-      if "#{@new_resource.ip_address}" != "#{@current_resource.ip_address}"
+      if @new_resource.ip_address != @current_resource.ip_address
         # CASE4 ip and aliases are changing
         unless @new_resource.aliases.nil?
           hostent_change_s = hostent_change_s << "-h \"#{@current_resource.name} "
