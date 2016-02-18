@@ -58,8 +58,8 @@ def load_current_resource
     # Searching for the stanza
     found_stanza = false
     current_attributes = {}
-    ::File.open("#{@new_resource.name}").each_line do |line|
-      if "#{line}".chomp == "#{@new_resource.stanza}:"
+    ::File.open(@new_resource.name).each_line do |line|
+      if line.chomp == "#{@new_resource.stanza}:"
         Chef::Log.debug("chsec: found stanza (#{@new_resource.stanza})")
         found_stanza = true
         next
@@ -70,8 +70,8 @@ def load_current_resource
         next if line.chomp.empty?
         line_attribute = line.split('=')
         # chomp and strip here
-        key = "#{line_attribute[0]}".chomp.strip
-        value = "#{line_attribute[1]}".chomp.strip
+        key = line_attribute[0].chomp.strip
+        value = line_attribute[1].chomp.strip
         # to_sym very important
         current_attributes[key.to_sym] = value
         Chef::Log.debug("chsec: #{@new_resource.stanza} -> [#{key}],[#{value}])")
@@ -95,7 +95,7 @@ action :update do
       # checking if value has to be changed
       current_attr = @current_resource.attributes[key]
       new_attr = @new_resource.attributes[key]
-      if "#{@new_resource.attributes[key]}" == "#{@current_resource.attributes[key]}"
+      if @new_resource.attributes[key] == @current_resource.attributes[key]
         Chef::Log.debug("chsec: value of #{key} already set to #{value} for stanza #{@new_resource.stanza}")
       else
         change = true

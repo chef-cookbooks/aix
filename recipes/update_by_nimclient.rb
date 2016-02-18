@@ -34,10 +34,10 @@ aix_altdisk "altdisk_by_auto" do
 end
 
 # nimclient configuration
-aix_niminit node[:hostname] do
+aix_niminit node['hostname'] do
   master "nim"
   connect "nimsh"
-  pif_name node[:network][:default_interface]
+  pif_name node['network']['default_interface']
   action :setup
 end
 

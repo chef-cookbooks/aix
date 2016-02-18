@@ -70,7 +70,7 @@ action :create do
     # searching for the disk on which create the alternate disk
     Chef::Log.debug("type : #{type}, value : #{value}")
     disk=find_and_check_disk(type,value)
-    if "#{disk}" != "None"
+    if disk != "None"
       Chef::Log.debug("alt_disk: we found a disk #{disk}")
       converge_by("alt_disk: creating alternate rootvg disk name #{@new_resource.altdisk_name} on disk #{disk}") do
         alt_disk_copy_str="alt_disk_copy -d #{disk}" 
