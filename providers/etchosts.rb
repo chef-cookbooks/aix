@@ -69,14 +69,14 @@ action :add do
     # add aliases if there are aliases
     if @new_resource.aliases.nil?
       # no aliases, closing the command line
-      hostent_add_s = hostent_add_s << "\""
+      hostent_add_s = hostent_add_s << '"'
     else
       # add each aliases to the command line
       (0..@new_resource.aliases.length).each do |i|
         hostent_add_s = hostent_add_s << " #{@new_resource.aliases[i]}"
       end
       # close last double quote
-      hostent_add_s = hostent_add_s << "\""
+      hostent_add_s = hostent_add_s << '"'
     end
     converge_by("hostent: add #{@new_resource.name} in /etc/hosts file") do
       Chef::Log.debug("etchosts: running #{hostent_add_s}")
@@ -123,7 +123,7 @@ action :change do
           end
         end
         # close last double quote
-        hostent_change_s = hostent_change_s << "\" "
+        hostent_change_s = hostent_change_s << '" '
       end
     else
       hostent_change_s = hostent_change_s << "-h \"#{@new_resource.name}\" "
@@ -142,7 +142,7 @@ action :change do
             end
           end
           # close last double quote
-          hostent_change_s = hostent_change_s << "\" "
+          hostent_change_s = hostent_change_s << '" '
         end
         change = true
         hostent_change_s = hostent_change_s << "-i #{@new_resource.ip_address}"

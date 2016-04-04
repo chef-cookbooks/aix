@@ -39,7 +39,7 @@ def load_current_resource
     @current_resource.exists = true
   else
     @current_resource.exists = false
-    fail("device #{@current_resource.name} does not exists")
+    raise("device #{@current_resource.name} does not exists")
   end
 
   # loading the attributes
@@ -62,7 +62,7 @@ end
 action :update do
   if !@current_resource.exists
     Chef::Log.debug("chdev: device #{@current_resource.name} does not exists")
-    fail "chdev: device #{@current_resource.name} does not exists"
+    raise "chdev: device #{@current_resource.name} does not exists"
   else
     set_attr = false
     # the command will always begin with chdev -l
@@ -85,7 +85,7 @@ action :update do
           string_shell_out = string_shell_out << " -a #{attribute}=#{value}"
         end
       else
-        fail "chdev device #{@current_resource.name} has not attribute #{attribute}"
+        raise "chdev device #{@current_resource.name} has not attribute #{attribute}"
       end
     end
     # if attributes needs a reboot add -P (for permanent to the command)
@@ -96,7 +96,7 @@ action :update do
         so = shell_out(string_shell_out)
         # if the command fails raise and exception
         if so.exitstatus != 0
-          fail "chdev: device #{@current_resource.name} failed"
+          raise "chdev: device #{@current_resource.name} failed"
         end
       end
     end

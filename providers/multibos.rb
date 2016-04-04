@@ -60,7 +60,7 @@ action :create do
       Chef::Log.debug("multibos: creating standby bos with command #{string_shell_out}")
       so = shell_out(string_shell_out, timeout: 7200)
       if so.exitstatus != 0 || !so.stderr.empty?
-        fail('multibos: error creating standby bos')
+        raise('multibos: error creating standby bos')
       end
     end
   end
@@ -74,7 +74,7 @@ action :remove do
       Chef::Log.debug('multibos: removing standby multibos with command multibos -RX')
       so = shell_out('multibos -RX')
       if so.exitstatus != 0 || !so.stderr.empty?
-        fail('multibos: error removing multibos')
+        raise('multibos: error removing multibos')
       end
     end
   end
@@ -89,7 +89,7 @@ action :update do
       Chef::Log.debug("multibos: updating standby multibos with command #{string_shell_out}")
       so = shell_out(string_shell_out, timeout: 7200)
       if so.exitstatus != 0 || !so.stderr.empty?
-        fail('multibos: error updating multibos')
+        raise('multibos: error updating multibos')
       end
     end
   end
@@ -127,7 +127,7 @@ action :mount do
         stby_bos = shell_out('multibos -m')
         if stby_bos.exitstatus != 0 || !stby_bos.stderr.empty?
           Chef::Log.debug('multibos: error while multibos -m')
-          fail('multibos: error while multibos -m')
+          raise('multibos: error while multibos -m')
         end
       end
     else
@@ -168,7 +168,7 @@ action :umount do
         stby_bos = shell_out('multibos -u')
         if stby_bos.exitstatus != 0 || !stby_bos.stderr.empty?
           Chef::Log.debug('multibos: error while multibos -m')
-          fail('multibos: error while multibos -u')
+          raise('multibos: error while multibos -u')
         end
       end
     else

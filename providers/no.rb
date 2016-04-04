@@ -35,7 +35,7 @@ def load_current_resource
   @current_resource.exists = true
 
   so = shell_out('no -x')
-  fail('no: error running no -x') if so.exitstatus != 0
+  raise('no: error running no -x') if so.exitstatus != 0
 
   # loading the tunables
   all_no_tunables = {}
@@ -71,11 +71,11 @@ def load_current_resource
       tunable_hash['unit'] = current_tunable[6]
       tunable_hash['type'] = current_tunable[7]
       # the dtunable tunable is not there for each tunable
-      if !current_tunable[8].chomp.empty?
-        tunable_hash['dtunable'] = current_tunable[8].chomp
-      else
-        tunable_hash['dtunable'] = 'none'
-      end
+      tunable_hash['dtunable'] = if !current_tunable[8].chomp.empty?
+                                   current_tunable[8].chomp
+                                 else
+                                   'none'
+                                 end
       # Chef::Log.debug("no: #{@current_resource.name}->#{current_tunable[0]} = #{tunable_hash}")
       all_no_tunables[current_tunable[0]] = tunable_hash
     end
@@ -118,12 +118,12 @@ action :update do
             Chef::Log.debug("command: #{string_shell_out}")
             so = shell_out(string_shell_out)
             # if the command fails raise and exception
-            fail "no: #{string_shell_out} failed" if so.exitstatus != 0
+            raise "no: #{string_shell_out} failed" if so.exitstatus != 0
             string_shell_out = 'no -p '
           end
         end
       else
-        fail "no: #{tunable} does not exist"
+        raise "no: #{tunable} does not exist"
       end
     end
   end
@@ -154,11 +154,11 @@ action :reset do
           Chef::Log.debug("command: #{string_shell_out}")
           so = shell_out(string_shell_out)
           # if the command fails raise and exception
-          fail "no: #{string_shell_out} failed" if so.exitstatus != 0
+          raise "no: #{string_shell_out} failed" if so.exitstatus != 0
           string_shell_out = 'no -p '
         end
       else
-        fail "no: #{tunable} does not exist"
+        raise "no: #{tunable} does not exist"
       end
     end
   end

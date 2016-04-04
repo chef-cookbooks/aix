@@ -177,11 +177,10 @@ action :maint_boot do
     stanza = standalone_a[0].to_s.strip
     value = standalone_a[1].to_s.strip
     Chef::Log.debug("nimclient: compare |#{stanza}| vs |Cstate|, |#{value}| vs |maintenance boot has been enabled|")
-    if stanza == 'Cstate'
-      if value == 'maintenance boot has been enabled'
-        do_not_converge = true
-        break
-      end
+    next unless stanza == 'Cstate'
+    if value == 'maintenance boot has been enabled'
+      do_not_converge = true
+      break
     end
   end
 
@@ -215,11 +214,10 @@ action :bos_inst do
     stanza = standalone_a[0].to_s.strip
     value = standalone_a[1].to_s.strip
     Chef::Log.debug("nimclient: compare |#{stanza}| vs |Cstate|, |#{value}| vs |maintenance boot has been enabled|")
-    if stanza == 'Cstate'
-      if value == 'BOS installation has been enabled'
-        do_not_converge = true
-        break
-      end
+    next unless stanza == 'Cstate'
+    if value == 'BOS installation has been enabled'
+      do_not_converge = true
+      break
     end
   end
 
@@ -290,28 +288,28 @@ action :cust do
   # getting installp flags
   installp_flags = @new_resource.installp_flags
   unless installp_flags.nil?
-    nimclient_s = nimclient_s << " -a installp_flags=\"" << installp_flags << "\""
+    nimclient_s = nimclient_s << ' -a installp_flags="' << installp_flags << '"'
   end
 
   # getting fixes
   fixes = @new_resource.fixes
-  nimclient_s = nimclient_s << " -a fixes=\"" << fixes << "\"" unless fixes.nil?
+  nimclient_s = nimclient_s << ' -a fixes="' << fixes << '"' unless fixes.nil?
 
   # getting filesets
   filesets = @new_resource.filesets
   unless filesets.nil?
     filesets = check_filesets(filesets, lpp_source)
     if filesets.any?
-      nimclient_s = nimclient_s << " -a filesets=\""
+      nimclient_s = nimclient_s << ' -a filesets="'
       filesets.each_with_index do |a_fileset, i|
-        if i == (filesets.size - 1)
-          nimclient_s = nimclient_s << a_fileset
-        else
-          # list of fileset separated by a space
-          nimclient_s = nimclient_s << a_fileset << ' '
-        end
+        nimclient_s = if i == (filesets.size - 1)
+                        nimclient_s << a_fileset
+                      else
+                        # list of fileset separated by a space
+                        nimclient_s << a_fileset << ' '
+                      end
       end
-      nimclient_s = nimclient_s << "\""
+      nimclient_s = nimclient_s << '"'
     else
       do_not_converge = true
     end
@@ -392,7 +390,7 @@ def find_resource(type, time)
       a_line = line.split('-')
       if a_line[0] == aixlevel && a_line[1] > tllevel
         lppsource = line
-        break if (time == 'next')
+        break if time == 'next'
       end
     end
   elsif type == 'sp'
@@ -401,7 +399,7 @@ def find_resource(type, time)
       a_line = line.split('-')
       if a_line[0] == aixlevel && a_line[1] == tllevel && a_line[2] > splevel
         lppsource = line
-        break if (time == 'next')
+        break if time == 'next'
       end
     end
   end
@@ -445,15 +443,14 @@ def check_filesets(filesets, resource)
   all_filesets = []
   filesets.each do |a_fileset|
     showres.each_line do |s_fileset|
-      if s_fileset.include? a_fileset
-        # don't include the "master" fileset
-        if s_fileset.include? '_all_filesets'
-          next
-        else
-          get_fileset = s_fileset.split(':')[1].split(' ')[0]
-          # if there are multiple versions, so multiple line just include the fileset one time
-          all_filesets.push(get_fileset) unless all_filesets.include? get_fileset
-        end
+      next unless s_fileset.include? a_fileset
+      # don't include the "master" fileset
+      if s_fileset.include? '_all_filesets'
+        next
+      else
+        get_fileset = s_fileset.split(':')[1].split(' ')[0]
+        # if there are multiple versions, so multiple line just include the fileset one time
+        all_filesets.push(get_fileset) unless all_filesets.include? get_fileset
       end
     end
   end
@@ -468,14 +465,13 @@ def check_filesets(filesets, resource)
     else
       lpp_version = lslpp.stdout.split(':')[2]
       showres.each_line do |s_fileset|
-        if s_fileset.include? a_fileset
-          next if s_fileset.include? '_all_filesets'
-          version_i = s_fileset.split(' ')[-1].tr('.', '')
-          showres_i = showres_version.tr('.', '')
-          Chef::Log.debug("nimclient: checking version #{version_i} vs #{showres_i} to determine latest version")
-          if version_i.to_i > showres_i.to_i
-            showres_version = s_fileset.split(' ')[-1]
-          end
+        next unless s_fileset.include? a_fileset
+        next if s_fileset.include? '_all_filesets'
+        version_i = s_fileset.split(' ')[-1].tr('.', '')
+        showres_i = showres_version.tr('.', '')
+        Chef::Log.debug("nimclient: checking version #{version_i} vs #{showres_i} to determine latest version")
+        if version_i.to_i > showres_i.to_i
+          showres_version = s_fileset.split(' ')[-1]
         end
       end
       Chef::Log.debug("nimclient: checking #{a_fileset} version #{lpp_version} vs showres version #{showres_version}")
@@ -499,11 +495,10 @@ def is_resource_allocated(resource, type)
     type_s = standalone_a[0].to_s.strip
     resource_s = standalone_a[1].to_s.strip
     Chef::Log.debug("nimclient: compare |#{type_s}| vs |#{type}|, |#{resource_s}| vs |#{resource}|")
-    if type_s == type
-      if resource_s == resource
-        allocated = true
-        break
-      end
+    next unless type_s == type
+    if resource_s == resource
+      allocated = true
+      break
     end
   end
   allocated
