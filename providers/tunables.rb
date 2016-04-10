@@ -46,7 +46,7 @@ def load_current_resource
   @current_resource = Chef::Resource::AixTunables.new(@new_resource.name)
 
   so = shell_out("#{cmd} -x")
-  fail("#{cmd}: error running #{cmd} -x") if so.exitstatus != 0
+  raise("#{cmd}: error running #{cmd} -x") if so.exitstatus != 0
 
   # initializing tunables attribute
   all_tunables = {}
@@ -92,7 +92,7 @@ action :update do
   @new_resource.tunables.each do |tunable, value|
     # raise error if tunable doesn't exist
     unless @current_resource.tunables.key?(tunable.to_sym)
-      fail "#{cmd}: #{tunable} does not exist"
+      raise "#{cmd}: #{tunable} does not exist"
     end
 
     Chef::Log.debug("#{cmd}: setting tunable #{tunable} with value #{value}")
@@ -106,7 +106,7 @@ action :update do
         Chef::Log.debug("command: #{string_shell_out}")
         so = shell_out(string_shell_out)
         # if the command fails raise and exception
-        fail "no: #{string_shell_out} failed" if so.exitstatus != 0
+        raise "no: #{string_shell_out} failed" if so.exitstatus != 0
       end
     end
   end
@@ -119,7 +119,7 @@ action :reset do
   @new_resource.tunables.each do |tunable, value|
     # raise error if tunable doesn't exist
     unless @current_resource.tunables.key?(tunable.to_sym)
-      fail "#{cmd}: #{tunable} does not exist"
+      raise "#{cmd}: #{tunable} does not exist"
     end
 
     if @current_resource.tunables[tunable.to_sym][:current] == value.to_s
@@ -131,7 +131,7 @@ action :reset do
         Chef::Log.debug("command: #{string_shell_out}")
         so = shell_out(string_shell_out)
         # if the command fails raise and exception
-        fail "#{cmd}: #{string_shell_out} failed" if so.exitstatus != 0
+        raise "#{cmd}: #{string_shell_out} failed" if so.exitstatus != 0
       end
     end
   end

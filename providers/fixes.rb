@@ -31,25 +31,23 @@ end
 def load_current_resource
   @current_resource = Chef::Resource::AixFixes.new(@new_resource.name)
 
-  emgr=Mixlib::ShellOut.new("emgr -l")
+  emgr = Mixlib::ShellOut.new('emgr -l')
   emgr.run_command
   emgr.error!
-  if !emgr.exitstatus
-    Chef::Log.fatal("emgr: error while running emgr")
-  end
+  Chef::Log.fatal('emgr: error while running emgr') unless emgr.exitstatus
 
-  # resource does not exists if there are no efix installed on the system 
-  if emgr.stdout == "There is no efix data on this system"
-    @current_resource.exists=false
+  # resource does not exists if there are no efix installed on the system
+  if emgr.stdout == 'There is no efix data on this system'
+    @current_resource.exists = false
   else
-    @current_resource.exists=true
+    @current_resource.exists = true
     array_fixes = []
     emgr.stdout.each_line do |line|
-      line_array=line.split(" ")
+      line_array = line.split(' ')
       if line_array[0] =~ /[0-9]/
         Chef::Log.debug("emgr: adding fixe #{line_array[0]} to fixes list")
         array_fixes.push(line_array[2])
-      end        
+      end
     end
     @current_resource.fixes(array_fixes)
   end
@@ -57,60 +55,54 @@ end
 
 action :remove do
   if @current_resource.exists
-    if @new_resource.fixes[0] == "all" 
+    if @new_resource.fixes[0] == 'all'
       @current_resource.fixes.each do |fix|
         converge_by("emgr: removing fix #{fix}") do
-          remove_emgr=Mixlib::ShellOut.new("emgr -r -L #{fix}")
+          remove_emgr = Mixlib::ShellOut.new("emgr -r -L #{fix}")
           remove_emgr.run_command
           remove_emgr.error!
-          if !remove_emgr.exitstatus
+          unless remove_emgr.exitstatus
             Chef::Log.fatal("emgr: error while trying to removing fix #{fix}")
           end
         end
       end
     else
       @new_resource.fixes.each do |fix|
-        converge=false
+        converge = false
         @current_resource.fixes.each do |i_fix|
-          if i_fix.include? fix
-            converge=true
-          end
-          if converge 
-            converge_by("emgr: removing fix #{fix}") do
-              remove_emgr=Mixlib::ShellOut.new("emgr -r -L #{fix}")
-              remove_emgr.run_command
-              remove_emgr.error!
-              if !remove_emgr.exitstatus
-                Chef::Log.fatal("emgr: error while trying to removing fix #{fix}")
-              end
+          converge = true if i_fix.include? fix
+          next unless converge
+          converge_by("emgr: removing fix #{fix}") do
+            remove_emgr = Mixlib::ShellOut.new("emgr -r -L #{fix}")
+            remove_emgr.run_command
+            remove_emgr.error!
+            unless remove_emgr.exitstatus
+              Chef::Log.fatal("emgr: error while trying to removing fix #{fix}")
             end
           end
-        end 
+        end
       end
     end
   end
 end
 
 action :install do
-  fix_directory=@new_resource.directory
+  fix_directory = @new_resource.directory
   @new_resource.fixes.each do |fix|
-    emgr_install_string="emgr -X -e " << fix_directory << "/" << fix
-    converge=true
-    if @current_resource.exists 
+    emgr_install_string = 'emgr -X -e ' << fix_directory << '/' << fix
+    converge = true
+    if @current_resource.exists
       @current_resource.fixes.each do |i_fix|
-        if fix.include? i_fix
-          converge = false
-        end
+        converge = false if fix.include? i_fix
       end
     end
-    if converge 
-      converge_by("emgr: installing fix #{fix}") do
-        install_emgr=Mixlib::ShellOut.new(emgr_install_string)
-        install_emgr.run_command
-        install_emgr.error!
-        if !install_emgr.exitstatus
-          Chef::Log.fatal("emgr: error while trying to install fix #{fix}")
-        end
+    next unless converge
+    converge_by("emgr: installing fix #{fix}") do
+      install_emgr = Mixlib::ShellOut.new(emgr_install_string)
+      install_emgr.run_command
+      install_emgr.error!
+      unless install_emgr.exitstatus
+        Chef::Log.fatal("emgr: error while trying to install fix #{fix}")
       end
     end
   end

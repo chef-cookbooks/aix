@@ -33,37 +33,33 @@ def load_current_resource
   @current_resource = Chef::Resource::AixBootlist.new(@new_resource.name)
 
   so = shell_out("bootlist -m #{@new_resource.mode} -o")
-  if so.exitstatus != 0
-    raise("#{cmd}: error running #{cmd} -x")
-  end
+  raise("#{cmd}: error running #{cmd} -x") if so.exitstatus != 0
 
   # initialize variables
-  @current_resource.devices(Array.new)
-  @current_resource.device_options(Hash.new)
+  @current_resource.devices([])
+  @current_resource.device_options({})
   # initializing tunables attribute
   so.stdout.each_line do |line|
-    (device,options) = line.split(" ",2)
+    (device, options) = line.split(' ', 2)
     unless @current_resource.devices.include? device
       @current_resource.devices << device
     end
 
-    unless options.nil?
-      # remove default blv option
-      options.sub!(/blv=hd5\s*/,"")
-      #special case to manage pathid
-      if @current_resource.device_options.has_key? device and @current_resource.device_options[device].match(/pathid/)
-        new_pathid=options.match(/pathid=(\d+)/)[1]
-        @current_resource.device_options[device].sub!(/(pathid=\S+)/, "\\1,#{new_pathid}")
-        next
-      end
-
-      @current_resource.device_options[device]=options.chomp
+    next if options.nil?
+    # remove default blv option
+    options.sub!(/blv=hd5\s*/, '')
+    # special case to manage pathid
+    if @current_resource.device_options.key?(device) && @current_resource.device_options[device].match(/pathid/)
+      new_pathid = options.match(/pathid=(\d+)/)[1]
+      @current_resource.device_options[device].sub!(/(pathid=\S+)/, "\\1,#{new_pathid}")
+      next
     end
+
+    @current_resource.device_options[device] = options.chomp
   end
 
   Chef::Log.debug("current devices: #{@current_resource.devices}")
   Chef::Log.debug("current device_options: #{@current_resource.device_options}")
-
 end
 
 def perform_bootlist
@@ -71,16 +67,14 @@ def perform_bootlist
   cmd = "bootlist -m #{@new_resource.mode} "
   @new_resource.devices.each do |device|
     cmd << " #{device}"
-    next if new_resource.device_options.nil? or @new_resource.device_options[device].nil?
+    next if new_resource.device_options.nil? || @new_resource.device_options[device].nil?
     cmd << " #{@new_resource.device_options[device]}"
   end
 
   converge_by("bootlist: #{cmd}") do
     so = shell_out(cmd)
     # if the command fails raise and exception
-    if so.exitstatus != 0
-      raise "no: #{cmd} failed"
-    end
+    raise "no: #{cmd} failed" if so.exitstatus != 0
   end
 end
 
@@ -93,13 +87,13 @@ action :update do
     #
 
     if @current_resource.devices.nil?
-      Chef::Log.debug("No device in bootlist !")
+      Chef::Log.debug('No device in bootlist !')
       perform_bootlist
       break
     end
 
     if @current_resource.devices.length != @new_resource.devices.length
-      Chef::Log.debug("Not same number of devices !")
+      Chef::Log.debug('Not same number of devices !')
       Chef::Log.debug(@current_resource.devices.length)
       Chef::Log.debug(@new_resource.devices.length)
       perform_bootlist
@@ -107,20 +101,18 @@ action :update do
     end
 
     # check if device already set in the bootlist in the same position
-    if @current_resource.devices[index].nil? or @current_resource.devices[index] != device
-      Chef::Log.debug("device not in the same order !")
+    if @current_resource.devices[index].nil? || @current_resource.devices[index] != device
+      Chef::Log.debug('device not in the same order !')
       perform_bootlist
       break
     end
 
     # check if we have device options
-    if  @new_resource.device_options and @new_resource.device_options.has_key? device
-      if @current_resource.device_options.nil? or @current_resource.device_options[device] != @new_resource.device_options[device]
-        Chef::Log.debug("Not same device options !")
-        perform_bootlist
-        break
-      end
-    end
+    next unless @new_resource.device_options && @new_resource.device_options.key?(device)
+    next unless @current_resource.device_options.nil? || @current_resource.device_options[device] != @new_resource.device_options[device]
+    Chef::Log.debug('Not same device options !')
+    perform_bootlist
+    break
   end
 end
 
@@ -130,8 +122,6 @@ action :invalidate do
     Chef::Log.debug("command: #{cmd}")
     so = shell_out(cmd)
     # if the command fails raise and exception
-    if so.exitstatus != 0
-      raise "no: #{cmd} failed"
-    end
+    raise "no: #{cmd} failed" if so.exitstatus != 0
   end
 end
