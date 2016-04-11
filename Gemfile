@@ -19,4 +19,4 @@ group :kitchen_common do
   gem 'test-kitchen', '~> 1.6'
 end
 
-gem "kitchen-wpar"
+gem 'kitchen-wpar'
