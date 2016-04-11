@@ -5,7 +5,7 @@ user 'foobar' do
   home '/home/foobar'
   shell '/usr/bin/ksh'
   password 'zbpkcVZ.1okhk'
-  supports :manage_home => true
+  supports manage_home: true
 end
 
 aix_inittab 'my-awesome-aix-daemon' do
@@ -25,7 +25,7 @@ aix_tcpservice 'xntpd' do
 end
 
 aix_chsec '/etc/security/login.cfg' do
-  attributes(:maxlogins => 16000, :maxroles => 7, :shells => '/bin/sh,/usr/bin/ksh')
+  attributes(maxlogins: 16000, maxroles: 7, shells: '/bin/sh,/usr/bin/ksh')
   stanza 'usw'
   action :update
 end
