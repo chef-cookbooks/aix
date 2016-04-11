@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-.kitchen
+
 =======
 # Put files/directories that should be ignored in this file when uploading
 # to a chef-server or supermarket.
@@ -103,4 +102,7 @@ Strainerfile
 ###########
 .vagrant
 Vagrantfile
->>>>>>> upstream/master
+
+# Kitchen #
+###########
+.kitchen
