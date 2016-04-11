@@ -25,7 +25,7 @@ aix_tcpservice 'xntpd' do
 end
 
 aix_chsec '/etc/security/login.cfg' do
-  attributes(maxlogins: 16000, maxroles: 7, shells: '/bin/sh,/usr/bin/ksh')
+  attributes(maxlogins: 16_000, maxroles: 7, shells: '/bin/sh,/usr/bin/ksh')
   stanza 'usw'
   action :update
 end
