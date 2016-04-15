@@ -1,0 +1,20 @@
+---
+driver:
+  name: wpar
+  aix_host: aixlpar2
+  aix_user: root
+  wpar_address: 10.10.10.10 
+
+provisioner:
+  name: chef_solo
+  chef_solo_path: /opt/chef/bin/chef-solo
+  require_chef_omnibus: false
+
+platforms:
+  - name: wpar
+
+suites:
+  - name: default
+    run_list:
+      - recipe[aix::default]
+    attributes:

@@ -19,6 +19,4 @@ group :kitchen_common do
   gem 'test-kitchen', '~> 1.6'
 end
 
-group :kitchen_vagrant do
-  gem 'kitchen-vagrant', '~> 0.19'
-end
+gem 'kitchen-wpar'
