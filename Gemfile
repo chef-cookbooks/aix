@@ -16,7 +16,7 @@ group :unit do
 end
 
 group :kitchen_common do
-  gem 'test-kitchen', '~> 1.6'
+  gem 'test-kitchen', '~> 1.7'
 end
 
 gem 'kitchen-wpar'
