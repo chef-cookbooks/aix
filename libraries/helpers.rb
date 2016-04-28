@@ -353,44 +353,6 @@ module Opscode
         "#{base_url}/#{pkgmap[pkg][:rpm]}" if pkgmap.key?(pkg)
       end
       
-      include Chef::Mixin::ShellOut
-      def best_fit_disk(size)
-        # Nil by default
-        disk = nil
-        # Get unused disk array
-        unused_disks = unused_disk_search
-        Chef::Log.info("unused disks: #{unused_disks}")
-        # Interate through array to find size of disk, keep if larger than size requested
-        unless unused_disks.nil?
-          disk_choices = {}
-          unused_disks.each do |this_disk|
-            disk_name = this_disk
-            Chef::Log.info("mkvg: examining disk size for #{this_disk}")
-            bootinfo = Mixlib::ShellOut.new("bootinfo -s #{this_disk}")
-            bootinfo.run_command
-            disk_size = bootinfo.stdout.to_i / 1024
-            if disk_size >= size
-              disk_choices[disk_name] = disk_size
-            end
-          end
-          Chef::Log.info("mkvg: disk sizes: #{disk_choices}")
-          disk_chosen = disk_choices.min_by { |_k, v| v }
-          Chef::Log.info("mkvg: disk chosen: #{disk_chosen}")
-          unless disk_chosen.nil?
-            disk = disk_chosen[0]
-          end
-        end
-        disk
-      end
-
-      def unused_disk_search
-        # Find unused disk and put into array
-        unused_disk = Mixlib::ShellOut.new("lspv | awk '{if ($3 == \"None\") print $1;}' |  tr '\n' ' '")
-        unused_disk.run_command
-        unused_disk_array = unused_disk.stdout.split(' ')
-        unused_disk_array
-      end
-
     end
   end
 end
