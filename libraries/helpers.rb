@@ -352,7 +352,6 @@ module Opscode
 
         "#{base_url}/#{pkgmap[pkg][:rpm]}" if pkgmap.key?(pkg)
       end
-      
     end
   end
 end
