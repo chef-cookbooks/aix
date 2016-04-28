@@ -33,74 +33,23 @@ action :add do
     # Valid options.  Contains logical test and option output
     option_map = {
       'big' => [@new_resource.big, '-B'],
-      'factor' => [
-        @new_resource.factor > 0,
-        "-t #{@new_resource.factor}"
-      ],
-      'scalable' => [
-        @new_resource.scalable,
-        '-S'
-      ],
-      'lv_number' => [
-        @new_resource.lv_number > 0,
-        "-v #{@new_resource.lv_number}"
-      ],
-      'partitions' => [
-        @new_resource.partitions > 0,
-        "-P #{new_resource.partitions}"
-      ],
-      'powerha_concurrent' => [
-        @new_resource.powerha_concurrent,
-        '-C'
-      ],
-      'force' => [
-        @new_resource.force,
-        '-f'
-      ],
-      'pre_53_compat' => [
-        @new_resource.pre_53_compat,
-        '-I'
-      ],
-      'pv_type' => [
-        !@new_resource.pv_type.empty?,
-        "-X#{@new_resource.pv_type}"
-      ],
-      'activate_on_boot' => [
-        !@new_resource.activate_on_boot,
-        '-n'
-      ],
-      'partition_size' => [
-        @new_resource.partition_size > 0,
-        "-s #{@new_resource.partition_size}"
-      ],
-      'major_number' => [
-        @new_resource.major_number > 0,
-        "-V #{@new_resource.major_number}"
-      ],
-      'name' => [
-        !@new_resource.name.empty?,
-        "-y #{@new_resource.name}"
-      ],
-      'mirror_pool_strictness' => [
-        !@new_resource.mirror_pool_strictness.empty?,
-        "-M #{@new_resource.mirror_pool_strictness}"
-      ],
-      'mirror_pool' => [
-        !@new_resource.mirror_pool.empty?,
-        "-p #{@new_resource.mirror_pool}"
-      ],
-      'infinite_retry' => [
-        @new_resource.infinite_retry,
-        '-O y'
-      ],
-      'non_concurrent_varyon' => [
-        !@new_resource.non_concurrent_varyon.empty?,
-        "-N #{@new_resource.non_concurrent_varyon}"
-      ],
-      'critical_vg' => [
-        @new_resource.critical_vg,
-        'r y'
-      ]
+      'factor' => [@new_resource.factor > 0, " -t #{@new_resource.factor}"],
+      'scalable' => [@new_resource.scalable, '-S'],
+      'lv_number' => [ @new_resource.lv_number > 0, "-v #{@new_resource.lv_number}"],
+      'partitions' => [@new_resource.partitions > 0, "-P #{new_resource.partitions}"],
+      'powerha_concurrent' => [@new_resource.powerha_concurrent, '-C'],
+      'force' => [@new_resource.force, '-f'],
+      'pre_53_compat' => [@new_resource.pre_53_compat, '-I'],
+      'pv_type' => [!@new_resource.pv_type.empty?, "-X#{@new_resource.pv_type}"],
+      'activate_on_boot' => [!@new_resource.activate_on_boot,  '-n'],
+      'partition_size' => [@new_resource.partition_size > 0,  "-s #{@new_resource.partition_size}"],
+      'major_number' => [@new_resource.major_number > 0, "-V #{@new_resource.major_number}"],
+      'name' => [!@new_resource.name.empty?,  "-y #{@new_resource.name}"],
+      'mirror_pool_strictness' => [!@new_resource.mirror_pool_strictness.empty?, "-M #{@new_resource.mirror_pool_strictness}"],
+      'mirror_pool' => [!@new_resource.mirror_pool.empty?,  "-p #{@new_resource.mirror_pool}"],
+      'infinite_retry' => [@new_resource.infinite_retry,  '-O y'],
+      'non_concurrent_varyon' => [!@new_resource.non_concurrent_varyon.empty?,  "-N #{@new_resource.non_concurrent_varyon}"],
+      'critical_vg' => [@new_resource.critical_vg, 'r y']
     }
     # Assign options
     option_map.each do |_opt, val|
@@ -171,82 +120,25 @@ action :change do
     chvg = 'chvg'
     # Valid options.  Contains logical test and option output
     option_map = {
-      'auto_synchronize' => [
-        @new_resource.auto_synchronize,
-        '-s y'
-      ],
-      'hotspare' => [
-        !@new_resource.hotspare.empty?,
-        "-h Hotspare #{@new_resource.hotspare}"
-      ],
-      'activate_on_boot' => [
-        !@new_resource.activate_on_boot,
-        '-a AutoOn n'
-      ],
-      'make_non_concurrent' => [
-        @new_resource.make_non_concurrent,
-        '-l'
-      ],
-      'lost_quorom_varyoff' => [
-        !@new_resource.lost_quorom_varyoff,
-        '-Q n'
-      ],
-      'pv_type' => [
-        !@new_resource.pv_type.empty?,
-        "-X#{@new_resource.pv_type}"
-      ],
-      'drain_io' => [
-        @new_resource.drain_io,
-        '-S'
-      ],
-      'resume_io' => [
-        @new_resource.resume_io,
-        '-R'
-      ],
-      'factor' => [
-        @new_resource.factor > 0,
-        "-t #{@new_resource.factor}"
-      ],
-      'big' => [
-        @new_resource.big,
-        '-B'
-      ],
-      'scalable' => [
-        @new_resource.scalable,
-        '-G'
-      ],
-      'partitions' => [
-        @new_resource.partitions > 0,
-        "-P #{new_resource.partitions}"
-      ],
-      'lv_number' => [
-        @new_resource.lv_number > 0,
-        "-v #{@new_resource.lv_number}"
-      ],
-      'powerha_concurrent' => [
-        @new_resource.powerha_concurrent,
-        '-C'
-      ],
-      'force' => [
-        @new_resource.force,
-        '-f'
-      ],
-      'grow' => [
-        @new_resource.grow,
-        '-g'
-      ],
-      'bad_block_relocation' => [
-        !@new_resource.bad_block_relocation,
-        '-b n'
-      ],
-      'mirror_pool_strictness' => [
-        !@new_resource.mirror_pool_strictness.empty?,
-        "-M #{@new_resource.mirror_pool_strictness}"
-      ],
-      'jfs2_resync_only' => [
-        @new_resource.jfs2_resync_only,
-        '-j y'
-      ]
+      'auto_synchronize' => [@new_resource.auto_synchronize,  '-s y'],
+      'hotspare' => [!@new_resource.hotspare.empty?,  "-h Hotspare #{@new_resource.hotspare}"],
+      'activate_on_boot' => [!@new_resource.activate_on_boot,  '-a AutoOn n'],
+      'make_non_concurrent' => [@new_resource.make_non_concurrent, '-l'],
+      'lost_quorom_varyoff' => [!@new_resource.lost_quorom_varyoff,  '-Q n'],
+      'pv_type' => [!@new_resource.pv_type.empty?,  "-X#{@new_resource.pv_type}"],
+      'drain_io' => [@new_resource.drain_io, '-S'],
+      'resume_io' => [@new_resource.resume_io, '-R'],
+      'factor' => [@new_resource.factor > 0,  "-t #{@new_resource.factor}"],
+      'big' => [@new_resource.big, '-B'],
+      'scalable' => [@new_resource.scalable, '-G'],
+      'partitions' => [@new_resource.partitions > 0,  "-P #{new_resource.partitions}"],
+      'lv_number' => [@new_resource.lv_number > 0,  "-v #{@new_resource.lv_number}"],
+      'powerha_concurrent' => [@new_resource.powerha_concurrent, '-C'],
+      'force' => [@new_resource.force, '-f'],
+      'grow' => [@new_resource.grow,  '-g'],
+      'bad_block_relocation' => [!@new_resource.bad_block_relocation,  '-b n'],
+      'mirror_pool_strictness' => [!@new_resource.mirror_pool_strictness.empty?, "-M #{@new_resource.mirror_pool_strictness}"],
+      'jfs2_resync_only' => [@new_resource.jfs2_resync_only, '-j y']
     }
     # Assign options
     option_map.each do |_opt, val|
