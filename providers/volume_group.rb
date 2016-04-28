@@ -2,8 +2,6 @@ require 'chef/mixin/shell_out'
 
 include Chef::Mixin::ShellOut
 
-include Opscode::AixLvm::Helpers
-
 # support whyrun
 def whyrun_supported?
   true
@@ -33,22 +31,22 @@ action :add do
     # Valid options.  Contains logical test and option output
     option_map = {
       'big' => [@new_resource.big, '-B'],
-      'factor' => [@new_resource.factor > 0, " -t #{@new_resource.factor}"],
+      'factor' => [@new_resource.factor > 0, "-t #{@new_resource.factor}"],
       'scalable' => [@new_resource.scalable, '-S'],
-      'lv_number' => [ @new_resource.lv_number > 0, "-v #{@new_resource.lv_number}"],
+      'lv_number' => [@new_resource.lv_number > 0, "-v #{@new_resource.lv_number}"],
       'partitions' => [@new_resource.partitions > 0, "-P #{new_resource.partitions}"],
       'powerha_concurrent' => [@new_resource.powerha_concurrent, '-C'],
       'force' => [@new_resource.force, '-f'],
       'pre_53_compat' => [@new_resource.pre_53_compat, '-I'],
       'pv_type' => [!@new_resource.pv_type.empty?, "-X#{@new_resource.pv_type}"],
-      'activate_on_boot' => [!@new_resource.activate_on_boot,  '-n'],
-      'partition_size' => [@new_resource.partition_size > 0,  "-s #{@new_resource.partition_size}"],
+      'activate_on_boot' => [!@new_resource.activate_on_boot, '-n'],
+      'partition_size' => [@new_resource.partition_size > 0, "-s #{@new_resource.partition_size}"],
       'major_number' => [@new_resource.major_number > 0, "-V #{@new_resource.major_number}"],
-      'name' => [!@new_resource.name.empty?,  "-y #{@new_resource.name}"],
+      'name' => [!@new_resource.name.empty?, "-y #{@new_resource.name}"],
       'mirror_pool_strictness' => [!@new_resource.mirror_pool_strictness.empty?, "-M #{@new_resource.mirror_pool_strictness}"],
-      'mirror_pool' => [!@new_resource.mirror_pool.empty?,  "-p #{@new_resource.mirror_pool}"],
-      'infinite_retry' => [@new_resource.infinite_retry,  '-O y'],
-      'non_concurrent_varyon' => [!@new_resource.non_concurrent_varyon.empty?,  "-N #{@new_resource.non_concurrent_varyon}"],
+      'mirror_pool' => [!@new_resource.mirror_pool.empty?, "-p #{@new_resource.mirror_pool}"],
+      'infinite_retry' => [@new_resource.infinite_retry, '-O y'],
+      'non_concurrent_varyon' => [!@new_resource.non_concurrent_varyon.empty?, "-N #{@new_resource.non_concurrent_varyon}"],
       'critical_vg' => [@new_resource.critical_vg, 'r y']
     }
     # Assign options
@@ -65,7 +63,7 @@ action :add do
         end
       end
     end
-
+ 
     # Select disks based on disk array attribute
     if !@new_resource.disks.nil?
       disk_found = true
@@ -120,23 +118,23 @@ action :change do
     chvg = 'chvg'
     # Valid options.  Contains logical test and option output
     option_map = {
-      'auto_synchronize' => [@new_resource.auto_synchronize,  '-s y'],
-      'hotspare' => [!@new_resource.hotspare.empty?,  "-h Hotspare #{@new_resource.hotspare}"],
-      'activate_on_boot' => [!@new_resource.activate_on_boot,  '-a AutoOn n'],
+      'auto_synchronize' => [@new_resource.auto_synchronize, '-s y'],
+      'hotspare' => [!@new_resource.hotspare.empty?, "-h Hotspare #{@new_resource.hotspare}"],
+      'activate_on_boot' => [!@new_resource.activate_on_boot, '-a AutoOn n'],
       'make_non_concurrent' => [@new_resource.make_non_concurrent, '-l'],
-      'lost_quorom_varyoff' => [!@new_resource.lost_quorom_varyoff,  '-Q n'],
-      'pv_type' => [!@new_resource.pv_type.empty?,  "-X#{@new_resource.pv_type}"],
+      'lost_quorom_varyoff' => [!@new_resource.lost_quorom_varyoff, '-Q n'],
+      'pv_type' => [!@new_resource.pv_type.empty?, "-X#{@new_resource.pv_type}"],
       'drain_io' => [@new_resource.drain_io, '-S'],
       'resume_io' => [@new_resource.resume_io, '-R'],
-      'factor' => [@new_resource.factor > 0,  "-t #{@new_resource.factor}"],
+      'factor' => [@new_resource.factor > 0, "-t #{@new_resource.factor}"],
       'big' => [@new_resource.big, '-B'],
       'scalable' => [@new_resource.scalable, '-G'],
-      'partitions' => [@new_resource.partitions > 0,  "-P #{new_resource.partitions}"],
-      'lv_number' => [@new_resource.lv_number > 0,  "-v #{@new_resource.lv_number}"],
+      'partitions' => [@new_resource.partitions > 0, "-P #{new_resource.partitions}"],
+      'lv_number' => [@new_resource.lv_number > 0, "-v #{@new_resource.lv_number}"],
       'powerha_concurrent' => [@new_resource.powerha_concurrent, '-C'],
       'force' => [@new_resource.force, '-f'],
-      'grow' => [@new_resource.grow,  '-g'],
-      'bad_block_relocation' => [!@new_resource.bad_block_relocation,  '-b n'],
+      'grow' => [@new_resource.grow, '-g'],
+      'bad_block_relocation' => [!@new_resource.bad_block_relocation, '-b n'],
       'mirror_pool_strictness' => [!@new_resource.mirror_pool_strictness.empty?, "-M #{@new_resource.mirror_pool_strictness}"],
       'jfs2_resync_only' => [@new_resource.jfs2_resync_only, '-j y']
     }
@@ -168,4 +166,41 @@ action :change do
       chvg_do.error?
     end
   end
+end
+
+def best_fit_disk(size)
+  # Nil by default
+  disk = nil
+  # Get unused disk array
+  unused_disks = unused_disk_search
+  Chef::Log.info("unused disks: #{unused_disks}")
+  # Interate through array to find size of disk, keep if larger than size requested
+  unless unused_disks.nil?
+    disk_choices = {}
+    unused_disks.each do |this_disk|
+      disk_name = this_disk
+      Chef::Log.info("mkvg: examining disk size for #{this_disk}")
+      bootinfo = Mixlib::ShellOut.new("bootinfo -s #{this_disk}")
+      bootinfo.run_command
+      disk_size = bootinfo.stdout.to_i / 1024
+      if disk_size >= size
+        disk_choices[disk_name] = disk_size
+      end
+    end
+    Chef::Log.info("mkvg: disk sizes: #{disk_choices}")
+    disk_chosen = disk_choices.min_by { |_k, v| v }
+    Chef::Log.info("mkvg: disk chosen: #{disk_chosen}")
+    unless disk_chosen.nil?
+      disk = disk_chosen[0]
+    end
+  end
+  disk
+end
+
+def unused_disk_search
+  # Find unused disk and put into array
+  unused_disk = Mixlib::ShellOut.new("lspv | awk '{if ($3 == \"None\") print $1;}' |  tr '\n' ' '")
+  unused_disk.run_command
+  unused_disk_array = unused_disk.stdout.split(' ')
+  unused_disk_array
 end
