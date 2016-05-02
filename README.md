@@ -627,6 +627,64 @@ Actions:
 * `install` - install fixes
 * `remove` - remove fixes
 
+### volume_group
+
+Create a LVM volume group
+Change an existing LVM  volume group
+
+```ruby
+aix_volume_group "create vg with specified disks" do
+ name "testvg"
+ disks ['hdisk2'] 
+end
+
+aix_volume_group "create vg with best fit" do
+ name "testvg"
+ best_fit 10 
+end
+
+aix_volume_group "create vg with all disks not in a vg" do
+ name "testvg"
+ use_all_disks true 
+end
+
+aix_volume_group "convert vg to big" do
+ name "testvg"
+ big true
+ action :change 
+end
+```
+
+Parameters:
+
+* `force` (optional) - add/change - Force override
+* `big` (optional) - add/change - Big VG format
+* `factor` (optional) - add/change - Limit number of partitions
+* `activate_on_boot` (optional) - add/change - Varyon VG at boot time
+* `scalable` (optional) - add - Scalable-type volume group
+* `lv_number` (optional) - add - Number of LVs that can be created
+* `partitions` (optional) - add - Total number of partitions in VG
+* `powerha_concurrent` (optional) - add -  Enhanced Concurrent Capable volume group
+* `pre_53_compat` (optional) - add - VG that can be imported to pre 5.3 AIX
+* `pv_type` (optional) - add - Physical volume type restriction
+* `partition_size` (optional) - add - Megabytes in each partition
+* `major_number` (optional) - add - Specify major number to be used at creation
+* `mirror_pool_strictness` (optional) - add - Enable mirror pool strictness
+* `mirror_pool` (optional) - add - Specify mirror pool
+* `infinite_retry` (optional) - add - Enables the infinite retry option of the logical volume.
+* `non_concurrent_varyon` (optional) - add - Volume group not allowed to varyon in non-concurrent mode in more than one node at the same time.
+* `critical_vg` (optional) - add - Eneable critical VG option
+* `auto_synchronize` (optional) - change - Sets the synchronization characteristics for the volume group
+* `hotspare` (optional) - change - Sets the sparing characteristics for the volume group
+* `lost_quorom_varyoff` (optional) - change - Determines if the volume group is automatically varied off after losing its quorum of physical volumes.
+
+
+
+Actions:
+
+* `add` - add a volume group
+* `change` - change an existing volume group
+
 
 ## License and Authors
 
@@ -634,7 +692,7 @@ Actions:
 * Author:: Christoph Hartmann (<chris@lollyrock.com>)
 * Author:: Benoit Creau (<benoit.creau@chmod666.org>)
 * Author:: Alain Dejoux (<adejoux@djouxtech.net>)
-
+* Author:: Alan Thatcher (<alanwthatcher@gmail.com>)
 ```text
 Copyright:: 2014-2015 Chef Software, Inc.
 
