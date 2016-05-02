@@ -2,6 +2,8 @@ require 'chef/mixin/shell_out'
 
 include Chef::Mixin::ShellOut
 
+use_inline_resources
+
 # support whyrun
 def whyrun_supported?
   true
@@ -30,24 +32,24 @@ action :add do
 
     # Valid options.  Contains logical test and option output
     option_map = {
-      'big' => [@new_resource.big, '-B'],
-      'factor' => [@new_resource.factor > 0, "-t #{@new_resource.factor}"],
-      'scalable' => [@new_resource.scalable, '-S'],
-      'lv_number' => [@new_resource.lv_number > 0, "-v #{@new_resource.lv_number}"],
-      'partitions' => [@new_resource.partitions > 0, "-P #{new_resource.partitions}"],
-      'powerha_concurrent' => [@new_resource.powerha_concurrent, '-C'],
-      'force' => [@new_resource.force, '-f'],
-      'pre_53_compat' => [@new_resource.pre_53_compat, '-I'],
-      'pv_type' => [!@new_resource.pv_type.empty?, "-X#{@new_resource.pv_type}"],
-      'activate_on_boot' => [!@new_resource.activate_on_boot, '-n'],
-      'partition_size' => [@new_resource.partition_size > 0, "-s #{@new_resource.partition_size}"],
-      'major_number' => [@new_resource.major_number > 0, "-V #{@new_resource.major_number}"],
-      'name' => [!@new_resource.name.empty?, "-y #{@new_resource.name}"],
-      'mirror_pool_strictness' => [!@new_resource.mirror_pool_strictness.empty?, "-M #{@new_resource.mirror_pool_strictness}"],
-      'mirror_pool' => [!@new_resource.mirror_pool.empty?, "-p #{@new_resource.mirror_pool}"],
-      'infinite_retry' => [@new_resource.infinite_retry, '-O y'],
-      'non_concurrent_varyon' => [!@new_resource.non_concurrent_varyon.empty?, "-N #{@new_resource.non_concurrent_varyon}"],
-      'critical_vg' => [@new_resource.critical_vg, 'r y']
+      'big' => [(@new_resource.big), '-B'],
+      'factor' => [(!@new_resource.factor.nil?), "-t #{@new_resource.factor}"],
+      'scalable' => [(@new_resource.scalable), '-S'],
+      'lv_number' => [(!@new_resource.lv_number.nil?) , "-v #{@new_resource.lv_number}"],
+      'partitions' => [(!@new_resource.partitions.nil?), "-P #{new_resource.partitions}"],
+      'powerha_concurrent' => [(@new_resource.powerha_concurrent), '-C'],
+      'force' => [(@new_resource.force), '-f'],
+      'pre_53_compat' => [(@new_resource.pre_53_compat), '-I'],
+      'pv_type' => [(!@new_resource.pv_type.nil?), "-X#{@new_resource.pv_type}"],
+      'activate_on_boot' => [(@new_resource.activate_on_boot.eql? 'no'), '-n'],
+      'partition_size' => [(!@new_resource.partition_size.nil?), "-s #{@new_resource.partition_size}"],
+      'major_number' => [(!@new_resource.major_number.nil?), "-V #{@new_resource.major_number}"],
+      'name' => [(!@new_resource.name.empty?), "-y #{@new_resource.name}"],
+      'mirror_pool_strictness' => [(!@new_resource.mirror_pool_strictness.nil?), "-M #{@new_resource.mirror_pool_strictness}"],
+      'mirror_pool' => [(!@new_resource.mirror_pool.nil?), "-p #{@new_resource.mirror_pool}"],
+      'infinite_retry' => [(@new_resource.infinite_retry), '-O y'],
+      'non_concurrent_varyon' => [(!@new_resource.non_concurrent_varyon.nil?), "-N #{@new_resource.non_concurrent_varyon}"],
+      'critical_vg' => [(@new_resource.critical_vg), 'r y']
     }
     # Assign options
     option_map.each do |_opt, val|
@@ -114,56 +116,63 @@ action :change do
   if !@current_resource.exists
     raise "chvg: volume group #{@new_resource.name} not found"
   else
+    # No updates by default
+    usable_options = false
+    # Gather VG information
+    so = shell_out("lqueryvg -g $(getlvodm -v #{@new_resource.name}) -a | tr '\n' '|'")
+    vginfo = so.stdout.split('|')
+    Chef::Log.info(vginfo)
     # Command start
     chvg = 'chvg'
     # Valid options.  Contains logical test and option output
     option_map = {
-      'auto_synchronize' => [@new_resource.auto_synchronize, '-s y'],
-      'hotspare' => [!@new_resource.hotspare.empty?, "-h Hotspare #{@new_resource.hotspare}"],
-      'activate_on_boot' => [!@new_resource.activate_on_boot, '-a AutoOn n'],
-      'make_non_concurrent' => [@new_resource.make_non_concurrent, '-l'],
-      'lost_quorom_varyoff' => [!@new_resource.lost_quorom_varyoff, '-Q n'],
-      'pv_type' => [!@new_resource.pv_type.empty?, "-X#{@new_resource.pv_type}"],
-      'drain_io' => [@new_resource.drain_io, '-S'],
-      'resume_io' => [@new_resource.resume_io, '-R'],
-      'factor' => [@new_resource.factor > 0, "-t #{@new_resource.factor}"],
-      'big' => [@new_resource.big, '-B'],
-      'scalable' => [@new_resource.scalable, '-G'],
-      'partitions' => [@new_resource.partitions > 0, "-P #{new_resource.partitions}"],
-      'lv_number' => [@new_resource.lv_number > 0, "-v #{@new_resource.lv_number}"],
-      'powerha_concurrent' => [@new_resource.powerha_concurrent, '-C'],
-      'force' => [@new_resource.force, '-f'],
-      'grow' => [@new_resource.grow, '-g'],
-      'bad_block_relocation' => [!@new_resource.bad_block_relocation, '-b n'],
-      'mirror_pool_strictness' => [!@new_resource.mirror_pool_strictness.empty?, "-M #{@new_resource.mirror_pool_strictness}"],
-      'jfs2_resync_only' => [@new_resource.jfs2_resync_only, '-j y']
+      'auto_synchronize' => [(@new_resource.auto_synchronize.eql? "on") && (vginfo[16].to_s.eql? "0"), '-s y'],
+      'auto_synchronize_off' => [(@new_resource.auto_synchronize.eql? "off") && (vginfo[16].to_s.eql? "1"), '-s n'],
+      'hotspare_n' => [(@new_resource.hotspare.eql? "n") && (!vginfo[15].eql? "0"), "-h #{@new_resource.hotspare}"],
+      'hotspare_r' => [(@new_resource.hotspare.eql? "r"), "-h #{@new_resource.hotspare}"],
+      'hotspare_y' => [(@new_resource.hotspare.eql? "y") && (!vginfo[15].eql? "1"), "-h #{@new_resource.hotspare}"],
+      'hotspare_Y' => [(@new_resource.hotspare.eql? "Y") && (!vginfo[15].eql? "2"), "-h #{@new_resource.hotspare}"],
+      'activate_on_boot' => [(@new_resource.activate_on_boot.eql? 'yes') && (!vginfo[10].eql? '1'), '-a y'],
+      'activate_on_boot_off' => [(@new_resource.activate_on_boot.eql? 'no') && (!vginfo[10].eql? '0'), '-a n'],
+      'lost_quorom_varyoff_off' => [(@new_resource.lost_quorom_varyoff.eql? "no") && (!vginfo[9].eql? '0'), '-Q n'],
+      'lost_quorom_varyoff_on' => [(@new_resource.lost_quorom_varyoff.eql? "yes") && (!vginfo[9].eql? '1'), '-Q y'],
+      'factor' => [(!@new_resource.factor.nil?) && (!vginfo[21].eql? "2") && (!@new_resource.factor.eql?  vginfo[7].to_i / 1016), "-t #{@new_resource.factor}"],
+      'big' => [(@new_resource.big) && (vginfo[21] != "1"), '-B'],
+      'force' => [(@new_resource.force), '-f'],
     }
     # Assign options
     option_map.each do |_opt, val|
-      chvg =  (val[0] ? "#{chvg} #{val[1]}" : chvg)
+      if val[0]
+        chvg = chvg << " #{val[1]}"
+        usable_options = true
+      end
     end
 
 
     # Any other options passed-in
     unless @new_resource.options.nil?
+      usable_options = true
       @new_resource.options.each do |o, v|
-        chvg = chvg << " #{o}"
-        if !v.nil? || !v.empty?
-          chvg = chvg << " #{v}"
-        end
+          chvg = chvg << " #{o}"
+          if !v.nil? || !v.empty?
+             chvg = chvg << " #{v}"
+          end
       end
     end
+    
 
     chvg = chvg << " #{@new_resource.name}"
 
     # Perform chvg
-    converge_by("chvg: changing #{@new_resource.name} : #{chvg}") do
-      Chef::Log.info("chvg: chaning #{@new_resource.name} : ${chvg}")
-      chvg_do = Mixlib::ShellOut.new(chvg)
-      chvg_do.valid_exit_codes = 0
-      chvg_do.run_command
-      chvg_do.error!
-      chvg_do.error?
+    if usable_options
+       converge_by("chvg: changing #{@new_resource.name} : #{chvg}") do
+         Chef::Log.info("chvg: chaning #{@new_resource.name} : ${chvg}")
+         chvg_do = Mixlib::ShellOut.new(chvg)
+         chvg_do.valid_exit_codes = 0
+         chvg_do.run_command
+         chvg_do.error!
+         chvg_do.error?
+       end
     end
   end
 end
@@ -204,3 +213,4 @@ def unused_disk_search
   unused_disk_array = unused_disk.stdout.split(' ')
   unused_disk_array
 end
+
