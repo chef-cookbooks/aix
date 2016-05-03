@@ -655,9 +655,13 @@ aix_volume_group "convert vg to big" do
 end
 ```
 
-Parameters:
+Volume Group Disk Selection Parameters, in order of precedence:
+* `disks` (optional) - List of named disks to use
+* `best_fit` (optional) - Takes desired size in GB and attempts to find suitable disk (smallest available disk that meets the requirements)
+* `use_all_disks` (optional) - Use all disks not currently in use by another Volume Group
 
-* `force` (optional) - add/change - Force override
+Volume Group Parameters:
+* `force` (optional) - add/change - Force override of restricted actions (i.e. disk previously assigned to a VG)
 * `big` (optional) - add/change - Big VG format
 * `factor` (optional) - add/change - Limit number of partitions
 * `activate_on_boot` (optional) - add/change - Varyon VG at boot time
