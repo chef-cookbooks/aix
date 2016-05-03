@@ -189,9 +189,9 @@ def best_fit_disk(size)
     unused_disks.each do |this_disk|
       disk_name = this_disk
       Chef::Log.info("mkvg: examining disk size for #{this_disk}")
-      bootinfo = Mixlib::ShellOut.new("bootinfo -s #{this_disk}")
-      bootinfo.run_command
-      disk_size = bootinfo.stdout.to_i / 1024
+      disksize = Mixlib::ShellOut.new("getconf DISK_SIZE /dev/#{this_disk}")
+      disksize.run_command
+      disk_size = disksize.stdout.to_i / 1024
       if disk_size >= size
         disk_choices[disk_name] = disk_size
       end
@@ -208,9 +208,8 @@ end
 
 def unused_disk_search
   # Find unused disk and put into array
-  unused_disk = Mixlib::ShellOut.new("lspv | awk '{if ($3 == \"None\") print $1;}' |  tr '\n' ' '")
+  unused_disk = Mixlib::ShellOut.new("lspv |awk '$3 == \"None\" {printf \"%s \",$1}'")
   unused_disk.run_command
   unused_disk_array = unused_disk.stdout.split(' ')
   unused_disk_array
 end
-
