@@ -64,6 +64,8 @@ def load_current_resource
         found_stanza = true
         next
       end
+      # if we found the stanza, and we match another stanza found_stanza=0
+      found_stanza = false if found_stanza && line =~ /\w:/
       # filling the hash table
       if found_stanza
         # if the line is empty we skip it
@@ -76,8 +78,6 @@ def load_current_resource
         current_attributes[key.to_sym] = value
         Chef::Log.debug("chsec: #{@new_resource.stanza} -> [#{key}],[#{value}])")
       end
-      # if we found the stanza, and we match another stanza found_stanza=0
-      found_stanza = false if found_stanza && line =~ /\w:/
     end
     # loading the attributes
     @current_resource.attributes(current_attributes)
@@ -99,7 +99,7 @@ action :update do
         Chef::Log.debug("chsec: value of #{key} already set to #{value} for stanza #{@new_resource.stanza}")
       else
         change = true
-        chsec_s = chsec_s << " -a #{key}=#{@new_resource.attributes[key]}"
+        chsec_s = chsec_s << " -a \"#{key}=#{@new_resource.attributes[key]}\""
       end
     end
     if change
