@@ -9,15 +9,22 @@ aix_wpar 'create wpar' do
   name 'testwpar'
   hostname 'testwpar'
   cpu '10%-50%,100%'
-#  autostart true
+  live_stream true
+  autostart true
 end
 
-#aix_wpar 'stop wpar' do
-#  action :stop
-#  name 'testwpar2'
-#end
+aix_wpar 'stop wpar' do
+ action :stop
+ name 'testwpar2'
+ live_stream true
+end
 
-#aix_wpar 'delete wpar' do
-#  action :delete
-#  name 'testwpar2'
-#end
+aix_wpar 'sync wpar' do
+ action :sync
+ name 'testwpar2'
+end
+
+aix_wpar 'delete wpar' do
+ action :delete
+ name 'testwpar2'
+end

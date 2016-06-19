@@ -20,3 +20,5 @@ group :kitchen_common do
 end
 
 gem 'kitchen-wpar'
+gem 'aix-wpar', '>=0.1.0'
+

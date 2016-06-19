@@ -37,7 +37,16 @@ def load_current_resource
 
   #get the current wpar
   @wpar = wpars[@new_resource.name]
-  unless @wpar.nil?
+  if @wpar.nil?
+    @current_resource.exists=false
+  else
+    @current_resource.exists=true
+  end
+
+  if @current_resource.exists
+    if @new_resource.live_stream
+      @wpar.live_stream = STDOUT
+    end
     @current_resource.state =  @wpar.general.state
     @current_resource.cpu = @wpar.resource_control.cpu
     unless @wpar.networks.first.nil?
@@ -57,6 +66,7 @@ def load_current_resource
       @current_resource.rootvg_disk=@wpar.devices.get_rootvg.first.devname
     end
   end
+
   Chef::Log.debug(@current_resource)
 end
 
@@ -64,11 +74,14 @@ end
 action :create do
   options = {}
   Chef::Log.debug("wpar #{@current_resource.state} ")
-  unless @current_resource.state.nil?
+  if @current_resource.exists
     Chef::Log.info("wpar #{@new_resource.name} already exist")
   else
     wpar = WPAR::WPAR.new(name: @new_resource.name)
     wpar.general.auto = @new_resource.autostart || "no"
+    if @new_resource.live_stream
+      wpar.live_stream = STDOUT
+    end
     if @new_resource.rootvg
       options[:rootvg]=@new_resource.rootvg_disk
     end
@@ -76,7 +89,12 @@ action :create do
     if @new_resource.backupimage
       options[:backupimage]=@new_resource.backupimage
     end
-    if @new_resource.cpu 
+
+    if @new_resource.wparvg
+      options[:wparvg]=@new_resource.wparvg
+    end
+
+    if @new_resource.cpu
       wpar.resource_control.cpu = @new_resource.cpu
     end
     wpar.general.hostname = @new_resource.hostname
@@ -95,29 +113,44 @@ end
 
 #start action
 action :start do
-  # don't do anything if the partition is not in Defined state
-  unless @current_resource.state == "D"
-    Chef::Log.info("wpar #{@new_resource.name} not in correct state")
+  if @current_resource.exists && @current_resource.state == "D"
+    converge_by("Start wpar #{@current_resource.name}") do
+      @wpar.start
+    end
   else
-    @wpar.start
+    Chef::Log.error("wpar #{@new_resource.name} not in correct state")
   end
 end
 
 #stop action
 action :stop do
-  # don't do anything if the partition is not in Defined state
-  unless @current_resource.state == "A"
-    Chef::Log.info("wpar #{@new_resource.name} not in correct state")
+  if @current_resource.exists && @current_resource.state == "A"
+    converge_by("Stop wpar #{@current_resource.name}") do
+      @wpar.stop
+    end
   else
-    @wpar.stop
+    Chef::Log.error("wpar #{@new_resource.name} not in correct state")
   end
 end
 
 #action delete
 action :delete do
-  unless @current_resource.state
-    Chef::Log.info("wpar #{@new_resource.name} doesn't exist")
+  if @current_resource.exists
+    converge_by("Delete wpar #{@current_resource.name}") do
+      @wpar.destroy(force: true)
+    end
   else
-    @wpar.destroy(force: true)
+    Chef::Log.error("wpar #{@new_resource.name} doesn't exist")
+  end
+end
+
+#action sync
+action :sync do
+  if @current_resource.exists
+    converge_by("Sync wpar #{@current_resource.name}") do
+      @wpar.sync()
+    end
+  else
+    Chef::Log.error("wpar #{@new_resource.name} doesn't exist")
   end
 end
