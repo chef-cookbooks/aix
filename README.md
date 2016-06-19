@@ -635,23 +635,23 @@ Change an existing LVM  volume group
 ```ruby
 aix_volume_group "create vg with specified disks" do
  name "testvg"
- disks ['hdisk2'] 
+ disks ['hdisk2']
 end
 
 aix_volume_group "create vg with best fit" do
  name "testvg"
- best_fit 10 
+ best_fit 10
 end
 
 aix_volume_group "create vg with all disks not in a vg" do
  name "testvg"
- use_all_disks true 
+ use_all_disks true
 end
 
 aix_volume_group "convert vg to big" do
  name "testvg"
  big true
- action :change 
+ action :change
 end
 ```
 
@@ -688,6 +688,63 @@ Actions:
 
 * `add` - add a volume group
 * `change` - change an existing volume group
+
+### wpar
+
+Manage wpar
+
+```ruby
+aix_wpar 'create wpar' do
+  action :create
+  name 'testwpar'
+  hostname 'testwpar'
+  cpu '10%-50%,100%'
+  live_stream true
+  autostart true
+end
+
+aix_wpar 'stop wpar' do
+ action :stop
+ name 'testwpar2'
+ live_stream true
+end
+
+aix_wpar 'sync wpar' do
+ action :sync
+ name 'testwpar2'
+end
+
+aix_wpar 'delete wpar' do
+ action :delete
+ name 'testwpar2'
+end
+```
+
+### Parameters:
+
+* `name`: WPAR name
+* `hostname`: specify wpar hostname(can be different of wpar name)
+* `address`: ip address to use if no entry in /etc/hosts or DNS.
+* `interface`: network interface to use
+* `rootvg: to build a rootvg wpar
+* `rootvg_disk: hdisk to use for rootvg wpar
+* `wparvg: volume group to use for system wpar. Default: **rootvg**
+* `backupimage: backup image to restore when building wpar
+* `cpu: resource control CPU. Example: **10%-50%,100%**
+* `memory: resource control memory.
+* `autostart: auto start wpar at boot.
+* `live_stream: live stream wpar commands output
+
+
+Actions:
+
+* `create` - create a wpar
+* `delete` - delete a wpar
+* `start` - start a wpar
+* `stop`- stop a wpar
+* `sync`- synchronize software between system and wpar
+
+* `reset_all` - reset all tunables to default
 
 
 ## License and Authors
