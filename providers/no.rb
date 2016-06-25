@@ -77,7 +77,7 @@ def load_current_resource
                                    'none'
                                  end
       # Chef::Log.debug("no: #{@current_resource.name}->#{current_tunable[0]} = #{tunable_hash}")
-      all_no_tunables[current_tunable[0]] = tunable_hash
+      all_no_tunables[current_tunable[0].to_sym] = tunable_hash
     end
     # set this hash to the current resource attribute
     @current_resource.tunables(all_no_tunables)

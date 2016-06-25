@@ -50,7 +50,7 @@ def load_current_resource
     so.stdout.each_line do |line|
       current_attr_a = line.split(' ')
       Chef::Log.debug("#{@current_resource.name}->#{current_attr_a[0]} = #{current_attr_a[1]}")
-      all_device_attr[current_attr_a[0]] = current_attr_a[1]
+      all_device_attr[current_attr_a[0].to_sym] = current_attr_a[1]
     end
     # set this hash to the current resource attribute
     @current_resource.attributes(all_device_attr)

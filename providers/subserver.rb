@@ -32,21 +32,30 @@ def load_current_resource
   @current_resource = Chef::Resource::AixSubserver.new(@new_resource.name)
   @current_resource.enabled = false
 
+  valid_protocols = %w(tcp udp tcp6 udp6)
+
   begin
     inetd = ::File.open('/etc/inetd.conf')
     inetd.each_line do |line|
       next if line =~ /^##/ # standard IBM comment
-      next unless line =~ /^(#?)(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(.*)$/
-      @current_resource.enabled = (Regexp.last_match(1) == '#')
-      # Assume that servicename and protocol are sufficient as a unique identifier
-      next unless @new_resource.servicename == Regexp.last_match(2) && @new_resource.protocol == Regexp.last_match(4)
-      @current_resource.servicename(Regexp.last_match(2))
-      @current_resource.type(Regexp.last_match(3))
-      @current_resource.protocol(Regexp.last_match(4))
-      @current_resource.wait(Regexp.last_match(5))
-      @current_resource.user(Regexp.last_match(6))
-      @current_resource.program(Regexp.last_match(7))
-      @current_resource.args(Regexp.last_match(8))
+      line_array = line.split(' ')
+      line_array_length = line_array.length
+      next unless line_array_length > 1 && valid_protocols.include?(line_array[2])
+      if line_array[0].chars[0] == '#'
+        line_array[0] = line_array[0].sub(/^#/, '')
+        service_enabled = false
+      else
+        service_enabled = true
+      end
+      next unless @new_resource.servicename == line_array[0] && @new_resource.protocol == line_array[2]
+      @current_resource.enabled = service_enabled
+      @current_resource.servicename(line_array[0])
+      @current_resource.type(line_array[1])
+      @current_resource.protocol(line_array[2])
+      @current_resource.wait(line_array[3])
+      @current_resource.user(line_array[4])
+      @current_resource.program(line_array[5])
+      @current_resource.args = line_array.slice(6, line_array_length - 5).join(' ')
     end
   ensure
     inetd.close unless inetd.nil?
