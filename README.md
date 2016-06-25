@@ -96,20 +96,20 @@ Parameters:
 Change any AIX device attribute. Example:
 
 ```ruby
-aix_chdev "sys0" do
-  attributes(:maxuproc => 1026, :ncargs => 1024)
+aix_chdev 'sys0' do
+  attributes(maxuproc: '1026', ncargs: '1024')
   need_reboot false
   action :update
 end
 
-aix_chdev "fcs0" do
-  attributes(:num_cmd_elems => 200, :max_xfer_size => "0x800000")
+aix_chdev 'fcs0' do
+  attributes(num_cmd_elems: '200', max_xfer_size: '0x800000')
   need_reboot true
   action :update
 end
 
-aix_chdev "ent0" do
-  attributes(:poll_uplin => "yes")
+aix_chdev 'ent0' do
+  attributes(poll_uplink: 'yes')
   need_reboot true
   action :update
 end
@@ -126,13 +126,13 @@ Change any AIX no (network) tunables. Example:
 
 ```ruby
 aix_no "changing no tunables" do
-  tunables(:udp_recv_perf => 0, :udprecvspace => 42083, :psetimers => 23)
+  tunables(udp_recv_perf: '0', udprecvspace: '42083', psetimers: '23')
   set_default
   action :update
 end
 
 aix_no "reseting no tunables" do
-  tunables(:udp_recv_perf => 0, :udprecvspace => 0)
+  tunables(udp_recv_perf: '0', udprecvspace: '0')
   set_default false
   action :reset
 end
@@ -254,9 +254,9 @@ Actions:
 Changes the attributes in the security stanza files.
 
 ```ruby
-aix_chsec "/etc/security/login.cfg" do
-  attributes(:maxlogins => 16000, :maxroles => 7, :shells => "/bin/sh,/usr/bin/ksh")
-  stanza "usw"
+aix_chsec '/etc/security/login.cfg' do
+  attributes(maxlogins: '16000', maxroles: '7', shells: '/bin/sh,/usr/bin/ksh')
+  stanza 'usw'
   action :update
 end
 ```
