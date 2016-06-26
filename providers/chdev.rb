@@ -88,8 +88,14 @@ action :update do
         raise "chdev device #{@current_resource.name} has not attribute #{attribute}"
       end
     end
+    # if both -P and -U will be add raise an error (-P or -U not both)
+    if @new_resource.need_reboot && @new_resource.hot_change
+      raise "chdev: conflicting flags: -P -U"
+    end
     # if attributes needs a reboot add -P (for permanent to the command)
     string_shell_out = string_shell_out << ' -P' if @new_resource.need_reboot
+    # if device attribute can be change while available add -U (for True+ attr)
+    string_shell_out = string_shell_out << ' -U' if @new_resource.hot_change
     if set_attr
       converge_by("chdev device #{@new_resource.name} with #{@new_resource.attributes}") do
         Chef::Log.debug("command: #{string_shell_out}")
