@@ -113,12 +113,18 @@ aix_chdev 'ent0' do
   need_reboot true
   action :update
 end
+
+aix_chdev 'hdisk1" do
+  attributes(reserve_policy: 'no_reserve')
+  hot_change true
+  action:update
+end
 ```
 
 Parameters:
 
-* `need_reboot` (optional) - Add -P to the chdev command if device is busy
-
+* `need_reboot` (optional) - Add -P to the chdev command if device is busy (this parameter cannot be used with hot_change)
+* `hot_change` (optional) - Add -U to the chdev command for attribute with True+ (this parameter cannot be used with need_reboot)
 
 ### no
 
