@@ -52,7 +52,7 @@ action :install do
         shell_out("rmitab #{@current_resource.identifier}")
       end
       follow = "-i #{@new_resource.follows} " if @new_resource.follows
-      shell_out("mkitab \"#{follow}#{[@new_resource.identifier, @new_resource.runlevel, @new_resource.processaction, @new_resource.command].join(':')}\"")
+      shell_out("mkitab #{follow}\"#{[@new_resource.identifier, @new_resource.runlevel, @new_resource.processaction, @new_resource.command].join(':')}\"")
     end
   end
 end
