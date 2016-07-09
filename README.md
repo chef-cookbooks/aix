@@ -127,6 +127,61 @@ Parameters:
 * `need_reboot` (optional) - Add -P to the chdev command if device is busy (this parameter cannot be used with hot_change)
 * `hot_change` (optional) - Add -U to the chdev command for attribute with True+ (this parameter cannot be used with need_reboot)
 
+### pagingspace
+
+Create, remove, modify AIX paging space. Example:
+
+```ruby
+aix_pagingspace "Changing paging space" do
+  name 'hd6'
+  size 1024
+  auto true
+  action :change
+end
+
+aix_pagingspace "Disabling paging space" do
+  name 'paging00'
+  active false
+  action :change
+end
+
+aix_pagingspace "Removing paging space" do
+  name 'paging00'
+  action :remove
+end
+
+aix_pagingspace "Creating paging space" do
+  name 'mypgsp'
+  size 1024
+  auto true
+  vgname 'rootvg'
+  action :create
+end
+
+aix_pagingspace "Creating paging space 2" do
+  name 'mypgsp2'
+  size 1024
+  auto true
+  active true
+  vgname 'rootvg'
+  action :create
+end
+```
+
+Parameters:
+
+* `name` - Name of the paging space
+* `size` - Size of the paging space in MB
+* `auto` - Active paging space on reboot (True,False)
+* `active` - Active/Desactive paging space  (True,False)
+* `vgname` - Volume group name where the paging space should be created
+
+Actions:
+
+* `change` - Modify the paging space
+* `remove` - Remove the paging space
+* `create` - Create the paging space
+
 ### no
 
 Change any AIX no (network) tunables. Example:
