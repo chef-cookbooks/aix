@@ -34,6 +34,7 @@ Parameters:
 * `runlevel` - the runlevel of the inittab entry
 * `processaction` - the action of the process (e.g. "once", "boot", etc.)
 * `command` - the command to run
+* `follows` - add the entry after this one
 
 ### subserver
 
