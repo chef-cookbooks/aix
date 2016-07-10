@@ -146,11 +146,14 @@ action :change do
         Chef::Log.debug('pagingspace: using swapon')
         ctrl_swap_cmd = 'swapon /dev/' << @current_resource.name
       else
-        Chef::Log.debug('pagingspace: using swapon')
+        Chef::Log.debug('pagingspace: using swapoff')
         ctrl_swap_cmd = 'swapoff /dev/' << @current_resource.name
       end
+      Chef::Log.debug("pagingspace: current active: #{@current_resource.active}, new active: #{ @new_resource.active}")
       if @current_resource.active != @new_resource.active
         converge = true
+      else
+        ctrl_swap_cmd = ''
       end
     end
     if converge
