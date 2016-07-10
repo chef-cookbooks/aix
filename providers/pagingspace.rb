@@ -33,15 +33,14 @@ def load_current_resource
 
   lsps = Mixlib::ShellOut.new("lsps -ca | grep ^#{@new_resource.name}")
   lsps.run_command
-  #lsps.error!
+  # lsps.error!
   # not fatal if paging space does not exists
-  #Chef::Log.fatal('pagingspace: error while running lsps') unless lsps.exitstatus
+  # Chef::Log.fatal('pagingspace: error while running lsps') unless lsps.exitstatus
 
   if lsps.stdout.lines.count != 1
     @current_resource.exists = false
   else
     @current_resource.exists = true
-    array_pagingspaces = []
     lsps.stdout.each_line do |line|
       line_array = line.split(':')
       # if the name of the paging space exists the resource exists
@@ -50,18 +49,18 @@ def load_current_resource
       end
       # name:Pvname:Vgname:Size:Used:Active:Auto:Type:Chksum
       # hd6:hdisk0:rootvg:8:1:y:n:lv:0
-      # first line of lsps -ac is a commentary  
+      # first line of lsps -ac is a commentary
       if line_array[0] =~ /^#/
-        Chef::Log.debug("pagingspace: first line of lsps -ac, skipping")
+        Chef::Log.debug('pagingspace: first line of lsps -ac, skipping')
       else
-        # updating current resource with current values 
+        # updating current resource with current values
         @current_resource.name   = line_array[0]
         @current_resource.pvname = line_array[1]
         @current_resource.vgname = line_array[2]
         # number of pp
         @current_resource.size   = line_array[3].to_i
         # %user cannot be change skipping
-        #@current_resource.used   = line_array[4]
+        # @current_resource.used   = line_array[4]
         # active parameter
         # y = true, n = false
         if line_array[5] == 'y'
@@ -76,8 +75,9 @@ def load_current_resource
         elsif line_array[6] == 'n'
           @current_resource.auto  = false
         end
-        #@current_resource.type   = line_array[7]
-        #@current_reousrce.chksum = line_array[8]
+        # maybe needed later
+        # @current_resource.type   = line_array[7]
+        # @current_reousrce.chksum = line_array[8]
       end
     end
   end
@@ -87,8 +87,8 @@ end
 action :change do
   if @current_resource.exists
     converge = false
-    chps_flag = ""
-    ctrl_swap_cmd = ""
+    chps_flag = ''
+    ctrl_swap_cmd = ''
     Chef::Log.debug("pagingspace: paging space #{@current_resource.name} exits")
     # size
     unless @new_resource.size.nil?
@@ -105,18 +105,18 @@ action :change do
       # getting number of pp to add or remove from the paging space
       # adding pp
       if @current_resource.size < @new_resource.size
-        Chef::Log.debug("pagingspace: extending")
-        chps_flag="-s " 
+        Chef::Log.debug('pagingspace: extending')
+        chps_flag = '-s '
       # removing pp
       elsif @current_resource.size > @new_resource.size
-        Chef::Log.debug("pagingspace: reducing")
-        chps_flag="-d "
+        Chef::Log.debug('pagingspace: reducing')
+        chps_flag = '-d '
       end
       additionnal_mb = @new_resource.size - @current_resource.size
       # we need the absolute value if reducing the paging space
       additionnal_mb = additionnal_mb.abs
       additionnal_pp = additionnal_mb.to_i / pp_size.to_f
-      if ! additionnal_pp.is_a? Integer
+      if !additionnal_pp.is_a? Integer
         additionnal_pp = additionnal_pp.ceil
       end
       Chef::Log.debug("pagingspace: adding/removing #{additionnal_pp} to paging space")
@@ -129,34 +129,34 @@ action :change do
     # if auto
     unless @new_resource.auto.nil?
       if @new_resource.auto
-        Chef::Log.debug("pagingspace: auto y")
+        Chef::Log.debug('pagingspace: auto y')
         auto = 'y'
       else
-        Chef::Log.debug("pagingspace: auto n")
+        Chef::Log.debug('pagingspace: auto n')
         auto = 'n'
       end
-      if @current_resource.auto != (@new_resource.auto)
+      if @current_resource.auto != @new_resource.auto
         converge = true
-        chps_flag = chps_flag << " -a " << auto
-      end 
-    end        
+        chps_flag = chps_flag << ' -a ' << auto
+      end
+    end
     # if active
     unless @new_resource.active.nil?
       if @new_resource.active
-        Chef::Log.debug("pagingspace: using swapon")
-        ctrl_swap_cmd = "swapon /dev/" << @current_resource.name
+        Chef::Log.debug('pagingspace: using swapon')
+        ctrl_swap_cmd = 'swapon /dev/' << @current_resource.name
       else
-        Chef::Log.debug("pagingspace: using swapon")
-        ctrl_swap_cmd = "swapoff /dev/" << @current_resource.name
+        Chef::Log.debug('pagingspace: using swapon')
+        ctrl_swap_cmd = 'swapoff /dev/' << @current_resource.name
       end
-      if @current_resource.active != (@new_resource.active)
+      if @current_resource.active != @new_resource.active
         converge = true
-      end 
-    end 
+      end
+    end
     if converge
-      converge_by("paging_space: changing paging space #{@current_resource.name} to #{@new_resource.size}MB, auto to #{@new_resource.auto}") do
-        chps_string = "chps "
-        chps_string = chps_string << chps_flag << " " << @new_resource.name
+      converge_by("paging_space: changing paging space #{@current_resource.name}") do
+        chps_string = 'chps '
+        chps_string = chps_string << chps_flag << ' ' << @new_resource.name
         Chef::Log.debug("pagingspace: command: #{chps_string}")
         chps = Mixlib::ShellOut.new(chps_string)
         chps.run_command
@@ -164,7 +164,7 @@ action :change do
         unless chps.exitstatus
           Chef::Log.fatal("pagingspace: error while trying to change paging space #{@current_resource.name}")
         end
-        if ! ctrl_swap_cmd.empty?
+        if !ctrl_swap_cmd.empty?
           Chef::Log.debug("pagingspace: command: #{ctrl_swap_cmd}")
           swapcmd = Mixlib::ShellOut.new(ctrl_swap_cmd)
           swapcmd.run_command
@@ -181,8 +181,8 @@ end
 # removing paging space
 action :remove do
   if @current_resource.exists
-    rmps_string = "rmps " << @new_resource.name
-    converge_by("paging_space: removing paging sapce #{@new_resource.name}") do
+    rmps_string = 'rmps ' << @new_resource.name
+    converge_by("pagingspace: removing paging sapce #{@new_resource.name}") do
       rmps = Mixlib::ShellOut.new(rmps_string)
       rmps.run_command
       rmps.error!
@@ -195,8 +195,8 @@ end
 
 # creating paging space
 action :create do
-  # Creating paging space ony if this one does not exists
-  if ! @current_resource.exists
+  # Creating paging space only if this one does not exists
+  unless @current_resource.exists
     # finding pp size
     pp_size_cmd = Mixlib::ShellOut.new("lsvg #{@new_resource.vgname} | awk '$4 == \"PP\" {print $6}'")
     pp_size_cmd.run_command
@@ -204,34 +204,52 @@ action :create do
     pp_size = pp_size_cmd.stdout.chomp.to_i
     number_of_pp = @new_resource.size / pp_size
     number_of_pp = number_of_pp.ceil
-    mkps_flag = ""
+    mkps_flag = ''
     Chef::Log.debug("pagingspace: pp size of vg #{@new_resource.vgname} is #{pp_size} MB")
     Chef::Log.debug("pagingspace: paging space #{@new_resource.name} size in pp will be #{number_of_pp}")
     unless @new_resource.auto.nil?
       if @new_resource.auto
-        mkps_flag = mkps_flag << " -a " 
+        Chef::Log.debug("pagingspace: paging space #{@new_resource.name} will be activated at reboot")
+        mkps_flag = mkps_flag << ' -a '
       end
     end
     unless @new_resource.active.nil?
       if @new_resource.active
-        mkps_flag = mkps_flag << " -n " 
+        Chef::Log.debug("pagingspace: paging space #{@new_resource.name} will be active now")
+        mkps_flag = mkps_flag << ' -n '
       end
     end
-    mkps_flag = mkps_flag << " -s " << number_of_pp.to_s << " " << @new_resource.vgname
-    converge_by("paging_space: removing paging sapce #{@new_resource.name}") do
-      mkps_string = "mkps " << mkps_flag
+    mkps_flag = mkps_flag << ' -s ' << number_of_pp.to_s << ' ' << @new_resource.vgname
+    converge_by("pagingspace: creating paging space #{@new_resource.name}") do
+      mkps_string = 'mkps ' << mkps_flag
+      Chef::Log.debug("pagingspace: #{mkps_string}")
       mkps = Mixlib::ShellOut.new(mkps_string)
       mkps.run_command
       mkps.error!
       unless mkps.exitstatus
-        Chef::Log.fatal("pagingspace: error while trying to create paging space")
+        Chef::Log.fatal('pagingspace: error while trying to create paging space')
       end
-      old_name = mkps.stdout
-      rename = Mixlib::ShellOut.new("chlv -n " << @new_resource.name << " " << old_name)
-      rename.run_command
-      rename.error!
-      unless rename.exitstatus
-        Chef::Log.fatal("pagingspace: error while trying to rename paging space")
+      old_name = mkps.stdout.chomp
+      Chef::Log.debug("pagingspace: old_name #{old_name} new_name #{@new_resource.name}")
+      # rename only if name are different
+      if old_name != @new_resource.name
+        rename = Mixlib::ShellOut.new('chlv -n ' << @new_resource.name << ' ' << old_name)
+        rename.run_command
+        rename.error!
+        unless rename.exitstatus
+          Chef::Log.fatal('pagingspace: error while trying to rename paging space')
+        end
+        unless @new_resource.auto.nil?
+          if @new_resource.auto
+            chps_string = "chps -ay #{@new_resource.name}"
+            chps = Mixlib::ShellOut.new(chps_string)
+            chps.run_command
+            chps.error!
+            unless rename.exitstatus
+              Chef::Log.fatal('pagingspace: error while trying to auto paging space')
+            end
+          end
+        end
       end
     end
   end
