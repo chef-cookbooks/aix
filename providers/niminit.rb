@@ -60,8 +60,8 @@ action :remove do
   if @current_resource.exists
     converge_by('niminit: removing nimclient configuration') do
       stopsrc_s = 'stopsrc -g nimclient'
-      Chef::Log.debug("niminit: stoping nimclient running #{niminit_s}")
-      niminit = Mixlib::ShellOut.new(niminit_s)
+      Chef::Log.debug("niminit: stoping nimclient running #{stopsrc_s}")
+      niminit = Mixlib::ShellOut.new(stopsrc_s)
       niminit.run_command
       # we don't care here about return code, sometime nimsh will not be runing
       # removing /etc/niminfo
