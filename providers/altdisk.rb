@@ -34,11 +34,11 @@ def load_current_resource
 
   # if there is no altdisk_name specified in the recipe the altdisk_name will be the default one
   # (altinst_rootvg)
-  unless @new_resource.altdisk_name.nil?
-    altdisk_name = @new_resource.altdisk_name
-  else
+  if @new_resource.altdisk_name.nil?
     altdisk_name = 'altinst_rootvg'
     @new_resource.altdisk_name('altinst_rootvg')
+  else
+    altdisk_name = @new_resource.altdisk_name
   end
 
   lspv_altinst_rootvg = Mixlib::ShellOut.new("lspv | awk '$3 == \"#{altdisk_name}\" {print $1}")
@@ -214,10 +214,10 @@ action :customize do
     Chef::Log.info('alt_disk: customize')
     disk = get_current_alt
     customize = false
-    customize = unless defined?(@new_resource.image_location)
-                  false
-                else
+    customize = if defined?(@new_resource.image_location)
                   true
+                else
+                  false
                 end
     if disk != 'None' && customize
       converge_by('alt_disk: customize alt_disk (update)') do
