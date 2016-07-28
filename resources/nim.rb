@@ -15,26 +15,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-require 'chef/mixin/shell_out'
 
-include Chef::Mixin::ShellOut
-use_inline_resources
+actions :update
+default_action :update
 
-# suma reminder
-# suma -c [ -a Field=Value ]...
-# suma -x [ -a Field=Value ]...
-# suma -s CronSched [ -a Field=Value ]...
-# suma -d TaskID
+attr_accessor :exists
 
-# Support whyrun
-def whyrun_supported?
-  true
-end
+attribute :location, kind_of: String, default: "/usr/sys/inst.images"
+attribute :target, kind_of: String, default: ""
+attribute :server, kind_of: String, default: "master"
 
-def load_current_resource
-  # some Ruby
-end
-
-action :download do
-  # a mix of built-in Chef resources and Ruby
-end
+# nim / niminv reminder
+# nim -o define -t lpp_source [ -a Field=Value ]... <ident>
+# nim -o cust [ -a Field=Value ]... <client>
+# niminv -o invcmp [ -a Field=Value ]

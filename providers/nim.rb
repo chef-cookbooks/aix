@@ -20,11 +20,10 @@ require 'chef/mixin/shell_out'
 include Chef::Mixin::ShellOut
 use_inline_resources
 
-# suma reminder
-# suma -c [ -a Field=Value ]...
-# suma -x [ -a Field=Value ]...
-# suma -s CronSched [ -a Field=Value ]...
-# suma -d TaskID
+# nim / niminv reminder
+# nim -o define -t lpp_source [ -a Field=Value ]... <ident>
+# nim -o cust [ -a Field=Value ]... <client>
+# niminv -o invcmp [ -a Field=Value ]
 
 # Support whyrun
 def whyrun_supported?
@@ -35,6 +34,6 @@ def load_current_resource
   # some Ruby
 end
 
-action :download do
+action :update do
   # a mix of built-in Chef resources and Ruby
 end
