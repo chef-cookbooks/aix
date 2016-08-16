@@ -5,10 +5,20 @@
 
 This cookbook contains useful resources for using Chef with AIX systems.
 
-## Supported Platforms
+## Requirements
 
-* AIX 6.1
-* AIX 7.1
+### Platforms
+
+- AIX 6.1
+- AIX 7.1
+
+### Chef
+
+- Chef 12+
+
+### Cookbooks
+
+- none
 
 ## Usage
 
