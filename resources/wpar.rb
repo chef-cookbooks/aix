@@ -13,5 +13,5 @@ attribute :backupimage, kind_of: String
 attribute :cpu, kind_of: String
 attribute :memory, kind_of: String
 attribute :autostart, kind_of: [TrueClass, FalseClass], default: false
-attribute :state,kind_of: String, default: nil
+attribute :state, kind_of: String, default: nil
 attribute :live_stream, kind_of: [TrueClass, FalseClass], default: false

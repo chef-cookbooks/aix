@@ -12,4 +12,3 @@ gem 'stove'
 gem 'community_cookbook_releaser'
 gem 'kitchen-wpar'
 gem 'aix-wpar', '>=0.1.0'
-

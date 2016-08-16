@@ -67,15 +67,14 @@ def load_current_resource
       # if we found the stanza, and we match another stanza found_stanza=0
       found_stanza = false if found_stanza && line =~ /\w:/
       # filling the hash table
-      if found_stanza && line =~ /=/
-        line_attribute = line.split('=')
-        # chomp and strip here
-        key = line_attribute[0].chomp.strip
-        value = line_attribute[1].chomp.strip
-        # to_sym very important
-        current_attributes[key.to_sym] = value
-        Chef::Log.debug("chsec: #{@new_resource.stanza} -> [#{key}],[#{value}])")
-      end
+      next unless found_stanza && line =~ /=/
+      line_attribute = line.split('=')
+      # chomp and strip here
+      key = line_attribute[0].chomp.strip
+      value = line_attribute[1].chomp.strip
+      # to_sym very important
+      current_attributes[key.to_sym] = value
+      Chef::Log.debug("chsec: #{@new_resource.stanza} -> [#{key}],[#{value}])")
     end
     # loading the attributes
     @current_resource.attributes(current_attributes)

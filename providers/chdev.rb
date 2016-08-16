@@ -90,7 +90,7 @@ action :update do
     end
     # if both -P and -U will be add raise an error (-P or -U not both)
     if @new_resource.need_reboot && @new_resource.hot_change
-      raise "chdev: conflicting flags: -P -U"
+      raise 'chdev: conflicting flags: -P -U'
     end
     # if attributes needs a reboot add -P (for permanent to the command)
     string_shell_out = string_shell_out << ' -P' if @new_resource.need_reboot

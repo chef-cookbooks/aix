@@ -1,4 +1,7 @@
-# Rubocop todo items
+
+Lint/AmbiguousRegexpLiteral:
+  Exclude:
+    - 'test/integration/capabilities/serverspec/capabilities_drop_spec.rb'
 
 Lint/DuplicatedKey:
   Exclude:
@@ -13,7 +16,6 @@ Lint/UselessAssignment:
     - 'providers/altdisk.rb'
     - 'providers/chsec.rb'
     - 'providers/nimclient.rb'
-    - 'providers/niminit.rb'
     - 'providers/no.rb'
     - 'providers/tunables.rb'
 
@@ -35,6 +37,7 @@ Style/CommentAnnotation:
 Style/GuardClause:
   Exclude:
     - 'providers/nimclient.rb'
+    - 'providers/volume_group.rb'
 
 Style/IdenticalConditionalBranches:
   Exclude:
