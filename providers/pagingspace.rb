@@ -44,9 +44,7 @@ def load_current_resource
     lsps.stdout.each_line do |line|
       line_array = line.split(':')
       # if the name of the paging space exists the resource exists
-      if line_array[0] == @new_resource.name
-        @current_resource.exists = true
-      end
+      @current_resource.exists = true if line_array[0] == @new_resource.name
       # name:Pvname:Vgname:Size:Used:Active:Auto:Type:Chksum
       # hd6:hdisk0:rootvg:8:1:y:n:lv:0
       # first line of lsps -ac is a commentary
@@ -116,9 +114,7 @@ action :change do
       # we need the absolute value if reducing the paging space
       additionnal_mb = additionnal_mb.abs
       additionnal_pp = additionnal_mb.to_i / pp_size.to_f
-      if !additionnal_pp.is_a? Integer
-        additionnal_pp = additionnal_pp.ceil
-      end
+      additionnal_pp = additionnal_pp.ceil unless additionnal_pp.is_a? Integer
       Chef::Log.debug("pagingspace: adding/removing #{additionnal_pp} to paging space")
       # converging only if we need to add or remove some pp from the paging space
       if additionnal_pp.to_i > 0
@@ -149,7 +145,7 @@ action :change do
         Chef::Log.debug('pagingspace: using swapoff')
         ctrl_swap_cmd = 'swapoff /dev/' << @current_resource.name
       end
-      Chef::Log.debug("pagingspace: current active: #{@current_resource.active}, new active: #{ @new_resource.active}")
+      Chef::Log.debug("pagingspace: current active: #{@current_resource.active}, new active: #{@new_resource.active}")
       if @current_resource.active != @new_resource.active
         converge = true
       else
@@ -167,7 +163,7 @@ action :change do
         unless chps.exitstatus
           Chef::Log.fatal("pagingspace: error while trying to change paging space #{@current_resource.name}")
         end
-        if !ctrl_swap_cmd.empty?
+        unless ctrl_swap_cmd.empty?
           Chef::Log.debug("pagingspace: command: #{ctrl_swap_cmd}")
           swapcmd = Mixlib::ShellOut.new(ctrl_swap_cmd)
           swapcmd.run_command
