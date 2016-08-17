@@ -35,42 +35,36 @@ def load_current_resource
   # get all WPAR on the system
   wpars = WPAR::WPARS.new
 
-  #get the current wpar
+  # get the current wpar
   @wpar = wpars[@new_resource.name]
-  if @wpar.nil?
-    @current_resource.exists=false
-  else
-    @current_resource.exists=true
-  end
+  @current_resource.exists = if @wpar.nil?
+                               false
+                             else
+                               true
+                             end
 
   if @current_resource.exists
-    if @new_resource.live_stream
-      @wpar.live_stream = STDOUT
-    end
-    @current_resource.state =  @wpar.general.state
+    @wpar.live_stream = STDOUT if @new_resource.live_stream
+    @current_resource.state = @wpar.general.state
     @current_resource.cpu = @wpar.resource_control.cpu
     unless @wpar.networks.first.nil?
       @current_resource.address = @wpar.networks.first.address
       @current_resource.interface = @wpar.networks.first.interface
     end
 
-    if @wpar.general.auto == "yes"
-      @current_resource.autostart = true
-    end
-    if @wpar.general.rootvgwpar == "yes"
-      @current_resource.rootvg = true
-    end
-    #get the hdisk used if it's a rootvg wpar
+    @current_resource.autostart = true if @wpar.general.auto == 'yes'
+    @current_resource.rootvg = true if @wpar.general.rootvgwpar == 'yes'
+    # get the hdisk used if it's a rootvg wpar
     unless @wpar.get_rootvg.empty?
       @current_resource.rootvg = true
-      @current_resource.rootvg_disk=@wpar.devices.get_rootvg.first.devname
+      @current_resource.rootvg_disk = @wpar.devices.get_rootvg.first.devname
     end
   end
 
   Chef::Log.debug(@current_resource)
 end
 
-#create action
+# create action
 action :create do
   options = {}
   Chef::Log.debug("wpar #{@current_resource.state} ")
@@ -78,42 +72,32 @@ action :create do
     Chef::Log.info("wpar #{@new_resource.name} already exist")
   else
     wpar = WPAR::WPAR.new(name: @new_resource.name)
-    wpar.general.auto = @new_resource.autostart || "no"
-    if @new_resource.live_stream
-      wpar.live_stream = STDOUT
-    end
-    if @new_resource.rootvg
-      options[:rootvg]=@new_resource.rootvg_disk
-    end
+    wpar.general.auto = @new_resource.autostart || 'no'
+    wpar.live_stream = STDOUT if @new_resource.live_stream
+    options[:rootvg] = @new_resource.rootvg_disk if @new_resource.rootvg
 
-    if @new_resource.backupimage
-      options[:backupimage]=@new_resource.backupimage
-    end
+    options[:backupimage] = @new_resource.backupimage if @new_resource.backupimage
 
-    if @new_resource.wparvg
-      options[:wparvg]=@new_resource.wparvg
-    end
+    options[:wparvg] = @new_resource.wparvg if @new_resource.wparvg
 
-    if @new_resource.cpu
-      wpar.resource_control.cpu = @new_resource.cpu
-    end
+    wpar.resource_control.cpu = @new_resource.cpu if @new_resource.cpu
     wpar.general.hostname = @new_resource.hostname
-    #create a network if specified
+    # create a network if specified
     if @new_resource.address
       wpar.networks.add(name: @new_resource.name,
                         address: @new_resource.address,
                         interface: @new_resource.interface)
     end
 
-    converge_by("creating wpar") do
+    converge_by('creating wpar') do
       wpar.create(options)
     end
   end
 end
 
-#start action
+# start action
 action :start do
-  if @current_resource.exists && @current_resource.state == "D"
+  if @current_resource.exists && @current_resource.state == 'D'
     converge_by("Start wpar #{@current_resource.name}") do
       @wpar.start
     end
@@ -122,9 +106,9 @@ action :start do
   end
 end
 
-#stop action
+# stop action
 action :stop do
-  if @current_resource.exists && @current_resource.state == "A"
+  if @current_resource.exists && @current_resource.state == 'A'
     converge_by("Stop wpar #{@current_resource.name}") do
       @wpar.stop
     end
@@ -133,7 +117,7 @@ action :stop do
   end
 end
 
-#action delete
+# action delete
 action :delete do
   if @current_resource.exists
     converge_by("Delete wpar #{@current_resource.name}") do
@@ -144,11 +128,11 @@ action :delete do
   end
 end
 
-#action sync
+# action sync
 action :sync do
   if @current_resource.exists
     converge_by("Sync wpar #{@current_resource.name}") do
-      @wpar.sync()
+      @wpar.sync
     end
   else
     Chef::Log.error("wpar #{@new_resource.name} doesn't exist")

@@ -5,7 +5,9 @@ license          'Apache 2.0'
 description      'Custom resources useful for AIX systems'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
 version          '1.0.0'
-source_url       'https://github.com/chef-cookbooks/aix' if respond_to?(:source_url)
-issues_url       'https://github.com/chef-cookbooks/aix/issues' if respond_to?(:issues_url)
+source_url       'https://github.com/chef-cookbooks/aix'
+issues_url       'https://github.com/chef-cookbooks/aix/issues'
 
 supports 'aix', '>= 6.1'
+
+chef_version '>= 12' if respond_to?(:chef_version)
