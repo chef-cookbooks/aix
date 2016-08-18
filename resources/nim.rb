@@ -1,6 +1,6 @@
 # Author:: Jérôme Hurstel (<jerome.hurstel@atos.ne>) & Laurent Gay (<laurent.gay@atos.net>)
 # Cookbook Name:: aix
-# Provider:: suma
+# Provider:: nim
 #
 # Copyright:: 2016, Atos
 #
@@ -16,16 +16,82 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-actions :update
-default_action :update
+property :type, String
+property :targets, String
+property :lpp_source, String
+property :location, String
 
-attr_accessor :exists
+# nim reminder
+# nim -o cust -a lpp_source=<lpp_source> <targets>
+# nim -o define -t <type> -a server=<server> -a location=<location> <lpp_source>
+# nim -o remove -t <type> <lpp_source>
 
-attribute :location, kind_of: String, default: "/usr/sys/inst.images"
-attribute :target, kind_of: String, default: ""
-attribute :server, kind_of: String, default: "master"
+load_current_value do
 
-# nim / niminv reminder
-# nim -o define -t lpp_source [ -a Field=Value ]... <ident>
-# nim -o cust [ -a Field=Value ]... <client>
-# niminv -o invcmp [ -a Field=Value ]
+end
+	
+action :cust do
+  
+  nim_s = 'nim -o cust'
+
+  # getting lpp_source
+  nim_s = nim_s << ' -a lpp_source=' << lpp_source
+  
+  # getting targets
+  nim_s = nim_s << ' ' << targets
+
+  # removing any efixes
+#  aix_fixes 'remvoving_efixes' do
+#	fixes ['all']
+#	action :remove
+  #end
+
+  # committing filesets in APPLIED state
+  # no guard needed here
+  #execute 'commit' do
+  #  command 'installp -c all'
+  #end
+
+  # running command
+  execute "#{nim_s}" do
+	action :run		# replace by :run action
+  end
+
+end
+
+action :define do
+  
+  nim_s = 'nim -o define -a server=master'
+
+  # getting type
+  nim_s = nim_s << ' -t type=' << type
+  
+  # getting location
+  nim_s = nim_s << ' -a location=' << location
+
+  # getting lpp_source
+  nim_s = nim_s << ' ' << lpp_source
+
+  # running command
+  execute "#{nim_s}" do
+	action :run		# replace by :run action
+  end
+
+end
+
+action :remove do
+  
+  nim_s = 'nim -o remove'
+
+  # getting type
+  nim_s = nim_s << ' -t type=' << type
+  
+  # getting lpp_source
+  nim_s = nim_s << ' ' << lpp_source
+
+  # running command
+  execute "#{nim_s}" do
+	action :run		# replace by :run action
+  end
+
+end
