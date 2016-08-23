@@ -41,11 +41,11 @@ action :download do
     new_filter_ml = shell_out!("/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{machine} \"/usr/bin/oslevel -r\"").stdout.chomp!
     Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
 
-	new_filter_ml.delete!('-')
-	old_filter_ml=new_filter_ml
-	if new_filter_ml <= old_filter_ml
-	  filter_ml=new_filter_ml
-	end
+    new_filter_ml.delete!('-')
+    old_filter_ml=new_filter_ml
+    if new_filter_ml <= old_filter_ml
+      filter_ml=new_filter_ml
+    end
 
   end
   filter_ml.insert(4, '-')
@@ -68,23 +68,23 @@ action :download do
   so=shell_out("#{suma_s} -a Action=Preview 2>&1")
   #raise "no: #{suma_s} -a Action=Preview failed" if so.exitstatus != 0
   if so.error?
-	Chef::Log.info("suma returns an error...")
+    Chef::Log.info("suma returns an error...")
     need=shell_out!("echo \"#{so.stdout}\" | grep \"0500-035 No fixes match your query.\"")
     if need.error?
-	  Chef::Log.info("Other suma error")
-	else
-	  Chef::Log.info("Suma error: No fixes match your query")
-	end
+      Chef::Log.info("Other suma error")
+    else
+      Chef::Log.info("Suma error: No fixes match your query")
+    end
   else
-	dl=shell_out("echo \"#{so.stdout}\" | grep \"Total bytes of updates downloaded:\" | cut -d' ' -f6").stdout
-	if dl == 0
-	  Chef::Log.info("Nothing to download")
-	else
+    dl=shell_out("echo \"#{so.stdout}\" | grep \"Total bytes of updates downloaded:\" | cut -d' ' -f6").stdout.strip.to_i
+    if dl == 0
+      Chef::Log.info("Nothing to download")
+    else
       Chef::Log.info("Something to download")
     end
   end
 
-  unless dl == 0 
+  unless dl == 0
     # suma download
     converge_by("suma download operation: \"#{suma_s}\"") do
       Chef::Log.info("Download fixes...")
@@ -99,7 +99,7 @@ action :download do
   #rescue Mixlib::ShellOut::ShellCommandFailed => e
   #  Chef::Log.fatal(e.message)
   #end
-  
+
   # converge here
   #unless do_not_converge
   #  converge_by("suma download operation: \"#{suma_s}\"") do
