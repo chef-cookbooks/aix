@@ -39,7 +39,7 @@ action :download do
   machines.each do |machine|
 
     #new_filter_ml = shell_out!("/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{machine} \"/usr/bin/oslevel -r\"").stdout.chomp!
-	new_filter_ml=node['nim']['clients'][machine]['oslevel']
+    new_filter_ml=node['nim']['clients'][machine]['oslevel']
     Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
 
     new_filter_ml.delete!('-')
@@ -50,6 +50,7 @@ action :download do
 
   end
   filter_ml.insert(4, '-')
+  filter_ml.insert(7, '-')
   Chef::Log.info("Lowest ML level is: #{filter_ml}")
 
   # create location if it does not exist
@@ -91,7 +92,7 @@ action :download do
     converge_by("nim define lpp_source: \"#{res_name}\"") do
       Chef::Log.info("Define #{res_name} ...")
       so=shell_out("nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}")
-	end
+    end
   end
 
 end

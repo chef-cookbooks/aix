@@ -102,7 +102,13 @@ function generate_bff
     	    nb=350
         fi
     fi
-	let last_value=855000
+    if [ "${fields['RqType']}" != "Latest" ]
+    then
+	    version_origin=$(echo "${fields['FilterML']}" | sed 's|-||g')
+	    version_target=$(echo "${fields['RqName']}" | sed 's|-||g')
+	    [ $version_origin -ge $version_target ] && nb=0
+	fi    
+    let last_value=855000
 	for num in `seq 1 $nb`
 	do
         let step=$num%4
