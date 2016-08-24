@@ -1,4 +1,4 @@
-# Author:: JÃ©rÃ´me Hurstel (<jerome.hurstel@atos.ne>) & Laurent Gay (<laurent.gay@atos.net>)
+# Author:: Jérôme Hurstel (<jerome.hurstel@atos.ne>) & Laurent Gay (<laurent.gay@atos.net>)
 # Cookbook Name:: aix
 # Provider:: nim
 #
@@ -16,82 +16,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-property :type, String
+property :desc, String, name_property: true
+property :name, String
 property :targets, String
-property :lpp_source, String
-property :location, String
-
-# nim reminder
-# nim -o cust -a lpp_source=<lpp_source> <targets>
-# nim -o define -t <type> -a server=<server> -a location=<location> <lpp_source>
-# nim -o remove -t <type> <lpp_source>
 
 load_current_value do
 
 end
-	
-action :cust do
-  
-  nim_s = 'nim -o cust'
 
-  # getting lpp_source
-  nim_s = nim_s << ' -a lpp_source=' << lpp_source
-  
-  # getting targets
-  nim_s = nim_s << ' ' << targets
+action :update do
 
-  # removing any efixes
-#  aix_fixes 'remvoving_efixes' do
-#	fixes ['all']
-#	action :remove
-  #end
+  res_name="#{name}-lpp_source"
+  nim_s="nim -o cust -a lpp_source=#{res_name} #{targets.gsub!(',', ' ')}"
 
-  # committing filesets in APPLIED state
-  # no guard needed here
-  #execute 'commit' do
-  #  command 'installp -c all'
-  #end
-
-  # running command
-  execute "#{nim_s}" do
-	action :run		# replace by :run action
-  end
-
-end
-
-action :define do
-  
-  nim_s = 'nim -o define -a server=master'
-
-  # getting type
-  nim_s = nim_s << ' -t type=' << type
-  
-  # getting location
-  nim_s = nim_s << ' -a location=' << location
-
-  # getting lpp_source
-  nim_s = nim_s << ' ' << lpp_source
-
-  # running command
-  execute "#{nim_s}" do
-	action :run		# replace by :run action
-  end
-
-end
-
-action :remove do
-  
-  nim_s = 'nim -o remove'
-
-  # getting type
-  nim_s = nim_s << ' -t type=' << type
-  
-  # getting lpp_source
-  nim_s = nim_s << ' ' << lpp_source
-
-  # running command
-  execute "#{nim_s}" do
-	action :run		# replace by :run action
+  unless shell_out("lsnim -t lpp_source #{res_name}").error?
+    # nim install
+    converge_by("nim custom operation: \"#{nim_s}\"") do
+      Chef::Log.info("Install fixes...")
+      so=shell_out!("#{nim_s}")
+    end
   end
 
 end

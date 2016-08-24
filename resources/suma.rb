@@ -38,7 +38,8 @@ action :download do
   filter_ml.delete!('-')
   machines.each do |machine|
 
-    new_filter_ml = shell_out!("/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{machine} \"/usr/bin/oslevel -r\"").stdout.chomp!
+    #new_filter_ml = shell_out!("/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{machine} \"/usr/bin/oslevel -r\"").stdout.chomp!
+	new_filter_ml=node['nim']['clients'][machine]['oslevel']
     Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
 
     new_filter_ml.delete!('-')
@@ -54,19 +55,14 @@ action :download do
   # create location if it does not exist
   dl_target="#{location}/#{name}-lpp_source"
   Chef::Log.info("Checking location #{dl_target}...")
-  directory dl_target do
-    recursive true
-    action :create
-  end
-
-  suma_s="suma -x -a DisplayName=#{desc} -a RqType=SP -a RqName=#{name} -a DLTarget=#{dl_target} -a FilterML=#{filter_ml}"
-  res_name="#{name}-lpp_source"
+  shell_out!("mkdir -p #{dl_target}")
 
   # suma preview
+  suma_s="suma -x -a DisplayName=#{desc} -a RqType=SP -a RqName=#{name} -a DLTarget=#{dl_target} -a FilterML=#{filter_ml}"
+  res_name="#{name}-lpp_source"
   dl=0
   Chef::Log.info("Preview operation...")
   so=shell_out("#{suma_s} -a Action=Preview 2>&1")
-  #raise "no: #{suma_s} -a Action=Preview failed" if so.exitstatus != 0
   if so.error?
     Chef::Log.info("suma returns an error...")
     need=shell_out!("echo \"#{so.stdout}\" | grep \"0500-035 No fixes match your query.\"")
@@ -92,22 +88,10 @@ action :download do
     end
 
     # nim define
-    Chef::Log.info("Define #{res_name} ...")
-    so=shell_out("nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}")
+    converge_by("nim define lpp_source: \"#{res_name}\"") do
+      Chef::Log.info("Define #{res_name} ...")
+      so=shell_out("nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}")
+	end
   end
 
-  #rescue Mixlib::ShellOut::ShellCommandFailed => e
-  #  Chef::Log.fatal(e.message)
-  #end
-
-  # converge here
-  #unless do_not_converge
-  #  converge_by("suma download operation: \"#{suma_s}\"") do
-  #    suma = Mixlib::ShellOut.new(suma_s, timeout: 7200)
-  #    suma.valid_exit_codes = 0
-  #    suma.run_command
-  #    suma.error!
-  #    suma.error?
-  #  end
-  #end
 end
