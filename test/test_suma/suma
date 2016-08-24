@@ -47,36 +47,41 @@ Delete a SUMA task.
 #===============================================
 function error_managment
 {
+	error_message=""
     if [ ! -z $(echo "${fields['DisplayName']}" | grep "error") ]
     then
         if [ ! -z $(echo "${fields['DisplayName']}" | grep "BSO") ]
         then
-            echo '
+            error_message='
 CWPKI0022E: SSL HANDSHAKE FAILURE:  A signer with SubjectDN "CN=ASA Temporary Self Signed Certificate" was sent from target host:port "esupport.ibm.com:443".  The signer may need to be added to local trust store  "/var/ecc/data/TrustList.jks" located in SSL configuration alias "null" loaded from SSL configuration file "null".  The extended error message from the SSL handshake exception is: "PKIX path building failed: java.security.cert.CertPathBuilderException: unable to find valid certification path to requested target".
 
 CWPKI0040I: An SSL handshake failure occurred from a secure client.  The server's SSL signer has to be added to the client's trust store.  A retrieveSigners utility is provided to download signers from the server but requires administrative permission.  Check with your administrator to have this utility run to setup the secure environment before running the client.  Alternatively, the com.ibm.ssl.enableSignerExchangePrompt can be enabled in ssl.client.props for "DefaultSSLSettings" in order to allow acceptance of the signer during the connection attempt.
 '
         fi
-        echo "0500-013 Failed to retrieve list from fix server."
-        exit 1
+        error_message+="0500-013 Failed to retrieve list from fix server."
     fi
     if [ ! -z $(echo "${fields['DisplayName']}" | grep "not entitled") ]
     then
-        echo "0500-059 Entitlement is required to download.
+        error_message="0500-059 Entitlement is required to download.
 The system's serial number is not entitled.
 Please go to the Fix Central website to download fixes."
-        exit 1
     fi
     if [ ! -z $(echo "${fields['DisplayName']}" | grep "up-to-date") ]
     then
-        echo "0500-035 No fixes match your query."
-        exit 1
+        error_message="0500-035 No fixes match your query."
     fi
     if [ "${fields['RqType']}" != "TL" -a "${fields['RqType']}" != "SP" -a "${fields['RqType']}" != "Latest" ]
     then
-        echo "0500-019 The -a flag entry RqType=${fields['RqType']} is not valid."
-        exit 1
+        error_message="0500-019 The -a flag entry RqType=${fields['RqType']} is not valid."
     fi
+    if [ ! -z "$error_message" ]
+    then
+    	echo $error_message
+	    log_file="${fields['DLTarget']}/suma.error"
+	    echo "---- $(date) ----" >> $log_file
+    	echo $error_message >> $log_file
+    	echo "" >> $log_file
+    fi   
 }
 
 #===============================================
