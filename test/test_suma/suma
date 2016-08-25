@@ -104,7 +104,7 @@ function generate_bff
     fi
     if [ "${fields['RqType']}" != "Latest" ]
     then
-	    version_origin=$(echo "${fields['FilterML']}" | sed 's|-||g')
+	    version_origin=$(echo "${fields['FilterML']}" | sed 's|-||g')'00'
 	    version_target=$(echo "${fields['RqName']}" | sed 's|-||g')
 	    [ $version_origin -ge $version_target ] && nb=0
 	fi    

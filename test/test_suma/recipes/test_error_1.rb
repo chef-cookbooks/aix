@@ -1,5 +1,5 @@
 
-node.default['nim']['clients'] = {'client1'=>{'oslevel'=>'7100-09-00'}}
+node.default['nim']['clients'] = {'client1'=>{'mllevel'=>'7100-09'}}
 
 # Suma error 1 
 aix_suma "error network (BSO) for test" do
