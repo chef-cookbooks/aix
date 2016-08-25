@@ -51,25 +51,31 @@ action :download do
   Chef::Log.info("rq_name=#{rq_name}")
 
   # find lowest ML level by comparing each machine's oslevel from ohai
-  filter_ml='7200-00'   # TODO: GET LAST ML LEVEL (WITH METADATA ?)
+  last_ml_level='7200-00'    # TODO: GET LAST ML LEVEL (WITH METADATA ?)
+  filter_ml=last_ml_level
   filter_ml.delete!('-')
   if property_is_set?(:targets)
     machines=targets.split(',')
     Chef::Log.info("machines=#{machines}")
+    new_filter_ml=String.new
+    old_filter_ml=String.new
     machines.each do |machine|
 
       begin
-        new_filter_ml=node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('mllevel')
+        old_filter_ml=new_filter_ml
+        new_filter_ml=String.new(node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('mllevel'))
         Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
+        Chef::Log.info("#{node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('mllevel')}")
+        new_filter_ml.delete!('-')
+        if new_filter_ml.to_i <= old_filter_ml.to_i
+          filter_ml=new_filter_ml
+        end
       rescue Exception => e
+        puts e.message
+        puts e.backtrace.inspect
         raise "SUMA-SUMA-SUMA client '#{machine}' unknown!"
       end
 
-      new_filter_ml.delete!('-')
-      old_filter_ml=new_filter_ml
-      if new_filter_ml.to_i <= old_filter_ml.to_i
-        filter_ml=new_filter_ml
-      end
     end
   else
     raise "SUMA-SUMA-SUMA no client targets specified!"
@@ -78,7 +84,11 @@ action :download do
   Chef::Log.info("Lowest ML level is: #{filter_ml}")
 
   # create location if it does not exist
-  res_name="#{rq_name}-lpp_source"
+  if rq_name.nil?
+    res_name="#{last_ml_level}-lpp_source"
+  else
+    res_name="#{rq_name}-lpp_source"
+  end
   dl_target="#{location}/#{res_name}"
   Chef::Log.info("Checking location #{dl_target}...")
   shell_out!("mkdir -p #{dl_target}")
