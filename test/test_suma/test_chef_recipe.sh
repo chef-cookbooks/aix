@@ -17,10 +17,10 @@ function check_suma
     expected_type=$4
     expected_target=$5
 
-    check_action=$(check_value_log 'Action' $lpp_source)
-    check_origin=$(check_value_log 'FilterML' $lpp_source)
-    check_type=$(check_value_log 'RqType' $lpp_source)
-    check_target=$(check_value_log 'RqName' $lpp_source)
+    check_action=$(check_value_log 'Action' $lpp_source/suma.log)
+    check_origin=$(check_value_log 'FilterML' $lpp_source/suma.log)
+    check_type=$(check_value_log 'RqType' $lpp_source/suma.log)
+    check_target=$(check_value_log 'RqName' $lpp_source/suma.log)
     if [ "$check_action" != "$expected_action" -o "$check_type" != "$expected_origin" -o "$check_origin" != "$expected_type" -o "$check_target" != "$expected_target" ]
     then
 	    echo "********* SUMA FAILURE ********"
@@ -34,6 +34,41 @@ function check_suma
 	    let nb_failure+=1
     fi
 }
+
+function check_nim
+{
+    lpp_source=$1
+    expected_name=$2
+    expected_server=$3
+    expected_location=$lpp_source
+	
+	if [ -z "$expected_name" -a -z "$expected_server" ]
+	then
+		if [ -f "$lpp_source/nim.log" ]
+		then
+		    echo "********* SUMA FAILURE ********"
+		    cat $lpp_source/nim.log
+		    echo "*******************************"
+		    let nb_failure+=1
+		fi
+	else
+	    check_name=$(check_value_log 'name' $lpp_source/nim.log)
+	    check_location=$(check_value_log 'location' $lpp_source/nim.log)
+	    check_server=$(check_value_log 'server' $lpp_source/nim.log)
+	    if [ "$check_name" != "$expected_name" -o "$check_location" != "$expected_location" -o "$check_server" != "$expected_server" ]
+	    then
+		    echo "********* SUMA FAILURE ********"
+	        echo "\texpected name = $expected_name"
+	        echo "\texpected location = $expected_location"
+	        echo "\texpected server = $expected_server"
+	        echo ""
+		    cat $lpp_source/nim.log
+		    echo "*******************************"
+		    let nb_failure+=1
+	    fi
+	fi
+}
+
 
 function check_directory
 {
@@ -51,8 +86,8 @@ function check_directory
 function check_value_log
 {
     field=$1
-    lpp_source=$2
-    check=$(grep "$field" $lpp_source/suma.log | sed "s|$field : ||g")
+	log_file=$2
+    check=$(grep "$field" $log_file | sed "s|$field : ||g")
     echo $check
 }
 
@@ -100,7 +135,7 @@ then
     exit 1
 fi
 
-export PATH=$current_dir/aix/test/test_suma:$PATH:/opt/chef/bin
+export PATH=$current_dir/aix/test/aix_fake:$PATH:/opt/chef/bin
 cd $current_dir
 
 [ -z "$(suma -h 2>&1 | grep '++ Suma fake for tests ++')" ] && echo "*** No Fake suma ***" && exit 1
@@ -129,6 +164,7 @@ then
 		if [ $? -eq 0 ]
 		then
 	        check_suma /tmp/img.source/7100-09-02-lpp_source "Preview Download" "SP SP" "7100-09 7100-09" "7100-09-02 7100-09-02"
+	        check_nim /tmp/img.source/7100-09-02-lpp_source "7100-09-02-lpp_source" 'master' 
 		fi 
 	
 		echo '== aix_suma "Downloading TL+SP 7100-09 >> 7100-10-02" =='
@@ -136,6 +172,7 @@ then
 		if [ $? -eq 0 ]
 		then
 	        check_suma /tmp/img.source/7100-10-02-lpp_source "Preview Download" "SP SP" "7100-09 7100-09" "7100-10-02 7100-10-02"
+	        check_nim /tmp/img.source/7100-10-02-lpp_source "7100-10-02-lpp_source" 'master' 
 		fi 
 	
 		echo '== aix_suma "nothing 7100-10 >> 7100-09-03" =='
@@ -143,6 +180,7 @@ then
 		if [ $? -eq 0 ]
 		then
 	        check_suma /tmp/img.source/7100-09-03-lpp_source "Preview" "SP" "7100-10" "7100-09-03"
+	        check_nim /tmp/img.source/7100-09-03-lpp_source "" '' 
 		fi 
 	
 		echo '== aix_suma "Downloading multi-clients TL+SP 7100-08 >> 7100-10-04" =='
@@ -150,6 +188,7 @@ then
 		if [ $? -eq 0 ]
 		then
 	        check_suma /tmp/img.source/7100-10-04-lpp_source "Preview Download" "SP SP" "7100-08 7100-08" "7100-10-04 7100-10-04"
+	        check_nim /tmp/img.source/7100-10-04-lpp_source "7100-10-04-lpp_source" 'master' 
 		fi 
 	fi
 fi
