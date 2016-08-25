@@ -49,7 +49,7 @@ action :download do
   end
   Chef::Log.info("rq_type=#{rq_type}")
   Chef::Log.info("rq_name=#{rq_name}")
-  
+
   # find lowest ML level by comparing each machine's oslevel from ohai
   filter_ml='7200-00'   # TODO: GET LAST ML LEVEL (WITH METADATA ?)
   filter_ml.delete!('-')
@@ -58,13 +58,12 @@ action :download do
     Chef::Log.info("machines=#{machines}")
     machines.each do |machine|
 
-	  begin
+      begin
         new_filter_ml=node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('mllevel')
-	    Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
-	  rescue Exception => e
-        puts e.message
-        puts e.backtrace.inspect
-	  end
+        Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
+      rescue Exception => e
+        raise "SUMA-SUMA-SUMA client '#{machine}' unknown!"
+      end
 
       new_filter_ml.delete!('-')
       old_filter_ml=new_filter_ml
@@ -87,7 +86,7 @@ action :download do
   # suma preview
   suma_s="suma -x -a DisplayName=\"#{desc}\" -a RqType=#{rq_type} -a DLTarget=#{dl_target} -a FilterML=#{filter_ml}"
   unless rq_name.nil?
-	suma_s << " -a RqName=#{rq_name}"
+    suma_s << " -a RqName=#{rq_name}"
   end
   dl=0
   Chef::Log.info("SUMA preview operation: #{suma_s}")
@@ -101,10 +100,11 @@ action :download do
       Chef::Log.info("Suma error: No fixes match your query")
     end
   else
-    dl=shell_out("scale=2; `echo \"#{so.stdout}\" | grep \"Total bytes of updates downloaded:\" | cut -d' ' -f6`/1024/1024/1024\" | bc").stdout.strip.to_f
+    dl=shell_out("echo \"#{so.stdout}\" | grep \"Total bytes of updates downloaded:\" | cut -d' ' -f6").stdout.strip.to_f
     if dl == 0
       Chef::Log.info("Nothing to download")
     else
+      dl=dl/1024/1024/1024
       Chef::Log.info("#{dl} GB to download")
     end
     failed=shell_out("echo \"#{so.stdout}\" | grep \"failed\" | cut -d' ' -f1").stdout.strip.to_i

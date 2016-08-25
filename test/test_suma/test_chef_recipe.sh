@@ -150,12 +150,11 @@ echo "ohai.plugin_path << '$current_dir/nim/ohai/plugins/'" >> $current_dir/solo
 
 echo "--------- Run tests recipes ---------"
 
-rm -rf /tmp/img.source
 nb_failure=0
-
 if [ ! -z "$(echo $run_option | grep 'A')" ]
 then 
 	echo "---- Nominal tests ----"
+	rm -rf /tmp/img.source
 	run_test "test_simple" 4 1
 	if [ $? -eq 0 ]
 	then
@@ -196,6 +195,7 @@ fi
 if [ ! -z "$(echo $run_option | grep 'B')" ]
 then 
 	echo "---- Complex tests ----"
+	rm -rf /tmp/img.source
 	mkdir -p /tmp/img.source/7100-09-05-lpp_source
 	suma -x -a RqName=7100-09-05 -a RqType=SP -a Action=Download -a DLTarget=/tmp/img.source/7100-09-05-lpp_source -a FilterML=7100-09 > /dev/null
 	rm -f /tmp/img.source/7100-09-05-lpp_source/suma.*
@@ -212,7 +212,7 @@ then
 	            if [ "$val" != "0500-035 No fixes match your query." ]
 	            then
 		            echo "********* BAD SUMA ERROR ********"
-		            cat $lpp_source/suma.error
+		            cat /tmp/img.source/7100-09-02-lpp_source/suma.error
 		            echo "*********************************"
 		            let nb_failure+=1
 	            fi
@@ -231,11 +231,11 @@ then
 	        check_suma /tmp/img.source/7100-10-lpp_source "Preview Download" "TL TL" "7100-09 7100-09" "7100-10 7100-10"
 		fi
 	
-		echo '== aix_suma "Downloading TL 7100-09 >> 7100-11-00" =='
-		check_directory '/tmp/img.source/7100-11-00-lpp_source'
+		echo '== aix_suma "Downloading TL 7100-09 >> 7100-11" =='
+		check_directory '/tmp/img.source/7100-11-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/7100-11-00-lpp_source "Preview Download" "TL TL" "7100-09 7100-09" "7100-11-00 7100-11-00"
+	        check_suma /tmp/img.source/7100-11-lpp_source "Preview Download" "TL TL" "7100-09 7100-09" "7100-11 7100-11"
 		fi
 	
 		echo '== aix_suma "Downloading Latest 7100-09" =='
@@ -258,6 +258,7 @@ fi
 if [ ! -z "$(echo $run_option | grep 'C')" ]
 then 
 	echo "---- Error and exception tests ----"
+	rm -rf /tmp/img.source
 	if [ ! -z "$(echo $run_option | grep '1')" ]
 	then 
 		echo '== aix_suma "error network (BSO) for test" =='
@@ -283,7 +284,7 @@ then
 		run_test "test_error_2" 1 0
 		if [ $? -eq 0 ]
 		then
-			check_directory '/tmp/img.source/7100-09-02-lpp_source'
+			check_directory '/tmp/img.source/7100-09-01-lpp_source'
 			if [ $? -eq 0 ]
 			then
 				# suma return "0500-013 Failed to retrieve list from fix server."
@@ -297,7 +298,7 @@ then
 		run_test "test_error_3" 1 0
 		if [ $? -eq 0 ]
 		then
-			check_directory '/tmp/img.source/7100-09-02-lpp_source'
+			check_directory '/tmp/img.source/7100-09-05-lpp_source'
 			if [ $? -eq 0 ]
 			then
 				# suma return "0500-059 Entitlement is required to download.
@@ -313,16 +314,17 @@ then
 		run_test "test_error_4" 1 0
 		if [ $? -eq 0 ]
 		then
-			if [ -d '/tmp/img.source/7100-09-02-lpp_source' ]
+			if [ -d '/tmp/img.source/7100-09-03-lpp_source' ]
 			then
-				echo "** lpp_source folder '/tmp/img.source/7100-09-02-lpp_source' are created!"
+				echo "** lpp_source folder '/tmp/img.source/7100-09-03-lpp_source' are created!"
 				show_error_chef
 				let nb_failure+=1
-			else:
+			else
 				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-				if [ "$error_msg" != "NoMethodError: undefined method `[]' for nil:NilClass" ]
+				if [ "$error_msg" != "RuntimeError: SUMA-SUMA-SUMA client 'client1' unknown!" ]
 				then
 					show_error_chef
+					echo "error '$error_msg'"
 					let nb_failure+=1
 				fi
 			fi 
