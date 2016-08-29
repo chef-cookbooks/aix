@@ -33,11 +33,11 @@ action :download do
 
   # compute suma request type based on oslevel property
   if property_is_set?(:oslevel)
-    if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-[0-9]{4})$/ then
+    if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-[0-9]{4})$/
       rq_type="TL"
       rq_name=$1
     else
-      if oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/ then
+      if oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
         rq_type="SP"
         rq_name=$1
       else
@@ -46,36 +46,29 @@ action :download do
     end
   else
     rq_type="Latest"
+	rq_name='7200-00-01-1527'    # TODO: GET LAST SP LEVEL (WITH METADATA ?)
+	rq_name=rq_name.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/)[1]
   end
   Chef::Log.info("rq_type=#{rq_type}")
   Chef::Log.info("rq_name=#{rq_name}")
 
   # find lowest ML level by comparing each machine's oslevel from ohai
-  last_ml_level='7200-00'    # TODO: GET LAST ML LEVEL (WITH METADATA ?)
-  filter_ml=last_ml_level
+  filter_ml=rq_name.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
+  Chef::Log.info("Base ML level is #{filter_ml}")
   filter_ml.delete!('-')
   if property_is_set?(:targets)
-    machines=targets.split(',')
-    Chef::Log.info("machines=#{machines}")
-    new_filter_ml=String.new
-    old_filter_ml=String.new
-    machines.each do |machine|
+    targets.split(',').each do |machine|
 
       begin
-        old_filter_ml=new_filter_ml
         new_filter_ml=String.new(node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('mllevel'))
         Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
-        Chef::Log.info("#{node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('mllevel')}")
         new_filter_ml.delete!('-')
-        if new_filter_ml.to_i <= old_filter_ml.to_i
+        if new_filter_ml.to_i <= filter_ml.to_i
           filter_ml=new_filter_ml
         end
       rescue Exception => e
-        puts e.message
-        puts e.backtrace.inspect
-        raise "SUMA-SUMA-SUMA client '#{machine}' unknown!"
+        Chef::Log.info("No ML level for machine #{machine}")
       end
-
     end
   else
     raise "SUMA-SUMA-SUMA no client targets specified!"
@@ -84,18 +77,14 @@ action :download do
   Chef::Log.info("Lowest ML level is: #{filter_ml}")
 
   # create location if it does not exist
-  if rq_name.nil?
-    res_name="#{last_ml_level}-lpp_source"
-  else
-    res_name="#{rq_name}-lpp_source"
-  end
+  res_name="#{rq_name}-lpp_source"
   dl_target="#{location}/#{res_name}"
   Chef::Log.info("Checking location #{dl_target}...")
   shell_out!("mkdir -p #{dl_target}")
 
   # suma preview
   suma_s="suma -x -a DisplayName=\"#{desc}\" -a RqType=#{rq_type} -a DLTarget=#{dl_target} -a FilterML=#{filter_ml}"
-  unless rq_name.nil?
+  unless rq_type.eql?("Latest")
     suma_s << " -a RqName=#{rq_name}"
   end
   dl=0
@@ -103,29 +92,27 @@ action :download do
   so=shell_out("#{suma_s} -a Action=Preview 2>&1")
   if so.error?
     Chef::Log.info("suma returns an error...")
-    need=shell_out!("echo \"#{so.stdout}\" | grep \"0500-035 No fixes match your query.\"")
-    if need.error?
-      Chef::Log.info("Other suma error")
-    else
+    if so.stdout =~ /0500-035 No fixes match your query./
       Chef::Log.info("Suma error: No fixes match your query")
+    else
+      Chef::Log.info("Other suma error:\n#{so.stdout}")
     end
   else
-    dl=shell_out("echo \"#{so.stdout}\" | grep \"Total bytes of updates downloaded:\" | cut -d' ' -f6").stdout.strip.to_f
-    if dl == 0
+    if so.stdout =~ /Total bytes of updates downloaded: ([0-9]+)/
       Chef::Log.info("Nothing to download")
     else
-      dl=dl/1024/1024/1024
+      dl=$1/1024/1024/1024
       Chef::Log.info("#{dl} GB to download")
     end
-    failed=shell_out("echo \"#{so.stdout}\" | grep \"failed\" | cut -d' ' -f1").stdout.strip.to_i
-    if failed > 0
+    if so.stdout =~ /([0-9]+) failed/
+	  failed=$1
       Chef::Log.info("#{failed} failed fixes")
     else
       Chef::Log.info("No failed fixes")
     end
   end
 
-  unless dl == 0 or failed > 0
+  unless dl == 0 or failed.to_i > 0
     # suma download
     converge_by("suma download operation: \"#{suma_s}\"") do
       Chef::Log.info("Download fixes...")
