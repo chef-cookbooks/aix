@@ -109,7 +109,8 @@ function generate_bff
 	    [ $version_origin -ge $version_target ] && nb=0
 	fi    
     let last_value=855000
-	for num in `seq 1 $nb`
+    num=1
+	while [ $num -lt $nb ]
 	do
         let step=$num%4
         if [ $step -eq 0 ]
@@ -126,6 +127,7 @@ function generate_bff
         fi; fi; fi
 		let last_value+=$offcet
 		bff_list[$num]=$last_value
+		let num+=1
 	done
 }
 
@@ -135,6 +137,10 @@ function generate_bff
 function run_action
 {
     action_type=$1
+    if [ ! -z $(echo "${fields['DisplayName']}" | grep "time-out") ]
+    then
+    	sleep 10
+    fi    
 	echo "****************************************"
     if [ $action_type -eq 0 ]
     then

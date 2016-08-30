@@ -83,7 +83,7 @@ function check_directory
 	if [ ! -d  "$1" ]
 	then
 		echo "** lpp_source folder '$1' not created!"
-		show_error_chef
+		#show_error_chef
 		let nb_failure+=1
 		return 1
 	else
@@ -134,7 +134,7 @@ function run_test
 }
 
 run_option="$1"
-[ -z "$run_option" ] && run_option="ABC1234"
+[ -z "$run_option" ] && run_option="ABC1234567"
 
 current_dir=$PWD
 if [ ! -d "$current_dir/aix/test/test_suma/recipes" ]
@@ -216,10 +216,11 @@ if [ ! -z "$(echo $run_option | grep 'B')" ]
 then 
 	echo "---- Complex tests ----"
 	rm -rf /tmp/img.source
+	rm -rf /usr/sys/inst.images
 	mkdir -p /tmp/img.source/7100-09-05-lpp_source
 	suma -x -a RqName=7100-09-05 -a RqType=SP -a Action=Download -a DLTarget=/tmp/img.source/7100-09-05-lpp_source -a FilterML=7100-09 > /dev/null
 	rm -f /tmp/img.source/7100-09-05-lpp_source/suma.*
-	run_test "test_complex" 5 1
+	run_test "test_complex" 6 1
 	if [ $? -eq 0 ]
 	then
 		echo '== aix_suma "Want to download but up-to-date" =='
@@ -247,10 +248,14 @@ then
 		fi
 		
 		echo '== aix_suma "Downloading TL 7100-09 >> 7100-10" =='
-		check_directory '/tmp/img.source/7100-10-lpp_source'
+		check_directory '/usr/sys/inst.images/7100-10-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/7100-10-lpp_source "Preview Download" "TL TL" "7100-09 7100-09" "7100-10 7100-10"
+	        check_suma /usr/sys/inst.images/7100-10-lpp_source "Preview Download" "TL TL" "7100-09 7100-09" "7100-10 7100-10"
+			if [ $? -eq 0 ]
+			then
+		        check_nim /usr/sys/inst.images/7100-10-lpp_source "7100-10-lpp_source" 'master' 
+			fi 
 		fi
 	
 		echo '== aix_suma "Downloading TL 7100-09 >> 7100-11" =='
@@ -258,6 +263,10 @@ then
 		if [ $? -eq 0 ]
 		then
 	        check_suma /tmp/img.source/7100-11-lpp_source "Preview Download" "TL TL" "7100-09 7100-09" "7100-11 7100-11"
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/7100-11-lpp_source "7100-11-lpp_source" 'master' 
+			fi 
 		fi
 	
 		echo '== aix_suma "Downloading Latest 7100-09" =='
@@ -265,6 +274,10 @@ then
 		if [ $? -eq 0 ]
 		then
 	        check_suma /tmp/img.source/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-09 7100-09" ""
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/9999-99-99-lpp_source "9999-99-99-lpp_source" 'master' 
+			fi 
 		fi
 	
 		echo '== aix_suma "Only preview (already download) 7100-09 >> 7100-09-05" =='
@@ -272,6 +285,21 @@ then
 		if [ $? -eq 0 ]
 		then
 	        check_suma /tmp/img.source/7100-09-05-lpp_source "Preview" "SP" "7100-09" "7100-09-05"
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/7100-09-05-lpp_source "" '' 
+			fi 
+		fi
+
+		echo '== aix_suma "Downloading SP 7100-09 >> 7100-09-03 with failure" =='
+		check_directory '/tmp/img.source/7100-09-03-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/7100-09-03-lpp_source "Preview Download" "SP SP" "7100-09 7100-09" "7100-09-03 7100-09-03"
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/7100-09-03-lpp_source "" '' 
+			fi 
 		fi
 		 
 	fi
@@ -376,6 +404,73 @@ then
 			fi 
 		fi
 	fi
+	if [ ! -z "$(echo $run_option | grep '5')" ]
+	then 
+		echo '== aix_suma "Suma with oslevel wrong" =='
+		run_test "test_error_5" 1 0
+		if [ $? -eq 0 ]
+		then
+			if [ -d '/tmp/img.source/7100-09-03-lpp_source' ]
+			then
+				echo "** lpp_source folder '/tmp/img.source/7100-09-03-lpp_source' are created!"
+				show_error_chef
+				let nb_failure+=1
+			else
+				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
+				if [ "$error_msg" != "RuntimeError: SUMA-SUMA-SUMA oslevel is not recognized!" ]
+				then
+					show_error_chef
+					echo "error '$error_msg'"
+					let nb_failure+=1
+				fi
+			fi 
+		fi
+	fi
+	if [ ! -z "$(echo $run_option | grep '6')" ]
+	then 
+		echo '== aix_suma "Suma with time-out" =='
+		run_test "test_error_6" 1 0
+		if [ $? -eq 0 ]
+		then
+			if [ -d '/tmp/img.source/7100-10-00-lpp_source' ]
+			then
+				echo "** lpp_source folder '/tmp/img.source/7100-10-00-lpp_source' are created!"
+				show_error_chef
+				let nb_failure+=1
+			else
+				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
+				if [ "$error_msg" != "Mixlib::ShellOut::CommandTimeout: Command timed out after 5s:" ]
+				then
+					show_error_chef
+					echo "error '$error_msg'"
+					let nb_failure+=1
+				fi
+			fi 
+		fi
+	fi
+	if [ ! -z "$(echo $run_option | grep '7')" ]
+	then 
+		echo '== aix_suma "Suma with target empty" do" =='
+		run_test "test_error_7" 1 0
+		if [ $? -eq 0 ]
+		then
+			if [ -d '/tmp/img.source/7100-10-00-lpp_source' ]
+			then
+				echo "** lpp_source folder '/tmp/img.source/7100-10-00-lpp_source' are created!"
+				show_error_chef
+				let nb_failure+=1
+			else
+				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
+				if [ "$error_msg" != "RuntimeError: SUMA-SUMA-SUMA no client targets specified!" ]
+				then
+					show_error_chef
+					echo "error '$error_msg'"
+					let nb_failure+=1
+				fi
+			fi 
+		fi
+	fi
+	
 fi
 echo "--------- Result tests ---------"
 if [ $nb_failure -eq 0 ] 
