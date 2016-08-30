@@ -58,8 +58,8 @@ action :download do
     targets.split(',').each do |machine|
 
       begin
-        new_filter_ml=String.new(node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('oslevel'))
-		new_filter_ml=new_filter_ml.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
+        new_filter_ml=String.new(node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('mllevel'))
+        new_filter_ml=new_filter_ml.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
         Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
         new_filter_ml.delete!('-')
         if filter_ml.nil? or new_filter_ml.to_i <= filter_ml.to_i
