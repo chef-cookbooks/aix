@@ -1,4 +1,4 @@
-# Author:: Jérôme Hurstel (<jerome.hurstel@atos.ne>) & Laurent Gay (<laurent.gay@atos.net>)
+# Author:: Jï¿½rï¿½me Hurstel (<jerome.hurstel@atos.ne>) & Laurent Gay (<laurent.gay@atos.net>)
 # Cookbook Name:: aix
 # Provider:: nim
 #
@@ -16,8 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-property :desc, String, name_property: true
-property :name, String
+property :desc, [String,nil], name_property: true
+property :lpp_source, String
 property :targets, String
 
 load_current_value do
@@ -26,14 +26,46 @@ end
 
 action :update do
 
-  res_name="#{name}-lpp_source"
-  nim_s="nim -o cust -a lpp_source=#{res_name} #{targets.gsub!(',', ' ')}"
+  Chef::Log.info("desc=#{desc}")
+  Chef::Log.info("lpp_source=#{lpp_source}")
+  Chef::Log.info("targets=#{targets}")
+  Chef::Log.info("node['nim']=#{node['nim']}")
 
-  unless shell_out("lsnim -t lpp_source #{res_name}").error?
+  # find lowest ML level by comparing each machine's oslevel from ohai
+  target_list=""
+  if property_is_set?(:targets)
+    targets.split(',').each do |machine|
+      begin
+        new_filter_ml=String.new(node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('mllevel'))
+        Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
+        target_list+=machine
+        target_list+=" "
+      rescue Exception => e
+        Chef::Log.info("No ML level for machine #{machine}")
+      end
+    end
+  end
+  if target_list.strip.length == 0
+    raise "NIM-NIM-NIM no client targets specified!"
+  else
+    Chef::Log.info("client targets: #{target_list}")
+  end
+
+  lpp_source_exist=false
+  begin
+    current_location=node.fetch('nim', {}).fetch('lpp_sources', {}).fetch(lpp_source, {}).fetch("location")
+    Chef::Log.info("Obtained lpp-source define for #{lpp_source}: #{current_location}")
+    lpp_source_exist=true
+  rescue Exception => e
+    Chef::Log.info("No lpp-source define for #{lpp_source}")
+  end
+
+  if lpp_source_exist
     # nim install
+    nim_s="nim -o cust -a lpp_source=#{lpp_source} #{target_list}"
     converge_by("nim custom operation: \"#{nim_s}\"") do
       Chef::Log.info("Install fixes...")
-      so=shell_out!("#{nim_s}")
+      shell_out!("#{nim_s}")
     end
   end
 

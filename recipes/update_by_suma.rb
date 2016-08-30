@@ -89,11 +89,11 @@ end
 # Perfom nim cust operation on each targets based on their oslevel.
 #################
 
-#aix_nim "Updating machines" do
-#	name		"#{target_lvl_sp_1}"
-#	targets		"#{client_list}"
-#	action		:update
-#end
+aix_nim "Updating machines" do
+	lpp_source	"#{target_lvl_sp_1}"
+	targets		  "#{client_list}"
+	action		  :update
+end
 
 #
 # What nim will do ?

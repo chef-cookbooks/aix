@@ -6,10 +6,11 @@ typeset nimtype=''
 typeset object_name=''
 typeset -A fields
 fields['server']=''
-fields['location']=''
+fields['location']='/tmp/img.source'
 fields['source']=''
 fields['packages']=''
 fields['comments']=''
+fields['lpp_source']=''
 
 
 #===============================================
@@ -86,6 +87,10 @@ function run_action
 	    echo ""
 	    echo "Now checking for missing install images..."
     fi
+    if [ $action_type -eq 1 ]
+    then
+	    echo ""
+    fi
     log_file="${fields['location']}/nim.log"
     echo "---- $(date) ----" >> $log_file
     echo "\tname : $object_name" >> $log_file
@@ -133,9 +138,19 @@ object_name="$*"
 if [ ! -z "$operation"-a ! -z "$nimtype" ] 
 then
 	echo "### NIM FAKE ###"
+    if [ ! -z $(echo $object_name | grep "error") ]
+    then
+    	echo "-- Failure NIM --"
+		exit 1
+    fi	
 	if [ "$operation" == "define" -a "$nimtype" == "lpp_source" ]
 	then
 		run_action 0
+		exit 0
+	fi
+	if [ "$operation" == "cust" ]
+	then
+		run_action 1
 		exit 0
 	fi
 	echo "#### BAD OPERATION & TYPE ($operation/$nimtype) ####"
