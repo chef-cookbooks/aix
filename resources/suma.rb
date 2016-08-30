@@ -20,7 +20,7 @@ property :desc, [String,nil], name_property: true
 property :oslevel, String
 property :location, String, default: "/usr/sys/inst.images"
 property :targets, String
-property :timeout, Integer, default: 1200
+property :timeout, Integer, default: 3600
 
 load_current_value do
 end
@@ -47,16 +47,14 @@ action :download do
     end
   else
     rq_type="Latest"
-	rq_name='7200-00-01-1527'    # TODO: GET LAST SP LEVEL (WITH METADATA ?)
+	rq_name='9999-99-99-9999'
 	rq_name=rq_name.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/)[1]
   end
   Chef::Log.info("rq_type=#{rq_type}")
   Chef::Log.info("rq_name=#{rq_name}")
 
   # find lowest ML level by comparing each machine's oslevel from ohai
-  filter_ml=rq_name.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
-  Chef::Log.info("Base ML level is #{filter_ml}")
-  filter_ml.delete!('-')
+  filter_ml=nil
   if property_is_set?(:targets)
     targets.split(',').each do |machine|
 
@@ -64,14 +62,15 @@ action :download do
         new_filter_ml=String.new(node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('mllevel'))
         Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
         new_filter_ml.delete!('-')
-        if new_filter_ml.to_i <= filter_ml.to_i
+        if filter_ml.nil? or new_filter_ml.to_i <= filter_ml.to_i
           filter_ml=new_filter_ml
         end
       rescue Exception => e
         Chef::Log.info("No ML level for machine #{machine}")
       end
     end
-  else
+  end
+  if filter_ml.nil?
     raise "SUMA-SUMA-SUMA no client targets specified!"
   end
   filter_ml.insert(4, '-')
@@ -120,17 +119,18 @@ action :download do
       Chef::Log.info("Download fixes...")
       so=shell_out!("#{suma_s} -a Action=Download 2>&1", :timeout => timeout)
     end
-  end
-
-  toto=node.fetch('nim', {}).fetch('lpp_sources', {}).fetch(res_name, nil)
-  Chef::Log.info("toto=#{toto}")
-  if toto.nil?
-    # nim define
-	nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}"
-    converge_by("nim define lpp_source: \"#{nim_s}\"") do
-      Chef::Log.info("Define #{res_name} ...")
-      so=shell_out!("#{nim_s}")
+	
+    toto=node.fetch('nim', {}).fetch('lpp_sources', {}).fetch(res_name, nil)
+    Chef::Log.info("toto=#{toto}")
+    if toto.nil?
+      # nim define
+	  nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}"
+      converge_by("nim define lpp_source: \"#{nim_s}\"") do
+        Chef::Log.info("Define #{res_name} ...")
+        so=shell_out!("#{nim_s}")
+      end
     end
+
   end
 
 end
