@@ -20,6 +20,7 @@ property :desc, [String,nil], name_property: true
 property :oslevel, String
 property :location, String, default: "/usr/sys/inst.images"
 property :targets, String
+property :timeout, Integer, default: 1200
 
 load_current_value do
 end
@@ -89,7 +90,7 @@ action :download do
   end
   dl=0
   Chef::Log.info("SUMA preview operation: #{suma_s}")
-  so=shell_out("#{suma_s} -a Action=Preview 2>&1")
+  so=shell_out("#{suma_s} -a Action=Preview 2>&1", :timeout => timeout)
   if so.error?
     Chef::Log.info("suma returns an error...")
     if so.stdout =~ /0500-035 No fixes match your query./
@@ -98,11 +99,12 @@ action :download do
       Chef::Log.info("Other suma error:\n#{so.stdout}")
     end
   else
+    Chef::Log.info("#{so.stdout}")
     if so.stdout =~ /Total bytes of updates downloaded: ([0-9]+)/
-      Chef::Log.info("Nothing to download")
+      dl=$1.to_f/1024/1024/1024
+      Chef::Log.info("#{dl.to_f.round(2)} GB to download")
     else
-      dl=$1/1024/1024/1024
-      Chef::Log.info("#{dl} GB to download")
+      Chef::Log.info("Nothing to download")
     end
     if so.stdout =~ /([0-9]+) failed/
 	  failed=$1
@@ -112,17 +114,22 @@ action :download do
     end
   end
 
-  unless dl == 0 or failed.to_i > 0
+  unless dl.to_f == 0 or failed.to_i > 0
     # suma download
     converge_by("suma download operation: \"#{suma_s}\"") do
       Chef::Log.info("Download fixes...")
-      so=shell_out("#{suma_s} -a Action=Download 2>&1")
+      so=shell_out!("#{suma_s} -a Action=Download 2>&1", :timeout => timeout)
     end
+  end
 
+  toto=node.fetch('nim', {}).fetch('lpp_sources', {}).fetch(res_name, nil)
+  Chef::Log.info("toto=#{toto}")
+  if toto.nil?
     # nim define
-    converge_by("nim define lpp_source: \"#{res_name}\"") do
+	nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}"
+    converge_by("nim define lpp_source: \"#{nim_s}\"") do
       Chef::Log.info("Define #{res_name} ...")
-      so=shell_out("nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}")
+      so=shell_out!("#{nim_s}")
     end
   end
 
