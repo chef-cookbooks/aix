@@ -23,7 +23,6 @@ aix_suma "Downloading TL 7100-09 >> 7100-11-00" do
 end
 
 aix_suma "Downloading Latest 7100-09" do
-  oslevel   '7200-00'
   location  '/tmp/img.source'
   targets   'client1'
   action    :download

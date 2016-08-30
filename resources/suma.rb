@@ -47,8 +47,8 @@ action :download do
     end
   else
     rq_type="Latest"
-	rq_name='9999-99-99-9999'
-	rq_name=rq_name.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/)[1]
+    rq_name='9999-99-99-9999'
+    rq_name=rq_name.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/)[1]
   end
   Chef::Log.info("rq_type=#{rq_type}")
   Chef::Log.info("rq_name=#{rq_name}")
@@ -95,7 +95,7 @@ action :download do
     if so.stdout =~ /0500-035 No fixes match your query./
       Chef::Log.info("Suma error: No fixes match your query")
     else
-      Chef::Log.info("Other suma error:\n#{so.stdout}")
+      raise "Suma error:\n#{so.stdout}"
     end
   else
     Chef::Log.info("#{so.stdout}")
@@ -106,7 +106,7 @@ action :download do
       Chef::Log.info("Nothing to download")
     end
     if so.stdout =~ /([0-9]+) failed/
-	  failed=$1
+      failed=$1
       Chef::Log.info("#{failed} failed fixes")
     else
       Chef::Log.info("No failed fixes")
@@ -119,12 +119,12 @@ action :download do
       Chef::Log.info("Download fixes...")
       so=shell_out!("#{suma_s} -a Action=Download 2>&1", :timeout => timeout)
     end
-	
+
     toto=node.fetch('nim', {}).fetch('lpp_sources', {}).fetch(res_name, nil)
     Chef::Log.info("toto=#{toto}")
     if toto.nil?
       # nim define
-	  nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}"
+      nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}"
       converge_by("nim define lpp_source: \"#{nim_s}\"") do
         Chef::Log.info("Define #{res_name} ...")
         so=shell_out!("#{nim_s}")

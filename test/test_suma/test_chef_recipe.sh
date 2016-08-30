@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/ksh93
 
 function show_error_chef
 {
@@ -32,7 +32,9 @@ function check_suma
 	    cat $lpp_source/suma.log
 	    echo "*******************************"
 	    let nb_failure+=1
+    	return 1
     fi
+    return 0
 }
 
 function check_nim
@@ -46,26 +48,32 @@ function check_nim
 	then
 		if [ -f "$lpp_source/nim.log" ]
 		then
-		    echo "********* SUMA FAILURE ********"
+		    echo "********* NIM FAILURE ********"
 		    cat $lpp_source/nim.log
-		    echo "*******************************"
+		    echo "******************************"
 		    let nb_failure+=1
 		fi
 	else
-	    check_name=$(check_value_log 'name' $lpp_source/nim.log)
-	    check_location=$(check_value_log 'location' $lpp_source/nim.log)
-	    check_server=$(check_value_log 'server' $lpp_source/nim.log)
-	    if [ "$check_name" != "$expected_name" -o "$check_location" != "$expected_location" -o "$check_server" != "$expected_server" ]
-	    then
-		    echo "********* SUMA FAILURE ********"
-	        echo "\texpected name = $expected_name"
-	        echo "\texpected location = $expected_location"
-	        echo "\texpected server = $expected_server"
-	        echo ""
-		    cat $lpp_source/nim.log
-		    echo "*******************************"
+		if [ -f "$lpp_source/nim.log" ]
+		then
+		    check_name=$(check_value_log 'name' $lpp_source/nim.log)
+		    check_location=$(check_value_log 'location' $lpp_source/nim.log)
+		    check_server=$(check_value_log 'server' $lpp_source/nim.log)
+		    if [ "$check_name" != "$expected_name" -o "$check_location" != "$expected_location" -o "$check_server" != "$expected_server" ]
+		    then
+			    echo "********* SUMA FAILURE ********"
+		        echo "\texpected name = $expected_name"
+		        echo "\texpected location = $expected_location"
+		        echo "\texpected server = $expected_server"
+		        echo ""
+			    cat $lpp_source/nim.log
+			    echo "*******************************"
+			    let nb_failure+=1
+		    fi
+		else
+		    echo "********* NIM FAILURE (no log file '$lpp_source/nim.log') ********"
 		    let nb_failure+=1
-	    fi
+		fi
 	fi
 }
 
@@ -163,7 +171,10 @@ then
 		if [ $? -eq 0 ]
 		then
 	        check_suma /tmp/img.source/7100-09-02-lpp_source "Preview Download" "SP SP" "7100-09 7100-09" "7100-09-02 7100-09-02"
-	        check_nim /tmp/img.source/7100-09-02-lpp_source "7100-09-02-lpp_source" 'master' 
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/7100-09-02-lpp_source "7100-09-02-lpp_source" 'master' 
+			fi 
 		fi 
 	
 		echo '== aix_suma "Downloading TL+SP 7100-09 >> 7100-10-02" =='
@@ -171,7 +182,10 @@ then
 		if [ $? -eq 0 ]
 		then
 	        check_suma /tmp/img.source/7100-10-02-lpp_source "Preview Download" "SP SP" "7100-09 7100-09" "7100-10-02 7100-10-02"
-	        check_nim /tmp/img.source/7100-10-02-lpp_source "7100-10-02-lpp_source" 'master' 
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/7100-10-02-lpp_source "7100-10-02-lpp_source" 'master' 
+			fi 
 		fi 
 	
 		echo '== aix_suma "nothing 7100-10 >> 7100-09-03" =='
@@ -179,7 +193,10 @@ then
 		if [ $? -eq 0 ]
 		then
 	        check_suma /tmp/img.source/7100-09-03-lpp_source "Preview" "SP" "7100-10" "7100-09-03"
-	        check_nim /tmp/img.source/7100-09-03-lpp_source "" '' 
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/7100-09-03-lpp_source "" '' 
+			fi 
 		fi 
 	
 		echo '== aix_suma "Downloading multi-clients TL+SP 7100-08 >> 7100-10-04" =='
@@ -187,7 +204,10 @@ then
 		if [ $? -eq 0 ]
 		then
 	        check_suma /tmp/img.source/7100-10-04-lpp_source "Preview Download" "SP SP" "7100-08 7100-08" "7100-10-04 7100-10-04"
-	        check_nim /tmp/img.source/7100-10-04-lpp_source "7100-10-04-lpp_source" 'master' 
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/7100-10-04-lpp_source "7100-10-04-lpp_source" 'master' 
+			fi 
 		fi 
 	fi
 fi
@@ -208,11 +228,13 @@ then
 		then
 	        if [ -f '/tmp/img.source/7100-09-02-lpp_source/suma.error' ]
 	        then
-	            val=$(cat /tmp/img.source/7100-09-02-lpp_source/suma.error)
+	            val=$(grep '0500-' /tmp/img.source/7100-09-02-lpp_source/suma.error)
 	            if [ "$val" != "0500-035 No fixes match your query." ]
 	            then
 		            echo "********* BAD SUMA ERROR ********"
 		            cat /tmp/img.source/7100-09-02-lpp_source/suma.error
+		            echo "*********************************"
+		            echo "$val"
 		            echo "*********************************"
 		            let nb_failure+=1
 	            fi
@@ -239,10 +261,10 @@ then
 		fi
 	
 		echo '== aix_suma "Downloading Latest 7100-09" =='
-		check_directory '/tmp/img.source/-lpp_source'
+		check_directory '/tmp/img.source/9999-99-99-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/-lpp_source "Preview Download" "Latest Latest" "7100-09 7100-09" ""
+	        check_suma /tmp/img.source/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-09 7100-09" ""
 		fi
 	
 		echo '== aix_suma "Only preview (already download) 7100-09 >> 7100-09-05" =='
@@ -268,13 +290,25 @@ then
 			check_directory '/tmp/img.source/7100-09-02-lpp_source'
 			if [ $? -eq 0 ]
 			then
+				error_msg1=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
+				error_msg2=$(grep 'CWPKI0022E' $current_dir/aixtest/chef.log | sed 's| A signer with SubjectDN.*||g')
+				error_msg3=$(grep 'CWPKI0040I' $current_dir/aixtest/chef.log | sed "s| The server's SSL.*||g")
+				error_msg4=$(grep '0500-013' $current_dir/aixtest/chef.log)
+				if [ "$error_msg1" != "RuntimeError: Suma error:" -o "$error_msg2" != "CWPKI0022E: SSL HANDSHAKE FAILURE:" -o "$error_msg3" != "CWPKI0040I: An SSL handshake failure occurred from a secure client." -o "$error_msg4" != "0500-013 Failed to retrieve list from fix server." ]
+				then
+					show_error_chef
+					echo "error1 '$error_msg1'"
+					echo "error2 '$error_msg2'"
+					echo "error3 '$error_msg3'"
+					echo "error4 '$error_msg4'"
+					let nb_failure+=1
+				fi
 				# suma return "
 				#			   CWPKI0022E: SSL HANDSHAKE FAILURE:  A signer with SubjectDN "CN=ASA Temporary Self Signed Certificate" was sent from target host:port "esupport.ibm.com:443".  The signer may need to be added to local trust store  "/var/ecc/data/TrustList.jks" located in SSL configuration alias "null" loaded from SSL configuration file "null".  The extended error message from the SSL handshake exception is: "PKIX path building failed: java.security.cert.CertPathBuilderException: unable to find valid certification path to requested target".
 				#
 				#			   CWPKI0040I: An SSL handshake failure occurred from a secure client.  The server's SSL signer has to be added to the client's trust store.  A retrieveSigners utility is provided to download signers from the server but requires administrative permission.  Check with your administrator to have this utility run to setup the secure environment before running the client.  Alternatively, the com.ibm.ssl.enableSignerExchangePrompt can be enabled in ssl.client.props for "DefaultSSLSettings" in order to allow acceptance of the signer during the connection attempt.
 				#			   0500-013 Failed to retrieve list from fix server.
 				#			  "
-				echo ""
 			fi 
 		fi
 	fi
@@ -287,8 +321,14 @@ then
 			check_directory '/tmp/img.source/7100-09-01-lpp_source'
 			if [ $? -eq 0 ]
 			then
+				error_msg=$(grep '0500-013' $current_dir/aixtest/chef.log)
+				if [ "$error_msg" != "0500-013 Failed to retrieve list from fix server." ]
+				then
+					show_error_chef
+					echo "error '$error_msg'"
+					let nb_failure+=1
+				fi
 				# suma return "0500-013 Failed to retrieve list from fix server."
-				echo ""
 			fi 
 		fi
 	fi
@@ -301,16 +341,22 @@ then
 			check_directory '/tmp/img.source/7100-09-05-lpp_source'
 			if [ $? -eq 0 ]
 			then
+				error_msg=$(grep '0500-059' $current_dir/aixtest/chef.log)
+				if [ "$error_msg" != "0500-059 Entitlement is required to download. The system's serial number is not entitled. Please go to the Fix Central website to download fixes." ]
+				then
+					show_error_chef
+					echo "error '$error_msg'"
+					let nb_failure+=1
+				fi
 				# suma return "0500-059 Entitlement is required to download.
 				#			   The system's serial number is not entitled.
 				#			   Please go to the Fix Central website to download fixes."
-				echo ""
 			fi 
 		fi
 	fi	
 	if [ ! -z "$(echo $run_option | grep '4')" ]
 	then 
-		echo '== Suma with client unknown" =='
+		echo '== aix_suma "Suma with client unknown" =='
 		run_test "test_error_4" 1 0
 		if [ $? -eq 0 ]
 		then
@@ -321,7 +367,7 @@ then
 				let nb_failure+=1
 			else
 				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-				if [ "$error_msg" != "RuntimeError: SUMA-SUMA-SUMA client 'client1' unknown!" ]
+				if [ "$error_msg" != "RuntimeError: SUMA-SUMA-SUMA no client targets specified!" ]
 				then
 					show_error_chef
 					echo "error '$error_msg'"
