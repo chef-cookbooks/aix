@@ -16,11 +16,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-property :desc, [String,nil], name_property: true
+property :desc, String, name_property: true
 property :oslevel, String
 property :location, String, default: "/usr/sys/inst.images"
 property :targets, String
-property :timeout, Integer, default: 3600
 
 load_current_value do
 end
@@ -59,7 +58,8 @@ action :download do
     targets.split(',').each do |machine|
 
       begin
-        new_filter_ml=String.new(node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('mllevel'))
+        new_filter_ml=String.new(node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('oslevel'))
+		new_filter_ml=new_filter_ml.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
         Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
         new_filter_ml.delete!('-')
         if filter_ml.nil? or new_filter_ml.to_i <= filter_ml.to_i
@@ -71,7 +71,7 @@ action :download do
     end
   end
   if filter_ml.nil?
-    raise "SUMA-SUMA-SUMA no client targets specified!"
+    raise "SUMA-SUMA-SUMA no client targets specified or cannot reach them!"
   end
   filter_ml.insert(4, '-')
   Chef::Log.info("Lowest ML level is: #{filter_ml}")
@@ -89,7 +89,7 @@ action :download do
   end
   dl=0
   Chef::Log.info("SUMA preview operation: #{suma_s}")
-  so=shell_out("#{suma_s} -a Action=Preview 2>&1", :timeout => timeout)
+  so=shell_out("LANG=C #{suma_s} -a Action=Preview 2>&1")
   if so.error?
     Chef::Log.info("suma returns an error...")
     if so.stdout =~ /0500-035 No fixes match your query./
@@ -113,23 +113,26 @@ action :download do
     end
   end
 
-  unless dl.to_f == 0 or failed.to_i > 0
+  unless dl.to_f == 0
     # suma download
     converge_by("suma download operation: \"#{suma_s}\"") do
       Chef::Log.info("Download fixes...")
-      so=shell_out!("#{suma_s} -a Action=Download 2>&1", :timeout => timeout)
+	  timeout=dl.to_f*600  # 1 GB / 10 min
+      so=shell_out!("#{suma_s} -a Action=Download 2>&1", :timeout => timeout.to_i)
     end
 
-    toto=node.fetch('nim', {}).fetch('lpp_sources', {}).fetch(res_name, nil)
-    Chef::Log.info("toto=#{toto}")
-    if toto.nil?
-      # nim define
-      nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}"
-      converge_by("nim define lpp_source: \"#{nim_s}\"") do
-        Chef::Log.info("Define #{res_name} ...")
-        so=shell_out!("#{nim_s}")
+	unless failed.to_i > 0
+      toto=node.fetch('nim', {}).fetch('lpp_sources', {}).fetch(res_name, nil)
+      Chef::Log.info("toto=#{toto}")
+      if toto.nil?
+        # nim define
+        nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}"
+        converge_by("nim define lpp_source: \"#{nim_s}\"") do
+          Chef::Log.info("Define #{res_name} ...")
+          so=shell_out!("#{nim_s}")
+        end
       end
-    end
+	end
 
   end
 
