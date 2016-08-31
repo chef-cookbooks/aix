@@ -1,5 +1,5 @@
 
-node.default['nim']['clients'] = {'client1'=>{'mllevel'=>'7100-09'}}
+node.default['nim']['clients'] = {'client1'=>{'oslevel'=>'7100-09'}}
 
 # Suma error 2
 aix_suma "error network for test" do

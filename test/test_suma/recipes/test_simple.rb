@@ -1,5 +1,5 @@
 
-node.default['nim']['clients'] = {'client1'=>{'mllevel'=>'7100-09'},'client2'=>{'mllevel'=>'7100-10'},'client3'=>{'mllevel'=>'7100-08'}}
+node.default['nim']['clients'] = {'client1'=>{'oslevel'=>'7100-09'},'client2'=>{'oslevel'=>'7100-10'},'client3'=>{'oslevel'=>'7100-08'}}
 
 aix_suma "Downloading SP 7100-09 >> 7100-09-02" do
   oslevel   '7100-09-02'

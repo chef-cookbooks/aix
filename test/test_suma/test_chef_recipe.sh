@@ -428,30 +428,8 @@ then
 	fi
 	if [ ! -z "$(echo $run_option | grep '6')" ]
 	then 
-		echo '== aix_suma "Suma with time-out" =='
-		run_test "test_error_6" 1 0
-		if [ $? -eq 0 ]
-		then
-			if [ -d '/tmp/img.source/7100-10-00-lpp_source' ]
-			then
-				echo "** lpp_source folder '/tmp/img.source/7100-10-00-lpp_source' are created!"
-				show_error_chef
-				let nb_failure+=1
-			else
-				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-				if [ "$error_msg" != "Mixlib::ShellOut::CommandTimeout: Command timed out after 5s:" ]
-				then
-					show_error_chef
-					echo "error '$error_msg'"
-					let nb_failure+=1
-				fi
-			fi 
-		fi
-	fi
-	if [ ! -z "$(echo $run_option | grep '7')" ]
-	then 
 		echo '== aix_suma "Suma with target empty" do" =='
-		run_test "test_error_7" 1 0
+		run_test "test_error_6" 1 0
 		if [ $? -eq 0 ]
 		then
 			if [ -d '/tmp/img.source/7100-10-00-lpp_source' ]

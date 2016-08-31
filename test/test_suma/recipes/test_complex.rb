@@ -1,5 +1,5 @@
 
-node.default['nim']['clients'] = {'client1'=>{'mllevel'=>'7100-09'}}
+node.default['nim']['clients'] = {'client1'=>{'oslevel'=>'7100-09'}}
 
 aix_suma "Want to download but up-to-date" do
   oslevel   '7100-09-02'

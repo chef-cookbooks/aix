@@ -1,5 +1,5 @@
 
-node.default['nim']['clients'] = {'client1'=>{'mllevel'=>'7100-09'}}
+node.default['nim']['clients'] = {'client1'=>{'oslevel'=>'7100-09'}}
 
 # Suma error 5 
 aix_suma "Suma with oslevel wrong" do
