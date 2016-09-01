@@ -88,12 +88,12 @@ Please go to the Fix Central website to download fixes."
 function generate_bff
 {
     error_managment
-	bff_list=[]
-    if [ "${fields['RqType']}" == "TL" ]
+	#bff_list=[]
+    if [ "${fields['RqType']}" == "SP" ]
     then
   	    nb=100
     else
-        if [ "${fields['RqType']}" == "SP" ]
+        if [ "${fields['RqType']}" == "TL" ]
         then
     	    nb=200
         else
@@ -115,17 +115,17 @@ function generate_bff
         let step=$num%4
         if [ $step -eq 0 ]
         then
-		offcet=124
+		offset=124
         else if [ $step -eq 0 ]
         then
-		offcet=73
+		offset=73
         else if [ $step -eq 0 ]
         then
-		offcet=347
+		offset=347
         else
-		offcet=276
+		offset=276
         fi; fi; fi
-		let last_value+=$offcet
+		let last_value+=$offset
 		bff_list[$num]=$last_value
 		let num+=1
 	done

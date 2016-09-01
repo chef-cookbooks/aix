@@ -70,9 +70,9 @@ function check_nim
 			    echo "*******************************"
 			    let nb_failure+=1
 		    fi
-		else
-		    echo "********* NIM FAILURE (no log file '$lpp_source/nim.log') ********"
-		    let nb_failure+=1
+		#else
+		    #echo "********* NIM FAILURE (no log file '$lpp_source/nim.log') ********"
+		    #let nb_failure+=1
 		fi
 	fi
 }
@@ -318,11 +318,11 @@ then
 			check_directory '/tmp/img.source/7100-09-02-lpp_source'
 			if [ $? -eq 0 ]
 			then
-				error_msg1=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-				error_msg2=$(grep 'CWPKI0022E' $current_dir/aixtest/chef.log | sed 's| A signer with SubjectDN.*||g')
+				error_msg1=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed "s|.*had an error: ||g")
+				error_msg2=$(grep 'CWPKI0022E' $current_dir/aixtest/chef.log | sed "s| A signer with SubjectDN.*||g")
 				error_msg3=$(grep 'CWPKI0040I' $current_dir/aixtest/chef.log | sed "s| The server's SSL.*||g")
 				error_msg4=$(grep '0500-013' $current_dir/aixtest/chef.log)
-				if [ "$error_msg1" != "RuntimeError: Suma error:" -o "$error_msg2" != "CWPKI0022E: SSL HANDSHAKE FAILURE:" -o "$error_msg3" != "CWPKI0040I: An SSL handshake failure occurred from a secure client." -o "$error_msg4" != "0500-013 Failed to retrieve list from fix server." ]
+				if [ "$error_msg1" != "RuntimeError: SUMA-SUMA-SUMA error:" -o "$error_msg2" != "CWPKI0022E: SSL HANDSHAKE FAILURE:" -o "$error_msg3" != "CWPKI0040I: An SSL handshake failure occurred from a secure client." -o "$error_msg4" != "0500-013 Failed to retrieve list from fix server." ]
 				then
 					show_error_chef
 					echo "error1 '$error_msg1'"

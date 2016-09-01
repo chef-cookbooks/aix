@@ -91,46 +91,37 @@ action :download do
   Chef::Log.info("SUMA preview operation: #{suma_s}")
   so=shell_out("LANG=C #{suma_s} -a Action=Preview 2>&1")
   if so.error?
-    Chef::Log.info("suma returns an error...")
     if so.stdout =~ /0500-035 No fixes match your query./
       Chef::Log.info("Suma error: No fixes match your query")
     else
-      raise "Suma error:\n#{so.stdout}"
+      raise "SUMA-SUMA-SUMA error:\n#{so.stdout}"
     end
   else
     Chef::Log.info("#{so.stdout}")
     if so.stdout =~ /Total bytes of updates downloaded: ([0-9]+)/
       dl=$1.to_f/1024/1024/1024
       Chef::Log.info("#{dl.to_f.round(2)} GB to download")
-    else
-      Chef::Log.info("Nothing to download")
     end
     if so.stdout =~ /([0-9]+) failed/
       failed=$1
       Chef::Log.info("#{failed} failed fixes")
-    else
-      Chef::Log.info("No failed fixes")
     end
   end
 
   unless dl.to_f == 0
     # suma download
     converge_by("suma download operation: \"#{suma_s}\"") do
-      Chef::Log.info("Download fixes...")
-	  timeout=dl.to_f*600  # 1 GB / 10 min
+	  timeout=300+dl.to_f*600  # 5 min + 10 min / GB
+      Chef::Log.info("Download fixes with #{timeout.to_i}s timeout...")
       so=shell_out!("#{suma_s} -a Action=Download 2>&1", :timeout => timeout.to_i)
     end
 
-	unless failed.to_i > 0
-      toto=node.fetch('nim', {}).fetch('lpp_sources', {}).fetch(res_name, nil)
-      Chef::Log.info("toto=#{toto}")
-      if toto.nil?
-        # nim define
-        nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}"
-        converge_by("nim define lpp_source: \"#{nim_s}\"") do
-          Chef::Log.info("Define #{res_name} ...")
-          so=shell_out!("#{nim_s}")
-        end
+	unless failed.to_i > 0 or node.fetch('nim', {}).fetch('lpp_sources', {}).fetch(res_name, nil) == nil
+      # nim define
+      nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}"
+      converge_by("nim define lpp_source: \"#{nim_s}\"") do
+        Chef::Log.info("Define #{res_name} ...")
+        so=shell_out!("#{nim_s}")
       end
 	end
 
