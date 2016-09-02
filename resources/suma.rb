@@ -36,51 +36,86 @@ action :download do
     if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-[0-9]{4})$/
       rq_type="TL"
       rq_name=$1
+    elsif oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
+      rq_type="SP"
+      rq_name=$1
     else
-      if oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
-        rq_type="SP"
-        rq_name=$1
-      else
-        raise "SUMA-SUMA-SUMA oslevel is not recognized!"
-      end
+      raise "SUMA-SUMA-SUMA oslevel is not recognized!"
     end
   else
     rq_type="Latest"
-    rq_name='9999-99-99-9999'
+    rq_name='9999-99-99-9999' # TODO find latest SP for highest TL (with METADATA)
     rq_name=rq_name.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/)[1]
   end
   Chef::Log.info("rq_type=#{rq_type}")
   Chef::Log.info("rq_name=#{rq_name}")
 
+        #
+		# TODO warn if 7.2 and 7.1: "release level mismatch. Took the highest."
+		#
+
   # find lowest ML level by comparing each machine's oslevel from ohai
   filter_ml=nil
   if property_is_set?(:targets)
-    targets.split(',').each do |machine|
 
+    # get list of all NIM machines from Ohai
+    all_machines=node['nim']['clients'].keys
+    Chef::Log.info("Ohai client machine's list is #{all_machines}")
+
+    # build machine list by expanding wildcard
+	selected_machines=Array.new
+    targets.split(',').each do |machine|
+	  if machine.match(/\*/)
+		machine.gsub!(/\*/,'.*?')
+		all_machines.collect do |m|
+		  if m =~ /^#{machine}$/
+		    selected_machines.concat(m.split)
+		  end
+		end
+	  else
+	    selected_machines.concat(machine.split)
+	  end
+	end
+	selected_machines.sort.uniq!
+    Chef::Log.info "List of targets expanded to #{selected_machines}"
+
+	# build machine-oslevel hash
+    hash=Hash[selected_machines.collect do |m|
       begin
-        new_filter_ml=String.new(node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('oslevel'))
-        new_filter_ml=new_filter_ml.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
-        Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
-        new_filter_ml.delete!('-')
-        if filter_ml.nil? or new_filter_ml.to_i <= filter_ml.to_i
-          filter_ml=new_filter_ml
-        end
+	    filter_ml=node['nim']['clients'][m].fetch('oslevel')
+        Chef::Log.info("Obtained OS level for machine #{m}: #{filter_ml}")
+		filter_ml=filter_ml.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
+        [ m, filter_ml.delete('-') ]
       rescue Exception => e
-        Chef::Log.info("No ML level for machine #{machine}")
-      end
+        Chef::Log.warn("Cannot find OS level for machine #{m} into Ohai output")
+        [ m, nil ]
+	  end
+	end ]
+    Chef::Log.info "hash=#{hash}"
+
+    if rq_type.eql?("Latest")
+      # find highest
+      filter_ml=hash.values.max
+    else
+      # find lowest
+      filter_ml=hash.values.min
     end
+
   end
   if filter_ml.nil?
-    raise "SUMA-SUMA-SUMA no client targets specified or cannot reach them!"
+    raise "SUMA-SUMA-SUMA no client targets specified or cannot reach them all!"
   end
   filter_ml.insert(4, '-')
-  Chef::Log.info("Lowest ML level is: #{filter_ml}")
+  Chef::Log.info("Filter ML level is: #{filter_ml}")
 
   # create location if it does not exist
   res_name="#{rq_name}-lpp_source"
   dl_target="#{location}/#{res_name}"
-  Chef::Log.info("Checking location #{dl_target}...")
-  shell_out!("mkdir -p #{dl_target}")
+  unless ::File.directory?("#{dl_target}")
+    Chef::Log.info("Creating location #{dl_target}...")
+    shell_out!("mkdir -p #{dl_target}")
+	Chef::Log.warn("Directory #{dl_target} has been created.")
+  end
 
   # suma preview
   suma_s="suma -x -a DisplayName=\"#{desc}\" -a RqType=#{rq_type} -a DLTarget=#{dl_target} -a FilterML=#{filter_ml}"
@@ -111,12 +146,12 @@ action :download do
   unless dl.to_f == 0
     # suma download
     converge_by("suma download operation: \"#{suma_s}\"") do
-	  timeout=300+dl.to_f*600  # 5 min + 10 min / GB
+	  timeout=600+dl.to_f*900  # 10 min + 15 min / GB
       Chef::Log.info("Download fixes with #{timeout.to_i}s timeout...")
       so=shell_out!("#{suma_s} -a Action=Download 2>&1", :timeout => timeout.to_i)
     end
 
-	unless failed.to_i > 0 or node.fetch('nim', {}).fetch('lpp_sources', {}).fetch(res_name, nil) == nil
+	unless failed.to_i > 0 or node['nim']['lpp_sources'].fetch(res_name, nil) == nil
       # nim define
       nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}"
       converge_by("nim define lpp_source: \"#{nim_s}\"") do
