@@ -36,7 +36,7 @@ action :update do
   if property_is_set?(:targets)
     targets.split(',').each do |machine|
       begin
-        new_filter_ml=String.new(node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('mllevel'))
+        new_filter_ml=String.new(node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('oslevel'))
         Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
         target_list+=machine
         target_list+=" "
