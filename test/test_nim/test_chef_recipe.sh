@@ -104,6 +104,7 @@ function run_test
 }
 
 run_option="$1"
+[ -z "$run_option" ] && run_option="A123"
 
 current_dir=$PWD
 if [ ! -d "$current_dir/aix/test/test_suma/recipes" ]
@@ -128,22 +129,25 @@ echo "ohai.plugin_path << '$current_dir/nim/ohai/plugins/'" >> $current_dir/solo
 echo "--------- Run tests recipes ---------"
 
 nb_failure=0
-echo "---- Nominal tests ----"
-rm -rf /tmp/img.source
-mkdir -p /tmp/img.source/7100-09-04-lpp_source
-suma -x -a RqName=7100-09-04 -a RqType=SP -a Action=Download -a DLTarget=/tmp/img.source/7100-09-04-lpp_source -a FilterML=7100-09 > /dev/null
-run_test "test_simple" 2 1
-if [ $? -eq 0 ]
-then
-	echo '== aix_nim "Updating 2 clients => SP 7100-09-04" =='
-	echo '== aix_nim "no updating (lpp not exist) => TL 7100-11" =='
-    check_nim "7100-09-04-lpp_source" 'client1 client2'
-	nbfixes=$(grep -c 'Install fixes...' "${current_dir}/aixtest/chef.log")
-	if [ $nbfixes -ne 1 ]
+if [ ! -z "$(echo $run_option | grep 'A')" ]
+then 
+	echo "---- Nominal tests ----"
+	rm -rf /tmp/img.source
+	mkdir -p /tmp/img.source/7100-09-04-lpp_source
+	suma -x -a RqName=7100-09-04 -a RqType=SP -a Action=Download -a DLTarget=/tmp/img.source/7100-09-04-lpp_source -a FilterML=7100-09 > /dev/null
+	run_test "test_simple" 2 1
+	if [ $? -eq 0 ]
 	then
-		echo "** not correct fixes number $nbfixes<>1 "
-		show_error_chef
-		let nb_failure+=1
+		echo '== aix_nim "Updating 2 clients => SP 7100-09-04" =='
+		echo '== aix_nim "no updating (lpp not exist) => TL 7100-11" =='
+	    check_nim "7100-09-04-lpp_source" 'client1 client2'
+		nbfixes=$(grep -c 'Install fixes...' "${current_dir}/aixtest/chef.log")
+		if [ $nbfixes -ne 1 ]
+		then
+			echo "** not correct fixes number $nbfixes<>1 "
+			show_error_chef
+			let nb_failure+=1
+		fi
 	fi
 fi
 
@@ -151,41 +155,47 @@ echo "---- Error and exception tests ----"
 rm -rf /tmp/img.source
 mkdir -p /tmp/img.source/7100-09-04-lpp_source
 suma -x -a RqName=7100-09-04 -a RqType=SP -a Action=Download -a DLTarget=/tmp/img.source/7100-09-04-lpp_source -a FilterML=7100-09 > /dev/null
-echo '== aix_nim "Updating client unknown" =='
-run_test "test_error_1" 1 0
-if [ $? -eq 0 ]
-then
-	if [ -f '/tmp/img.source/nim.log' ]
+if [ ! -z "$(echo $run_option | grep '1')" ]
+then 
+	echo '== aix_nim "Updating client unknown" =='
+	run_test "test_error_1" 1 0
+	if [ $? -eq 0 ]
 	then
-		show_error_chef
-		check_nim
-	else
-		error_msg=$(grep 'ERROR: aix_nim' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-		if [ "$error_msg" != "RuntimeError: NIM-NIM-NIM no client targets specified!" ]
+		if [ -f '/tmp/img.source/nim.log' ]
 		then
 			show_error_chef
-			echo "error '$error_msg'"
-			let nb_failure+=1
-		fi
-	fi 
+			check_nim
+		else
+			error_msg=$(grep 'ERROR: aix_nim' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
+			if [ "$error_msg" != "RuntimeError: NIM-NIM-NIM no client targets specified!" ]
+			then
+				show_error_chef
+				echo "error '$error_msg'"
+				let nb_failure+=1
+			fi
+		fi 
+	fi
 fi
-echo '== aix_nim "Updating but failure" =='
-run_test "test_error_2" 1 0
-if [ $? -eq 0 ]
-then
-	if [ -f '/tmp/img.source/nim.log' ]
+if [ ! -z "$(echo $run_option | grep '2')" ]
+then 
+	echo '== aix_nim "Updating but failure" =='
+	run_test "test_error_2" 1 0
+	if [ $? -eq 0 ]
 	then
-		show_error_chef
-		check_nim
-	else
-		error_msg=$(grep 'ERROR: aix_nim' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-		if [ "$error_msg" != "Mixlib::ShellOut::ShellCommandFailed: Expected process to exit with [0], but received '1'" ]
+		if [ -f '/tmp/img.source/nim.log' ]
 		then
 			show_error_chef
-			echo "error '$error_msg'"
-			let nb_failure+=1
-		fi
-	fi 
+			check_nim
+		else
+			error_msg=$(grep 'ERROR: aix_nim' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
+			if [ "$error_msg" != "Mixlib::ShellOut::ShellCommandFailed: Expected process to exit with [0], but received '1'" ]
+			then
+				show_error_chef
+				echo "error '$error_msg'"
+				let nb_failure+=1
+			fi
+		fi 
+	fi
 fi
 
 echo "--------- Result tests ---------"
