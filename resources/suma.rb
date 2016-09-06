@@ -32,7 +32,7 @@ action :download do
   Chef::Log.info("targets=#{targets}")
 
   # compute suma request type based on oslevel property
-  if property_is_set?(:oslevel) or !oslevel.empty?
+  if property_is_set?(:oslevel)
     if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-[0-9]{4})$/
       rq_type="TL"
       rq_name=$1
@@ -60,7 +60,7 @@ action :download do
   
   # compute list of machines based on targets property
   selected_machines=Array.new
-  if property_is_set?(:targets) or !targets.empty?
+  if property_is_set?(:targets)
     targets.split(',').each do |machine|
 	  if machine.match(/\*/)
         # expand wildcard
