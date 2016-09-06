@@ -395,7 +395,7 @@ then
 				let nb_failure+=1
 			else
 				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-				if [ "$error_msg" != "RuntimeError: SUMA-SUMA-SUMA no client targets specified or cannot reach them!" ]
+				if [ "$error_msg" != "RuntimeError: SUMA-SUMA-SUMA cannot reach any clients!" ]
 				then
 					show_error_chef
 					echo "error '$error_msg'"
@@ -428,7 +428,7 @@ then
 	fi
 	if [ ! -z "$(echo $run_option | grep '6')" ]
 	then 
-		echo '== aix_suma "Suma with target empty" do" =='
+		echo '== aix_suma "Suma with target empty" =='
 		run_test "test_error_6" 1 0
 		if [ $? -eq 0 ]
 		then
@@ -439,7 +439,7 @@ then
 				let nb_failure+=1
 			else
 				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-				if [ "$error_msg" != "RuntimeError: SUMA-SUMA-SUMA no client targets specified or cannot reach them!" ]
+				if [ "$error_msg" != "RuntimeError: SUMA-SUMA-SUMA cannot reach any clients!" ]
 				then
 					show_error_chef
 					echo "error '$error_msg'"

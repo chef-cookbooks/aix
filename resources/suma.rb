@@ -32,7 +32,7 @@ action :download do
   Chef::Log.info("targets=#{targets}")
 
   # compute suma request type based on oslevel property
-  if property_is_set?(:oslevel)
+  if property_is_set?(:oslevel) or !oslevel.empty?
     if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-[0-9]{4})$/
       rq_type="TL"
       rq_name=$1
@@ -54,18 +54,16 @@ action :download do
 		# TODO warn if 7.2 and 7.1: "release level mismatch. Took the highest."
 		#
 
-  # find lowest ML level by comparing each machine's oslevel from ohai
-  filter_ml=nil
-  if property_is_set?(:targets)
-
-    # get list of all NIM machines from Ohai
-    all_machines=node['nim']['clients'].keys
-    Chef::Log.info("Ohai client machine's list is #{all_machines}")
-
-    # build machine list by expanding wildcard
-	selected_machines=Array.new
+  # get list of all NIM machines from Ohai
+  all_machines=node['nim']['clients'].keys
+  Chef::Log.info("Ohai client machine's list is #{all_machines}")
+  
+  # compute list of machines based on targets property
+  selected_machines=Array.new
+  if property_is_set?(:targets) or !targets.empty?
     targets.split(',').each do |machine|
 	  if machine.match(/\*/)
+        # expand wildcard
 		machine.gsub!(/\*/,'.*?')
 		all_machines.collect do |m|
 		  if m =~ /^#{machine}$/
@@ -76,37 +74,41 @@ action :download do
 	    selected_machines.concat(machine.split)
 	  end
 	end
-	selected_machines.sort.uniq!
-    Chef::Log.info "List of targets expanded to #{selected_machines}"
+	selected_machines=selected_machines.sort.uniq
+  else
+    selected_machines=all_machines.sort
+    Chef::Log.warn("No targets specified, consider all nim clients as targets!")
+  end
+  Chef::Log.info("List of targets expanded to #{selected_machines}")
 
-	# build machine-oslevel hash
-    hash=Hash[selected_machines.collect do |m|
-      begin
-	    filter_ml=node['nim']['clients'][m].fetch('oslevel')
-        Chef::Log.info("Obtained OS level for machine #{m}: #{filter_ml}")
-		filter_ml=filter_ml.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
-        [ m, filter_ml.delete('-') ]
-      rescue Exception => e
-        Chef::Log.warn("Cannot find OS level for machine #{m} into Ohai output")
-        [ m, nil ]
-	  end
-	end ]
-    Chef::Log.info "hash=#{hash}"
+  # build machine-oslevel hash
+  hash=Hash[selected_machines.collect do |m|
+    begin
+	  oslevel=node['nim']['clients'][m].fetch('oslevel')
+      Chef::Log.info("Obtained OS level for machine #{m}: #{oslevel}")
+	  oslevel=oslevel.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
+      [ m, oslevel.delete('-') ]
+    rescue Exception => e
+      Chef::Log.warn("Cannot find OS level for machine #{m} into Ohai output")
+      [ m, nil ]
+	end
+  end ]
+  hash.delete_if { |key,value| value.nil? }
 
-    if rq_type.eql?("Latest")
-      # find highest
-      filter_ml=hash.values.max
-    else
-      # find lowest
-      filter_ml=hash.values.min
-    end
-
+  # discover FilterML level
+  filter_ml=nil
+  if rq_type.eql?("Latest")
+    # find highest
+    filter_ml=hash.values.max
+  else
+    # find lowest
+    filter_ml=hash.values.min
   end
   if filter_ml.nil?
-    raise "SUMA-SUMA-SUMA no client targets specified or cannot reach them all!"
+    raise "SUMA-SUMA-SUMA cannot reach any clients!"
   end
   filter_ml.insert(4, '-')
-  Chef::Log.info("Filter ML level is: #{filter_ml}")
+  Chef::Log.info("Filter ML level discovered is: #{filter_ml}")
 
   # create location if it does not exist
   res_name="#{rq_name}-lpp_source"
