@@ -318,25 +318,14 @@ then
 			check_directory '/tmp/img.source/7100-09-02-lpp_source'
 			if [ $? -eq 0 ]
 			then
-				error_msg1=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed "s|.*had an error: ||g")
-				error_msg2=$(grep 'CWPKI0022E' $current_dir/aixtest/chef.log | sed "s| A signer with SubjectDN.*||g")
-				error_msg3=$(grep 'CWPKI0040I' $current_dir/aixtest/chef.log | sed "s| The server's SSL.*||g")
-				error_msg4=$(grep '0500-013' $current_dir/aixtest/chef.log)
-				if [ "$error_msg1" != "RuntimeError: SUMA-SUMA-SUMA error:" -o "$error_msg2" != "CWPKI0022E: SSL HANDSHAKE FAILURE:" -o "$error_msg3" != "CWPKI0040I: An SSL handshake failure occurred from a secure client." -o "$error_msg4" != "0500-013 Failed to retrieve list from fix server." ]
+				error_msg=$(grep '0500-013' $current_dir/aixtest/chef.log)
+				if [ "$error_msg" != "0500-013 Failed to retrieve list from fix server." ]
 				then
 					show_error_chef
-					echo "error1 '$error_msg1'"
-					echo "error2 '$error_msg2'"
-					echo "error3 '$error_msg3'"
-					echo "error4 '$error_msg4'"
+					echo "error '$error_msg'"
 					let nb_failure+=1
 				fi
-				# suma return "
-				#			   CWPKI0022E: SSL HANDSHAKE FAILURE:  A signer with SubjectDN "CN=ASA Temporary Self Signed Certificate" was sent from target host:port "esupport.ibm.com:443".  The signer may need to be added to local trust store  "/var/ecc/data/TrustList.jks" located in SSL configuration alias "null" loaded from SSL configuration file "null".  The extended error message from the SSL handshake exception is: "PKIX path building failed: java.security.cert.CertPathBuilderException: unable to find valid certification path to requested target".
-				#
-				#			   CWPKI0040I: An SSL handshake failure occurred from a secure client.  The server's SSL signer has to be added to the client's trust store.  A retrieveSigners utility is provided to download signers from the server but requires administrative permission.  Check with your administrator to have this utility run to setup the secure environment before running the client.  Alternatively, the com.ibm.ssl.enableSignerExchangePrompt can be enabled in ssl.client.props for "DefaultSSLSettings" in order to allow acceptance of the signer during the connection attempt.
-				#			   0500-013 Failed to retrieve list from fix server.
-				#			  "
+				# suma return "0500-013 Failed to retrieve list from fix server."
 			fi 
 		fi
 	fi
@@ -430,21 +419,13 @@ then
 	then 
 		echo '== aix_suma "Suma with target empty" =='
 		run_test "test_error_6" 1 0
+		check_directory '/tmp/img.source/7100-10-00-lpp_source'
 		if [ $? -eq 0 ]
 		then
-			if [ -d '/tmp/img.source/7100-10-00-lpp_source' ]
+	        check_suma /tmp/img.source/7100-10-00-lpp_source "Preview Download" "TL TL" "7100-10 7100-10" "7100-10 7100-10"
+			if [ $? -eq 0 ]
 			then
-				echo "** lpp_source folder '/tmp/img.source/7100-10-00-lpp_source' are created!"
-				show_error_chef
-				let nb_failure+=1
-			else
-				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-				if [ "$error_msg" != "RuntimeError: SUMA-SUMA-SUMA cannot reach any clients!" ]
-				then
-					show_error_chef
-					echo "error '$error_msg'"
-					let nb_failure+=1
-				fi
+		        check_nim /tmp/img.source/7100-10-00-lpp_source "" '' 
 			fi 
 		fi
 	fi
