@@ -52,7 +52,7 @@ action :download do
   if property_is_set?(:oslevel)
     if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-[0-9]{4})$/
       rq_type="TL"
-      rq_name=$1
+      rq_name="#{$1}-00"
     elsif oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
       rq_type="SP"
       rq_name=$1
@@ -141,7 +141,7 @@ action :download do
     if location =~ /-lpp_source$/
 	  begin
 	    lpp_source=location
-	    dl_target=node['nim']['lpp_sources'].fetch(location).fectch('location')
+	    dl_target=node['nim']['lpp_sources'].fetch(location).fetch('location')
 	    Chef::Log.info("Discover \'#{location}\' lpp source's location: \'#{dl_target}\'")
 	  rescue Exception => e
         raise InvalidLocationProperty, "SUMA-SUMA-SUMA cannot find lpp_source #{location} into Ohai output"
@@ -152,6 +152,12 @@ action :download do
 	else
 	  lpp_source="#{rq_name}-lpp_source"
       dl_target="#{location}/#{lpp_source}"
+	  unless node['nim']['lpp_sources'].fetch(lpp_source, {}).fetch('location', nil) == nil
+        Chef::Log.info("Found lpp source \'#{lpp_source}\' location")
+	    unless node['nim']['lpp_sources'][lpp_source]['location'] =~ /^#{dl_target}/
+		  raise InvalidLocationProperty, "SUMA-SUMA-SUMA location mismatch"
+		end
+	  end
 	end
   else
 	lpp_source="#{rq_name}-lpp_source"

@@ -248,24 +248,24 @@ then
 		fi
 		
 		echo '== aix_suma "Downloading TL 7100-09 >> 7100-10" =='
-		check_directory '/usr/sys/inst.images/7100-10-lpp_source'
+		check_directory '/usr/sys/inst.images/7100-10-00-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /usr/sys/inst.images/7100-10-lpp_source "Preview Download" "TL TL" "7100-09 7100-09" "7100-10 7100-10"
+	        check_suma /usr/sys/inst.images/7100-10-00-lpp_source "Preview Download" "TL TL" "7100-09 7100-09" "7100-10-00 7100-10-00"
 			if [ $? -eq 0 ]
 			then
-		        check_nim /usr/sys/inst.images/7100-10-lpp_source "7100-10-lpp_source" 'master' 
+		        check_nim /usr/sys/inst.images/7100-10-00-lpp_source "7100-10-lpp_source" 'master'
 			fi 
 		fi
 	
 		echo '== aix_suma "Downloading TL 7100-09 >> 7100-11" =='
-		check_directory '/tmp/img.source/7100-11-lpp_source'
+		check_directory '/tmp/img.source/7100-11-00-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/7100-11-lpp_source "Preview Download" "TL TL" "7100-09 7100-09" "7100-11 7100-11"
+	        check_suma /tmp/img.source/7100-11-00-lpp_source "Preview Download" "TL TL" "7100-09 7100-09" "7100-11-00 7100-11-00"
 			if [ $? -eq 0 ]
 			then
-		        check_nim /tmp/img.source/7100-11-lpp_source "7100-11-lpp_source" 'master' 
+		        check_nim /tmp/img.source/7100-11-00-lpp_source "7100-11-00-lpp_source" 'master' 
 			fi 
 		fi
 	
@@ -384,7 +384,7 @@ then
 				let nb_failure+=1
 			else
 				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-				if [ "$error_msg" != "RuntimeError: SUMA-SUMA-SUMA cannot reach any clients!" ]
+				if [ "$error_msg" != "Chef::Resource::AixSuma::InvalidTargetsProperty: SUMA-SUMA-SUMA cannot reach any clients!" ]
 				then
 					show_error_chef
 					echo "error '$error_msg'"
@@ -406,7 +406,7 @@ then
 				let nb_failure+=1
 			else
 				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-				if [ "$error_msg" != "RuntimeError: SUMA-SUMA-SUMA oslevel is not recognized!" ]
+				if [ "$error_msg" != "Chef::Resource::AixSuma::InvalidOsLevelProperty: SUMA-SUMA-SUMA oslevel is not recognized!" ]
 				then
 					show_error_chef
 					echo "error '$error_msg'"
@@ -422,7 +422,7 @@ then
 		check_directory '/tmp/img.source/7100-10-00-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/7100-10-00-lpp_source "Preview Download" "TL TL" "7100-10 7100-10" "7100-10 7100-10"
+	        check_suma /tmp/img.source/7100-10-00-lpp_source "Preview Download" "TL TL" "7100-10 7100-10" "7100-10-00 7100-10-00"
 			if [ $? -eq 0 ]
 			then
 		        check_nim /tmp/img.source/7100-10-00-lpp_source "" '' 
