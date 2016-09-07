@@ -18,8 +18,25 @@
 
 property :desc, String, name_property: true
 property :oslevel, String
-property :location, String, default: "/usr/sys/inst.images"
+property :location, String
 property :targets, String
+
+class InvalidOsLevelProperty < StandardError
+end
+class InvalidLocationProperty < StandardError
+end
+class InvalidTargetsProperty < StandardError
+end
+class SumaExecutionError < StandardError
+end
+class SumaPreviewExecutionError < SumaExecutionError
+end
+class SumaDownloadExecutionError < SumaExecutionError
+end
+class SumaMetadataExecutionError < SumaExecutionError
+end
+class NimExecutionError < SumaExecutionError
+end
 
 load_current_value do
 end
@@ -39,8 +56,12 @@ action :download do
     elsif oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
       rq_type="SP"
       rq_name=$1
-    else
-      raise "SUMA-SUMA-SUMA oslevel is not recognized!"
+    elsif oslevel.empty?
+      rq_type="Latest"
+      rq_name='9999-99-99-9999' # TODO find latest SP for highest TL (with METADATA)
+      rq_name=rq_name.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/)[1]
+	else
+      raise InvalidOsLevelProperty, "SUMA-SUMA-SUMA oslevel is not recognized!"
     end
   else
     rq_type="Latest"
@@ -50,31 +71,33 @@ action :download do
   Chef::Log.info("rq_type=#{rq_type}")
   Chef::Log.info("rq_name=#{rq_name}")
 
-        #
-		# TODO warn if 7.2 and 7.1: "release level mismatch. Took the highest."
-		#
-
   # get list of all NIM machines from Ohai
   all_machines=node['nim']['clients'].keys
   Chef::Log.info("Ohai client machine's list is #{all_machines}")
   
-  # compute list of machines based on targets property
   selected_machines=Array.new
+
+  # compute list of machines based on targets property
   if property_is_set?(:targets)
-    targets.split(',').each do |machine|
-	  if machine.match(/\*/)
-        # expand wildcard
-		machine.gsub!(/\*/,'.*?')
-		all_machines.collect do |m|
-		  if m =~ /^#{machine}$/
-		    selected_machines.concat(m.split)
+    if !targets.empty?
+      targets.split(',').each do |machine|
+	    if machine.match(/\*/)
+          # expand wildcard
+		  machine.gsub!(/\*/,'.*?')
+		  all_machines.collect do |m|
+		    if m =~ /^#{machine}$/
+		      selected_machines.concat(m.split)
+		    end
 		  end
-		end
-	  else
-	    selected_machines.concat(machine.split)
+	    else
+	      selected_machines.concat(machine.split)
+	    end
 	  end
+	  selected_machines=selected_machines.sort.uniq  
+    else
+      selected_machines=all_machines.sort
+      Chef::Log.warn("No targets specified, consider all nim clients as targets!")
 	end
-	selected_machines=selected_machines.sort.uniq
   else
     selected_machines=all_machines.sort
     Chef::Log.warn("No targets specified, consider all nim clients as targets!")
@@ -84,8 +107,8 @@ action :download do
   # build machine-oslevel hash
   hash=Hash[selected_machines.collect do |m|
     begin
-	  oslevel=node['nim']['clients'][m].fetch('oslevel')
-      Chef::Log.info("Obtained OS level for machine #{m}: #{oslevel}")
+	  oslevel=node['nim']['clients'].fetch(m).fetch('oslevel')
+      Chef::Log.info("Obtained OS level for machine \'#{m}\': #{oslevel}")
 	  oslevel=oslevel.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
       [ m, oslevel.delete('-') ]
     rescue Exception => e
@@ -100,22 +123,43 @@ action :download do
   if rq_type.eql?("Latest")
     # find highest
     filter_ml=hash.values.max
+	if filter_ml.to_i > hash.values.min.to_i
+		Chef::Log.warn("Release level mismatch. Only targets at level #{filter_ml} will be updated !")
+	end
   else
     # find lowest
     filter_ml=hash.values.min
   end
   if filter_ml.nil?
-    raise "SUMA-SUMA-SUMA cannot reach any clients!"
+    raise InvalidTargetsProperty, "SUMA-SUMA-SUMA cannot reach any clients!"
   end
   filter_ml.insert(4, '-')
   Chef::Log.info("Filter ML level discovered is: #{filter_ml}")
 
   # create location if it does not exist
-  res_name="#{rq_name}-lpp_source"
-  dl_target="#{location}/#{res_name}"
+  if property_is_set?(:location)
+    if location =~ /-lpp_source$/
+	  begin
+	    lpp_source=location
+	    dl_target=node['nim']['lpp_sources'].fetch(location).fectch('location')
+	    Chef::Log.info("Discover \'#{location}\' lpp source's location: \'#{dl_target}\'")
+	  rescue Exception => e
+        raise InvalidLocationProperty, "SUMA-SUMA-SUMA cannot find lpp_source #{location} into Ohai output"
+	  end
+	elsif location.empty?
+	  lpp_source="#{rq_name}-lpp_source"
+	  dl_target="/usr/sys/inst.images/#{lpp_source}"
+	else
+	  lpp_source="#{rq_name}-lpp_source"
+      dl_target="#{location}/#{lpp_source}"
+	end
+  else
+	lpp_source="#{rq_name}-lpp_source"
+    dl_target="/usr/sys/inst.images/#{lpp_source}"
+  end
   unless ::File.directory?("#{dl_target}")
-    Chef::Log.info("Creating location #{dl_target}...")
-    shell_out!("mkdir -p #{dl_target}")
+	Chef::Log.info("Creating location \'#{dl_target}\'...")
+	shell_out!("mkdir -p #{dl_target}")
 	Chef::Log.warn("Directory #{dl_target} has been created.")
   end
 
@@ -126,12 +170,12 @@ action :download do
   end
   dl=0
   Chef::Log.info("SUMA preview operation: #{suma_s}")
-  so=shell_out("LANG=C #{suma_s} -a Action=Preview 2>&1")
+  so=shell_out("LANG=C #{suma_s} -a Action=Preview")
   if so.error?
-    if so.stdout =~ /0500-035 No fixes match your query./
-      Chef::Log.info("Suma error: No fixes match your query")
+    if so.stderr =~ /0500-035 No fixes match your query./
+      Chef::Log.info("SUMA-SUMA-SUMA error: #{so.stderr}")
     else
-      raise "SUMA-SUMA-SUMA error:\n#{so.stdout}"
+      raise SumaPreviewExecutionError, "SUMA-SUMA-SUMA error:\n#{so.stderr}"
     end
   else
     Chef::Log.info("#{so.stdout}")
@@ -150,14 +194,14 @@ action :download do
     converge_by("suma download operation: \"#{suma_s}\"") do
 	  timeout=600+dl.to_f*900  # 10 min + 15 min / GB
       Chef::Log.info("Download fixes with #{timeout.to_i}s timeout...")
-      so=shell_out!("#{suma_s} -a Action=Download 2>&1", :timeout => timeout.to_i)
+      so=shell_out!("#{suma_s} -a Action=Download", :timeout => timeout.to_i)
     end
 
-	unless failed.to_i > 0 or node['nim']['lpp_sources'].fetch(res_name, nil) == nil
+	unless failed.to_i > 0 or node['nim']['lpp_sources'].fetch(lpp_source, nil) == nil
       # nim define
-      nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{res_name}"
+      nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
       converge_by("nim define lpp_source: \"#{nim_s}\"") do
-        Chef::Log.info("Define #{res_name} ...")
+        Chef::Log.info("Define #{lpp_source} ...")
         so=shell_out!("#{nim_s}")
       end
 	end
