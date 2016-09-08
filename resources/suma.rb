@@ -125,58 +125,49 @@ action :download do
   if rq_type.eql?("Latest")
     # find highest
     filter_ml=hash.values.max
-    filter_ml.insert(4, '-')
-    if filter_ml.to_i > hash.values.min.insert(4, '-').to_i
-      Chef::Log.warn("Release level mismatch. Only targets at level \'#{filter_ml}\' will be updated !")
+    unless filter_ml.nil?
+      filter_ml.insert(4, '-')
+      if filter_ml.to_i > hash.values.min.insert(4, '-').to_i
+        Chef::Log.warn("Release level mismatch. Only targets at level \'#{filter_ml}\' will be updated !")
+      end
+  
+      # find latest SP for highest TL
+      tmp_dir="/suma_metadata"
+      unless ::File.directory?("#{tmp_dir}")
+        shell_out!("mkdir -p #{tmp_dir}")
+      end
+      suma_s="suma -x -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{filter_ml}"
+      Chef::Log.info("SUMA metadata operation: #{suma_s}")
+      so=shell_out("#{suma_s}")
+      if so.error?
+        raise SumaMetadataError "SUMA-SUMA-SUMA suma metadata returns 1!"
+      else
+        Chef::Log.info("suma metadata returns 0")
+        #shell_out!("rm -rf #{tmp_dir}")
+        toto=shell_out("ls #{tmp_dir}/installp/ppc/*.html").stdout.split
+        Chef::Log.info("toto=#{toto}")
+        toto.collect { |tl| tl.match(/\/([0-9]{4}-[0-9]{2}-[0-9]{2}).install.tips.html$/)[1].delete('-') }
+        rq_name=toto.max
+        rq_name.insert(4, '-')
+        rq_name.insert(7, '-')
+        Chef::Log.info("rq_name=#{rq_name}")
+      end
     end
-
-    # find latest SP for highest TL
-    tmp_dir="/suma_metadata"
-    unless ::File.directory?("#{tmp_dir}")
-      shell_out!("mkdir -p #{tmp_dir}")
-    end
-    suma_s="suma -x -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{filter_ml}"
-    Chef::Log.info("SUMA metadata operation: #{suma_s}")
-    so=shell_out("#{suma_s}")
-    if so.error?
-      raise SumaMetadataError "SUMA-SUMA-SUMA suma metadata returns 1!"
-    else
-      Chef::Log.info("suma metadata returns 0")
-      #shell_out!("rm -rf #{tmp_dir}")
-      toto=shell_out("ls #{tmp_dir}/installp/ppc/*.html").stdout.split
-      Chef::Log.info("toto=#{toto}")
-      toto.collect { |tl| tl.match(/\/([0-9]{4}-[0-9]{2}-[0-9]{2}).install.tips.html$/)[1].delete('-') }
-      rq_name=toto.max
-      rq_name.insert(4, '-')
-      rq_name.insert(7, '-')
-      Chef::Log.info("rq_name=#{rq_name}")
-    end
-
   else
     # find lowest
     filter_ml=hash.values.min
-    filter_ml.insert(4, '-')
+    unless filter_ml.nil?
+      filter_ml.insert(4, '-')
+    end 
   end
   if filter_ml.nil?
     raise InvalidTargetsProperty, "SUMA-SUMA-SUMA cannot reach any clients!"
   end
-  filter_ml.insert(4, '-')
   Chef::Log.info("Discover filter ML level \'#{filter_ml}\'")
 
   # create location if it does not exist
   if property_is_set?(:location)
-    if ! location =~ /^\//
-      begin
-        lpp_source=location
-        dl_target=node['nim']['lpp_sources'].fetch(location).fetch('location')
-        Chef::Log.info("Discover \'#{location}\' lpp source's location: \'#{dl_target}\'")
-      rescue Exception => e
-        raise InvalidLocationProperty, "SUMA-SUMA-SUMA cannot find lpp_source \'#{location}\' into Ohai output"
-      end
-    elsif location.empty?
-      lpp_source="#{rq_name}-lpp_source"
-      dl_target="/usr/sys/inst.images/#{lpp_source}"
-    else
+    if location.start_with?("/")
       lpp_source="#{rq_name}-lpp_source"
       dl_target="#{location}/#{lpp_source}"
       unless node['nim']['lpp_sources'].fetch(lpp_source, {}).fetch('location', nil) == nil
@@ -184,6 +175,17 @@ action :download do
         unless node['nim']['lpp_sources'][lpp_source]['location'] =~ /^#{dl_target}/
           raise InvalidLocationProperty, "SUMA-SUMA-SUMA lpp source location mismatch"
         end
+      end
+    elsif location.empty?
+      lpp_source="#{rq_name}-lpp_source"
+      dl_target="/usr/sys/inst.images/#{lpp_source}"
+    else
+      begin
+        lpp_source=location
+        dl_target=node['nim']['lpp_sources'].fetch(location).fetch('location')
+        Chef::Log.info("Discover \'#{location}\' lpp source's location: \'#{dl_target}\'")
+      rescue Exception => e
+        raise InvalidLocationProperty, "SUMA-SUMA-SUMA cannot find lpp_source \'#{location}\' into Ohai output"
       end
     end
   else

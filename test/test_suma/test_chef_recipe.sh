@@ -126,10 +126,9 @@ function check_error_chef_log
 	else
 		if [ ! -z "$secondary_error" ]
 		then
-			error_msg=$(grep 'STDERR: ' $current_dir/aixtest/chef.log | sed 's|STDERR: ||g')
-			if [ "$error_msg" != "$secondary_error" ]
+			error_msg=$(grep "$secondary_error" $current_dir/aixtest/chef.log)
+			if [ -z "$error_msg" ]
 			then
-				echo "error '$error_msg'"
 				let nb_failure+=1
 				return 1
 			fi
@@ -215,31 +214,64 @@ then
 	then
 		echo '== aix_suma "11. Downloading SP 7100-02-02" =='
 		check_directory '/tmp/img.source/7100-02-02-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/7100-02-02-lpp_source "Preview Download" "SP SP" "7100-02 7100-02" "7100-02-02 7100-02-02"
+		fi
 
 		echo '== aix_suma "12. Downloading SP 7100-02-03-1316" =='
 		check_directory '/tmp/img.source/7100-02-03-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/7100-02-03-lpp_source "Preview Download" "SP SP" "7100-02 7100-02" "7100-02-03 7100-02-03"
+		fi
 
 		echo '== aix_suma "13. Downloading TL 7100-03" =='
 		check_directory '/tmp/img.source/7100-03-00-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/7100-03-00-lpp_source "Preview Download" "TL TL" "7100-02 7100-02" "7100-03-00 7100-03-00"
+		fi
 
 		echo '== aix_suma "14. Downloading TL 7100-04-00" =='
 		check_directory '/tmp/img.source/7100-04-00-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/7100-04-00-lpp_source "Preview Download" "TL TL" "7100-02 7100-02" "7100-04-00 7100-04-00"
+		fi
 
 		echo '== aix_suma "15. Downloading TL 7100-05-00-0000" =='
 		check_directory '/tmp/img.source/7100-05-00-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/7100-05-00-lpp_source "Preview Download" "TL TL" "7100-02 7100-02" "7100-05-00 7100-05-00"
+		fi
 
 		echo '== aix_suma "16. Downloading latest SP for highest TL" =='
 		check_directory '/tmp/img.source/latest1/9999-99-99-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
+		fi
 
 		echo '== aix_suma "17. Default property oslevel (latest)" =='
 		check_directory '/tmp/img.source/latest2/9999-99-99-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
+		fi
 
 		echo '== aix_suma "18. Empty property oslevel (latest)" =='
 		check_directory '/tmp/img.source/latest3/9999-99-99-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
+		fi
 
 		if [ $nb_failure -ne 0 ]
 		then
-			show_error_chef
+			echo ""
+			# show_error_chef
 		fi
 	fi
 	echo '== aix_suma "19. Unknown property oslevel (ERROR)" =='
@@ -282,8 +314,7 @@ then
 
 		if [ $nb_failure -ne $old_failure ]
 		then
-			error ""
-			# show_error_chef
+			show_error_chef
 		fi
 	fi
 	echo '== aix_suma "26. Existing lpp source but different location (ERROR)" =='
@@ -293,11 +324,10 @@ then
 		check_no_directory '/tmp/img.source/26/7100-02-03-lpp_source'
 		if [ $? -eq 0 ]
 		then
-			check_error_chef_log "Chef::Resource::AixSuma::InvalidLocationProperty: SUMA-SUMA-SUMA location mismatch"
+			check_error_chef_log "Chef::Resource::AixSuma::InvalidLocationProperty: SUMA-SUMA-SUMA lpp source location mismatch"
 			if [ $? -ne 0 ]
 			then
-				error ""
-			# show_error_chef
+				show_error_chef
 			fi 
 		fi 
 	fi
@@ -305,11 +335,10 @@ then
 	run_test "test_location_error_unknown_lpp" 1 0
 	if [ $? -eq 0 ]
 	then
-		check_error_chef_log "Chef::Resource::AixSuma::InvalidLocationProperty: SUMA-SUMA-SUMA location mismatch"
+		check_error_chef_log "Chef::Resource::AixSuma::InvalidLocationProperty: SUMA-SUMA-SUMA cannot find lpp_source 'unknown_lpp-source' into Ohai output"
 		if [ $? -ne 0 ]
 		then
-			error ""
-			# show_error_chef
+			show_error_chef
 		fi 
 	fi
 fi
@@ -454,7 +483,7 @@ then
 		check_directory '/tmp/img.source/42/7100-02-02-lpp_source'
 		if [ $? -eq 0 ]
 		then
-			check_error_chef_log "Chef::Resource::AixSuma::SumaPreviewExecutionError: SUMA-SUMA-SUMA error:" "0500-013 Failed to retrieve list from fix server."
+			check_error_chef_log "Chef::Resource::AixSuma::SumaPreviewError: SUMA-SUMA-SUMA error:" "0500-013 Failed to retrieve list from fix server."
 			if [ $? -ne 0 ]
 			then
 				show_error_chef
@@ -469,7 +498,7 @@ then
 		check_directory '/tmp/img.source/43/7100-02-02-lpp_source'
 		if [ $? -eq 0 ]
 		then
-			check_error_chef_log "Chef::Resource::AixSuma::SumaPreviewExecutionError: SUMA-SUMA-SUMA error:" "0500-059 Entitlement is required to download. The system's serial number is not entitled. Please go to the Fix Central website to download fixes."
+			check_error_chef_log "Chef::Resource::AixSuma::SumaPreviewError: SUMA-SUMA-SUMA error:" "0500-059 Entitlement is required to download. The system's serial number is not entitled. Please go to the Fix Central website to download fixes."
 			if [ $? -ne 0 ]
 			then
 				show_error_chef

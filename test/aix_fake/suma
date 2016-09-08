@@ -251,6 +251,14 @@ then
 		run_action 1
 		exit 0
 	fi
+	if [ "${fields['Action']}" == 'Metadata' ]
+	then
+	    echo "Performing metadata."
+	    mkdir -p "${fields['DLTarget']}/installp/ppc"
+	    html_file="${fields['DLTarget']}/installp/ppc/9999-99-99.install.tips.html"
+	    touch $html_file
+		exit 0
+	fi
 	echo "#### BAD ACTION (${fields['Action']}) ####"
 	exit 1
 fi
