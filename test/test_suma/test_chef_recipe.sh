@@ -16,23 +16,34 @@ function check_suma
     expected_origin=$3
     expected_type=$4
     expected_target=$5
-
-    check_action=$(check_value_log 'Action' $lpp_source/suma.log)
-    check_origin=$(check_value_log 'FilterML' $lpp_source/suma.log)
-    check_type=$(check_value_log 'RqType' $lpp_source/suma.log)
-    check_target=$(check_value_log 'RqName' $lpp_source/suma.log)
-    if [ "$check_action" != "$expected_action" -o "$check_type" != "$expected_origin" -o "$check_origin" != "$expected_type" -o "$check_target" != "$expected_target" ]
+    if [ "$expected_action" == "error" ]
     then
-	    echo "********* SUMA FAILURE ********"
-        echo "\texpected action = $expected_action"
-        echo "\texpected origin = $expected_origin"
-        echo "\texpected type = $expected_type"
-        echo "\texpected target = $expected_target"
-        echo ""
-	    cat $lpp_source/suma.log
-	    echo "*******************************"
-	    let nb_failure+=1
-    	return 1
+    	if [ ! -f "$lpp_source/suma.error" ]
+    	then
+		    echo "********* SUMA FAILURE ********"
+	        echo "	no error"
+		    echo "*******************************"
+		    let nb_failure+=1
+	    	return 1
+    	fi
+    else
+	    check_action=$(check_value_log 'Action' $lpp_source/suma.log)
+	    check_origin=$(check_value_log 'FilterML' $lpp_source/suma.log)
+	    check_type=$(check_value_log 'RqType' $lpp_source/suma.log)
+	    check_target=$(check_value_log 'RqName' $lpp_source/suma.log)
+	    if [ "$check_action" != "$expected_action" -o "$check_type" != "$expected_origin" -o "$check_origin" != "$expected_type" -o "$check_target" != "$expected_target" ]
+	    then
+		    echo "********* SUMA FAILURE ********"
+	        echo "\texpected action = $expected_action"
+	        echo "\texpected origin = $expected_origin"
+	        echo "\texpected type = $expected_type"
+	        echo "\texpected target = $expected_target"
+	        echo ""
+		    cat $lpp_source/suma.log
+		    echo "*******************************"
+		    let nb_failure+=1
+	    	return 1
+	    fi
     fi
     return 0
 }
@@ -98,6 +109,31 @@ function check_no_directory
 		let nb_failure+=1
 		return 1
 	else
+		return 0
+	fi
+}
+
+function check_error_chef_log
+{
+	excepted_error=$1
+	secondary_error=$2
+	error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
+	if [ "$error_msg" != "$excepted_error" ]
+	then
+		echo "error '$error_msg'"
+		let nb_failure+=1
+		return 1
+	else
+		if [ ! -z "$secondary_error" ]
+		then
+			error_msg=$(grep 'STDERR: ' $current_dir/aixtest/chef.log | sed 's|STDERR: ||g')
+			if [ "$error_msg" != "$secondary_error" ]
+			then
+				echo "error '$error_msg'"
+				let nb_failure+=1
+				return 1
+			fi
+		fi
 		return 0
 	fi
 }
@@ -174,7 +210,7 @@ if [ ! -z "$(echo $run_option | grep 'A')" ]
 then 
 	echo "---- oslevel tests ----"
 	rm -rf /tmp/img.source
-	run_test "test_oslevel" 9 1
+	run_test "test_oslevel" 8 1
 	if [ $? -eq 0 ]
 	then
 		echo '== aix_suma "11. Downloading SP 7100-02-02" =='
@@ -201,26 +237,246 @@ then
 		echo '== aix_suma "18. Empty property oslevel (latest)" =='
 		check_directory '/tmp/img.source/latest3/9999-99-99-lpp_source'
 
-#		echo '== aix_suma "19. Unknown property oslevel (ERROR)" =='
-#		check_no_directory '/tmp/img.source/xxx-lpp_source'
-#		if [ $? -eq 0 ]
-#		then
-#			error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-#			if [ "$error_msg" != "Chef::Resource::AixSuma::InvalidOsLevelProperty: SUMA-SUMA-SUMA oslevel is not recognized!" ]
-#			then
-#				show_error_chef
-#				echo "error '$error_msg'"
-#				let nb_failure+=1
-#			fi
-#		fi
- 
 		if [ $nb_failure -ne 0 ]
 		then
 			show_error_chef
 		fi
 	fi
+	echo '== aix_suma "19. Unknown property oslevel (ERROR)" =='
+	run_test "test_oslevel_error_unknown" 1 0
+	if [ $? -eq 0 ]
+	then
+		check_no_directory '/tmp/img.source/xxx-lpp_source'
+		if [ $? -eq 0 ]
+		then
+			check_error_chef_log "Chef::Resource::AixSuma::InvalidOsLevelProperty: SUMA-SUMA-SUMA oslevel is not recognized!"
+			if [ $? -ne 0 ]
+			then
+				show_error_chef
+			fi 
+		fi 
+	fi
 fi
 
+if [ ! -z "$(echo $run_option | grep 'B')" ]
+then
+	echo "---- location tests ----"
+	rm -rf /tmp/img.source
+	rm -rf /usr/sys/inst.images
+	run_test "test_location" 4 1
+	if [ $? -eq 0 ]
+	then
+		old_failure=$nb_failure
+
+		echo '== aix_suma "21. Existing directory (absolute path)" =='
+		check_directory '/tmp/img.source/21/7100-02-02-lpp_source'
+
+		echo '== aix_suma "23. Default property location (/usr/sys/inst.images)" =='
+		check_directory '/usr/sys/inst.images/7100-02-02-lpp_source'
+
+		echo '== aix_suma "24. Empty property location (/usr/sys/inst.images)" =='
+		check_directory '/usr/sys/inst.images/7100-02-03-lpp_source'
+
+		echo '== aix_suma "27. Provide existing lpp source as location" =='
+		check_directory '/usr/sys/inst.images/beautifull'
+
+		if [ $nb_failure -ne $old_failure ]
+		then
+			error ""
+			# show_error_chef
+		fi
+	fi
+	echo '== aix_suma "26. Existing lpp source but different location (ERROR)" =='
+	run_test "test_location_error_diff_lpp_loc" 1 0
+	if [ $? -eq 0 ]
+	then
+		check_no_directory '/tmp/img.source/26/7100-02-03-lpp_source'
+		if [ $? -eq 0 ]
+		then
+			check_error_chef_log "Chef::Resource::AixSuma::InvalidLocationProperty: SUMA-SUMA-SUMA location mismatch"
+			if [ $? -ne 0 ]
+			then
+				error ""
+			# show_error_chef
+			fi 
+		fi 
+	fi
+	echo '== aix_suma "28. Provide unknown lpp source as location (ERROR)" =='
+	run_test "test_location_error_unknown_lpp" 1 0
+	if [ $? -eq 0 ]
+	then
+		check_error_chef_log "Chef::Resource::AixSuma::InvalidLocationProperty: SUMA-SUMA-SUMA location mismatch"
+		if [ $? -ne 0 ]
+		then
+			error ""
+			# show_error_chef
+		fi 
+	fi
+fi
+
+if [ ! -z "$(echo $run_option | grep 'C')" ]
+then 
+	echo "---- targets tests ----"
+	rm -rf /tmp/img.source
+	run_test "test_targets" 4 1
+	if [ $? -eq 0 ]
+	then
+		old_failure=$nb_failure
+
+		echo '== aix_suma "31. Valid client list with wildcard" =='
+		check_directory '/tmp/img.source/31/7100-02-02-lpp_source'
+
+		echo '== aix_suma "32. Mostly valid client list" =='
+		check_directory '/tmp/img.source/32/7100-02-02-lpp_source'
+
+		echo '== aix_suma "34. Default property targets (all nim clients)" =='
+		check_directory '/tmp/img.source/34/7100-02-02-lpp_source'
+
+		echo '== aix_suma "35. Empty property targets (all nim clients)" =='
+		check_directory '/tmp/img.source/35/7100-02-02-lpp_source'
+
+		if [ $nb_failure -ne $old_failure ]
+		then
+			show_error_chef
+		fi
+	fi
+	echo '== aix_suma "33. Invalid client list (ERROR)" =='
+	run_test "test_targets_error_invalid" 1 0
+	if [ $? -eq 0 ]
+	then
+		check_no_directory '/tmp/img.source/33/7100-02-02-lpp_source'
+		if [ $? -eq 0 ]
+		then
+			check_error_chef_log "Chef::Resource::AixSuma::InvalidTargetsProperty: SUMA-SUMA-SUMA cannot reach any clients!"
+			if [ $? -ne 0 ]
+			then
+				show_error_chef
+			fi 
+		fi 
+	fi
+fi
+
+if [ ! -z "$(echo $run_option | grep 'D')" ]
+then 
+	echo "---- suma tests ----"
+	rm -rf /tmp/img.source
+	mkdir -p /tmp/img.source/46/7100-02-02-lpp_source
+	suma -x -a RqName=7100-02-02 -a RqType=SP -a Action=Download -a DLTarget=/tmp/img.source/46/7100-02-02-lpp_source -a FilterML=7100-02 > /dev/null
+	rm "/tmp/img.source/46/7100-02-02-lpp_source/suma.log"		
+	run_test "test_suma" 5 1
+	if [ $? -eq 0 ]
+	then
+		old_failure=$nb_failure
+		
+		echo '== aix_suma "45. error no fixes 0500-035 (Preview only)" =='
+		check_directory '/tmp/img.source/45/7100-02-02-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/45/7100-02-02-lpp_source "error"
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/45/7100-02-02-lpp_source "" '' 
+			fi 
+		fi
+
+		echo '== aix_suma "46. nothing to download (Preview only)" =='
+		check_directory '/tmp/img.source/46/7100-02-02-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/46/7100-02-02-lpp_source "Preview" "SP" "7100-02" "7100-02-02"
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/46/7100-02-02-lpp_source "" '' 
+			fi 
+		fi
+
+		echo '== aix_suma "47. failed fixes (Preview + Download)" =='
+		check_directory '/tmp/img.source/47/7100-02-02-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/47/7100-02-02-lpp_source "Preview Download" "SP SP" "7100-02 7100-02" "7100-02-02 7100-02-02"
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/47/7100-02-02-lpp_source "" '' 
+			fi 
+		fi
+
+		echo '== aix_suma "48. lpp source exists (Preview + Download)" =='
+		check_directory '/tmp/img.source/48/7100-02-02-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/48/7100-02-02-lpp_source "Preview Download" "SP SP" "7100-02 7100-02" "7100-02-02 7100-02-02"
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/48/7100-02-02-lpp_source "" '' 
+			fi 
+		fi
+
+		echo '== aix_suma "49. lpp source absent (Preview + Download + Define)" =='
+		check_directory '/tmp/img.source/49/7100-02-02-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/49/7100-02-02-lpp_source "Preview Download" "SP SP" "7100-02 7100-02" "7100-02-02 7100-02-02"
+			if [ $? -eq 0 ]
+			then
+		        check_nim /tmp/img.source/49/7100-02-02-lpp_source "7100-02-02-lpp_source" 'master' 
+			fi 
+		fi
+		
+		if [ $nb_failure -ne $old_failure ]
+		then
+			show_error_chef
+		fi
+	fi
+	echo '== aix_suma "41. error no more space 0500-004 (Download ERROR)" =='
+	run_test "test_suma_error_no_space" 1 0
+	if [ $? -eq 0 ]
+	then
+		check_directory '/tmp/img.source/41/7100-02-02-lpp_source'
+		if [ $? -eq 0 ]
+		then
+	        check_suma /tmp/img.source/41/7100-02-02-lpp_source "Preview" "SP" "7100-02" "7100-02-02"
+			if [ $? -eq 0 ]
+			then
+				check_error_chef_log "Mixlib::ShellOut::ShellCommandFailed: Expected process to exit with [0], but received '1'" "0500-004 no more space."
+				if [ $? -ne 0 ]
+				then
+					show_error_chef
+				fi 
+			fi 
+		fi 
+	fi
+
+	echo '== aix_suma "42. error network 0500-013 (Preview ERROR)" =='
+	run_test "test_suma_error_network" 1 0
+	if [ $? -eq 0 ]
+	then
+		check_directory '/tmp/img.source/42/7100-02-02-lpp_source'
+		if [ $? -eq 0 ]
+		then
+			check_error_chef_log "Chef::Resource::AixSuma::SumaPreviewExecutionError: SUMA-SUMA-SUMA error:" "0500-013 Failed to retrieve list from fix server."
+			if [ $? -ne 0 ]
+			then
+				show_error_chef
+			fi 
+		fi 
+	fi
+
+	echo '== aix_suma "43. error entitlement 0500-059 (Preview ERROR)" =='
+	run_test "test_suma_error_entitlement" 1 0
+	if [ $? -eq 0 ]
+	then
+		check_directory '/tmp/img.source/43/7100-02-02-lpp_source'
+		if [ $? -eq 0 ]
+		then
+			check_error_chef_log "Chef::Resource::AixSuma::SumaPreviewExecutionError: SUMA-SUMA-SUMA error:" "0500-059 Entitlement is required to download. The system's serial number is not entitled. Please go to the Fix Central website to download fixes."
+			if [ $? -ne 0 ]
+			then
+				show_error_chef
+			fi 
+		fi 
+	fi
+fi
 
 echo "--------- Result tests ---------"
 if [ $nb_failure -eq 0 ] 

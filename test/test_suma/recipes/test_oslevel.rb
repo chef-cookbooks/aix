@@ -55,10 +55,3 @@ aix_suma "18. Empty property oslevel (latest)" do
   targets   'client1'
   action    :download
 end
-
-#aix_suma "19. Unknown property oslevel (ERROR)" do
-#  oslevel   'xxx'
-#  location  '/tmp/img.source'
-#  targets   'client1'
-#  action    :download
-#end

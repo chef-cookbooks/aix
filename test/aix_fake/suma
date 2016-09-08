@@ -49,17 +49,28 @@ function error_managment
 {
 	error_message=""
 	display_name="${fields['DisplayName']}"
-    if [ ! -z $(echo $display_name | grep "error") ]
+	
+	if [ ! -z $(echo $display_name | grep "0500-004") ]
+    then
+		if [ "${fields['Action']}" == 'Download' ]
+		then
+	   	    error_message="0500-004 no more space."
+	    fi
+    fi
+
+	if [ ! -z $(echo $display_name | grep "0500-013") ]
     then
    	    error_message="0500-013 Failed to retrieve list from fix server."
     fi
-    if [ ! -z $(echo $display_name | grep "not entitled") ]
+
+	if [ ! -z $(echo $display_name | grep "0500-059") ]
     then
-        error_message="0500-059 Entitlement is required to download. The system's serial number is not entitled. Please go to the Fix Central website to download fixes."
+   	     error_message="0500-059 Entitlement is required to download. The system's serial number is not entitled. Please go to the Fix Central website to download fixes."
     fi
-    if [ ! -z $(echo $display_name | grep "up-to-date") ]
+
+	if [ ! -z $(echo $display_name | grep "0500-035") ]
     then
-        error_message="0500-035 No fixes match your query."
+   	     error_message="0500-035 No fixes match your query."
     fi
     if [ "${fields['RqType']}" != "TL" -a "${fields['RqType']}" != "SP" -a "${fields['RqType']}" != "Latest" ]
     then
