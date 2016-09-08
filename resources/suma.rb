@@ -21,28 +21,23 @@ property :oslevel, String
 property :location, String
 property :targets, String
 
+class OhaiNimPluginNotFound < StandardError
+end
 class InvalidOsLevelProperty < StandardError
 end
-
 class InvalidLocationProperty < StandardError
 end
-
 class InvalidTargetsProperty < StandardError
 end
-
-class SumaExecutionError < StandardError
+class SumaError < StandardError
 end
-
-class SumaPreviewExecutionError < SumaExecutionError
+class SumaPreviewError < SumaError
 end
-
-class SumaDownloadExecutionError < SumaExecutionError
+class SumaDownloadError < SumaError
 end
-
-class SumaMetadataExecutionError < SumaExecutionError
+class SumaMetadataError < SumaError
 end
-
-class NimExecutionError < SumaExecutionError
+class NimError < StandardError
 end
 
 load_current_value do
@@ -59,28 +54,28 @@ action :download do
   if property_is_set?(:oslevel)
     if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-[0-9]{4})$/
       rq_type="TL"
-      rq_name="#{$1}-00"
+      rq_name=$1
     elsif oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
       rq_type="SP"
       rq_name=$1
-    elsif oslevel.empty? or oslevel.downcase == 'latest'
+    elsif oslevel.empty? or oslevel.downcase.eql?("latest")
       rq_type="Latest"
-      rq_name='9999-99-99-9999' # TODO find latest SP for highest TL (with METADATA)
-      rq_name=rq_name.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/)[1]
     else
       raise InvalidOsLevelProperty, "SUMA-SUMA-SUMA oslevel is not recognized!"
     end
   else
     rq_type="Latest"
-    rq_name='9999-99-99-9999' # TODO find latest SP for highest TL (with METADATA)
-    rq_name=rq_name.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/)[1]
   end
   Chef::Log.info("rq_type=#{rq_type}")
   Chef::Log.info("rq_name=#{rq_name}")
 
   # get list of all NIM machines from Ohai
-  all_machines=node['nim']['clients'].keys
-  Chef::Log.info("Ohai client machine's list is #{all_machines}")
+  begin
+    all_machines=node.fetch('nim', {}).fetch('clients').keys
+    Chef::Log.info("Ohai client machine's list is #{all_machines}")
+  rescue Exception => e
+    raise OhaiNimPluginNotFound, "SUMA-SUMA-SUMA cannot find info from Ohai nim plugin!"
+  end
 
   selected_machines=Array.new
 
@@ -119,7 +114,7 @@ action :download do
       oslevel=oslevel.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
       [ m, oslevel.delete('-') ]
     rescue Exception => e
-      Chef::Log.warn("Cannot find OS level for machine #{m} into Ohai output")
+      Chef::Log.warn("Cannot find OS level for machine \'#{m}\' into Ohai output")
       [ m, nil ]
     end
   end ]
@@ -130,28 +125,53 @@ action :download do
   if rq_type.eql?("Latest")
     # find highest
     filter_ml=hash.values.max
-    if filter_ml.to_i > hash.values.min.to_i
-      Chef::Log.warn("Release level mismatch. Only targets at level #{filter_ml} will be updated !")
+    filter_ml.insert(4, '-')
+    if filter_ml.to_i > hash.values.min.insert(4, '-').to_i
+      Chef::Log.warn("Release level mismatch. Only targets at level \'#{filter_ml}\' will be updated !")
     end
+
+    # find latest SP for highest TL
+    tmp_dir="/suma_metadata"
+    unless ::File.directory?("#{tmp_dir}")
+      shell_out!("mkdir -p #{tmp_dir}")
+    end
+    suma_s="suma -x -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{filter_ml}"
+    Chef::Log.info("SUMA metadata operation: #{suma_s}")
+    so=shell_out("#{suma_s}")
+    if so.error?
+      raise SumaMetadataError "SUMA-SUMA-SUMA suma metadata returns 1!"
+    else
+      Chef::Log.info("suma metadata returns 0")
+      #shell_out!("rm -rf #{tmp_dir}")
+      toto=shell_out("ls #{tmp_dir}/installp/ppc/*.html").stdout.split
+      Chef::Log.info("toto=#{toto}")
+      toto.collect { |tl| tl.match(/\/([0-9]{4}-[0-9]{2}-[0-9]{2}).install.tips.html$/)[1].delete('-') }
+      rq_name=toto.max
+      rq_name.insert(4, '-')
+      rq_name.insert(7, '-')
+      Chef::Log.info("rq_name=#{rq_name}")
+    end
+
   else
     # find lowest
     filter_ml=hash.values.min
+    filter_ml.insert(4, '-')
   end
   if filter_ml.nil?
     raise InvalidTargetsProperty, "SUMA-SUMA-SUMA cannot reach any clients!"
   end
   filter_ml.insert(4, '-')
-  Chef::Log.info("Filter ML level discovered is: #{filter_ml}")
+  Chef::Log.info("Discover filter ML level \'#{filter_ml}\'")
 
   # create location if it does not exist
   if property_is_set?(:location)
-    if location =~ /-lpp_source$/
+    if ! location =~ /^\//
       begin
         lpp_source=location
         dl_target=node['nim']['lpp_sources'].fetch(location).fetch('location')
         Chef::Log.info("Discover \'#{location}\' lpp source's location: \'#{dl_target}\'")
       rescue Exception => e
-        raise InvalidLocationProperty, "SUMA-SUMA-SUMA cannot find lpp_source #{location} into Ohai output"
+        raise InvalidLocationProperty, "SUMA-SUMA-SUMA cannot find lpp_source \'#{location}\' into Ohai output"
       end
     elsif location.empty?
       lpp_source="#{rq_name}-lpp_source"
@@ -162,7 +182,7 @@ action :download do
       unless node['nim']['lpp_sources'].fetch(lpp_source, {}).fetch('location', nil) == nil
         Chef::Log.info("Found lpp source \'#{lpp_source}\' location")
         unless node['nim']['lpp_sources'][lpp_source]['location'] =~ /^#{dl_target}/
-          raise InvalidLocationProperty, "SUMA-SUMA-SUMA location mismatch"
+          raise InvalidLocationProperty, "SUMA-SUMA-SUMA lpp source location mismatch"
         end
       end
     end
@@ -173,7 +193,7 @@ action :download do
   unless ::File.directory?("#{dl_target}")
     Chef::Log.info("Creating location \'#{dl_target}\'...")
     shell_out!("mkdir -p #{dl_target}")
-    Chef::Log.warn("Directory #{dl_target} has been created.")
+    Chef::Log.warn("Directory \'#{dl_target}\' has been created.")
   end
 
   # suma preview
@@ -188,24 +208,30 @@ action :download do
     if so.stderr =~ /0500-035 No fixes match your query./
       Chef::Log.info("SUMA-SUMA-SUMA error: #{so.stderr}")
     else
-      raise SumaPreviewExecutionError, "SUMA-SUMA-SUMA error:\n#{so.stderr}"
+      raise SumaPreviewError, "SUMA-SUMA-SUMA error:\n#{so.stderr}"
     end
   else
     Chef::Log.info("#{so.stdout}")
-    if so.stdout =~ /Total bytes of updates downloaded: ([0-9]+)/
-      dl=$1.to_f/1024/1024/1024
-      Chef::Log.info("#{dl.to_f.round(2)} GB to download")
+    if so.stdout =~ /([0-9]+) downloaded/
+      downloaded=$1
+      dl=so.stdout.match(/Total bytes of updates downloaded: ([0-9]+)/)[1].to_f/1024/1024/1024
+      timeout=600+dl.to_f*900  # 10 min + 15 min / GB
+      if downloaded.to_i > 0
+        Chef::Log.warn("#{downloaded} fixes (~ #{dl.to_f.round(2)} GB) will be downloaded to \'#{dl_target}\' directory. It may take up to #{Time.at(timeout).strftime("%Hh:%Mm:%Ss")}.")
+      end
     end
     if so.stdout =~ /([0-9]+) failed/
       failed=$1
       Chef::Log.info("#{failed} failed fixes")
+      if failed.to_i > 0
+        Chef::Log.warn("Preview of #{failed} fixes has failed. Only download will be done, no lpp source created.")
+      end
     end
   end
 
   unless dl.to_f == 0
     # suma download
     converge_by("suma download operation: \"#{suma_s}\"") do
-      timeout=600+dl.to_f*900  # 10 min + 15 min / GB
       Chef::Log.info("Download fixes with #{timeout.to_i}s timeout...")
       so=shell_out!("#{suma_s} -a Action=Download", :timeout => timeout.to_i)
     end
