@@ -83,7 +83,18 @@ function check_directory
 	if [ ! -d  "$1" ]
 	then
 		echo "** lpp_source folder '$1' not created!"
-		#show_error_chef
+		let nb_failure+=1
+		return 1
+	else
+		return 0
+	fi
+}
+
+function check_no_directory
+{
+	if [ -d  "$1" ]
+	then
+		echo "** lpp_source folder '$1' are created!"
 		let nb_failure+=1
 		return 1
 	else
@@ -134,7 +145,7 @@ function run_test
 }
 
 run_option="$1"
-[ -z "$run_option" ] && run_option="ABC1234567"
+[ -z "$run_option" ] && run_option="ABCD"
 
 current_dir=$PWD
 if [ ! -d "$current_dir/aix/test/test_suma/recipes" ]
@@ -161,276 +172,56 @@ echo "--------- Run tests recipes ---------"
 nb_failure=0
 if [ ! -z "$(echo $run_option | grep 'A')" ]
 then 
-	echo "---- Nominal tests ----"
+	echo "---- oslevel tests ----"
 	rm -rf /tmp/img.source
-	run_test "test_simple" 4 1
+	run_test "test_oslevel" 9 1
 	if [ $? -eq 0 ]
 	then
-		echo '== aix_suma "Downloading SP 7100-09 >> 7100-09-02" =='
-		check_directory '/tmp/img.source/7100-09-02-lpp_source'
-		if [ $? -eq 0 ]
+		echo '== aix_suma "11. Downloading SP 7100-02-02" =='
+		check_directory '/tmp/img.source/7100-02-02-lpp_source'
+
+		echo '== aix_suma "12. Downloading SP 7100-02-03-1316" =='
+		check_directory '/tmp/img.source/7100-02-03-lpp_source'
+
+		echo '== aix_suma "13. Downloading TL 7100-03" =='
+		check_directory '/tmp/img.source/7100-03-00-lpp_source'
+
+		echo '== aix_suma "14. Downloading TL 7100-04-00" =='
+		check_directory '/tmp/img.source/7100-04-00-lpp_source'
+
+		echo '== aix_suma "15. Downloading TL 7100-05-00-0000" =='
+		check_directory '/tmp/img.source/7100-05-00-lpp_source'
+
+		echo '== aix_suma "16. Downloading latest SP for highest TL" =='
+		check_directory '/tmp/img.source/latest1/9999-99-99-lpp_source'
+
+		echo '== aix_suma "17. Default property oslevel (latest)" =='
+		check_directory '/tmp/img.source/latest2/9999-99-99-lpp_source'
+
+		echo '== aix_suma "18. Empty property oslevel (latest)" =='
+		check_directory '/tmp/img.source/latest3/9999-99-99-lpp_source'
+
+#		echo '== aix_suma "19. Unknown property oslevel (ERROR)" =='
+#		check_no_directory '/tmp/img.source/xxx-lpp_source'
+#		if [ $? -eq 0 ]
+#		then
+#			error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
+#			if [ "$error_msg" != "Chef::Resource::AixSuma::InvalidOsLevelProperty: SUMA-SUMA-SUMA oslevel is not recognized!" ]
+#			then
+#				show_error_chef
+#				echo "error '$error_msg'"
+#				let nb_failure+=1
+#			fi
+#		fi
+ 
+		if [ $nb_failure -ne 0 ]
 		then
-	        check_suma /tmp/img.source/7100-09-02-lpp_source "Preview Download" "SP SP" "7100-09 7100-09" "7100-09-02 7100-09-02"
-			if [ $? -eq 0 ]
-			then
-		        check_nim /tmp/img.source/7100-09-02-lpp_source "7100-09-02-lpp_source" 'master' 
-			fi 
-		fi 
-	
-		echo '== aix_suma "Downloading TL+SP 7100-09 >> 7100-10-02" =='
-		check_directory '/tmp/img.source/7100-10-02-lpp_source'
-		if [ $? -eq 0 ]
-		then
-	        check_suma /tmp/img.source/7100-10-02-lpp_source "Preview Download" "SP SP" "7100-09 7100-09" "7100-10-02 7100-10-02"
-			if [ $? -eq 0 ]
-			then
-		        check_nim /tmp/img.source/7100-10-02-lpp_source "7100-10-02-lpp_source" 'master' 
-			fi 
-		fi 
-	
-		echo '== aix_suma "nothing 7100-10 >> 7100-09-03" =='
-		check_directory '/tmp/img.source/7100-09-03-lpp_source'
-		if [ $? -eq 0 ]
-		then
-	        check_suma /tmp/img.source/7100-09-03-lpp_source "Preview" "SP" "7100-10" "7100-09-03"
-			if [ $? -eq 0 ]
-			then
-		        check_nim /tmp/img.source/7100-09-03-lpp_source "" '' 
-			fi 
-		fi 
-	
-		echo '== aix_suma "Downloading multi-clients TL+SP 7100-08 >> 7100-10-04" =='
-		check_directory '/tmp/img.source/7100-10-04-lpp_source'
-		if [ $? -eq 0 ]
-		then
-	        check_suma /tmp/img.source/7100-10-04-lpp_source "Preview Download" "SP SP" "7100-08 7100-08" "7100-10-04 7100-10-04"
-			if [ $? -eq 0 ]
-			then
-		        check_nim /tmp/img.source/7100-10-04-lpp_source "7100-10-04-lpp_source" 'master' 
-			fi 
-		fi 
+			show_error_chef
+		fi
 	fi
 fi
 
-if [ ! -z "$(echo $run_option | grep 'B')" ]
-then 
-	echo "---- Complex tests ----"
-	rm -rf /tmp/img.source
-	rm -rf /usr/sys/inst.images
-	mkdir -p /tmp/img.source/7100-09-05-lpp_source
-	suma -x -a RqName=7100-09-05 -a RqType=SP -a Action=Download -a DLTarget=/tmp/img.source/7100-09-05-lpp_source -a FilterML=7100-09 > /dev/null
-	rm -f /tmp/img.source/7100-09-05-lpp_source/suma.*
-	run_test "test_complex" 6 1
-	if [ $? -eq 0 ]
-	then
-		echo '== aix_suma "Want to download but up-to-date" =='
-		check_directory '/tmp/img.source/7100-09-02-lpp_source'
-		if [ $? -eq 0 ]
-		then
-	        if [ -f '/tmp/img.source/7100-09-02-lpp_source/suma.error' ]
-	        then
-	            val=$(grep '0500-' /tmp/img.source/7100-09-02-lpp_source/suma.error)
-	            if [ "$val" != "0500-035 No fixes match your query." ]
-	            then
-		            echo "********* BAD SUMA ERROR ********"
-		            cat /tmp/img.source/7100-09-02-lpp_source/suma.error
-		            echo "*********************************"
-		            echo "$val"
-		            echo "*********************************"
-		            let nb_failure+=1
-	            fi
-	        else
-		        echo "********* SUMA FAILURE ********"
-		        cat /tmp/img.source/7100-09-02-lpp_source/suma.log
-		        echo "*******************************"
-		        let nb_failure+=1
-	        fi
-		fi
-		
-		echo '== aix_suma "Downloading TL 7100-09 >> 7100-10" =='
-		check_directory '/usr/sys/inst.images/7100-10-00-lpp_source'
-		if [ $? -eq 0 ]
-		then
-	        check_suma /usr/sys/inst.images/7100-10-00-lpp_source "Preview Download" "TL TL" "7100-09 7100-09" "7100-10-00 7100-10-00"
-			if [ $? -eq 0 ]
-			then
-		        check_nim /usr/sys/inst.images/7100-10-00-lpp_source "7100-10-lpp_source" 'master'
-			fi 
-		fi
-	
-		echo '== aix_suma "Downloading TL 7100-09 >> 7100-11" =='
-		check_directory '/tmp/img.source/7100-11-00-lpp_source'
-		if [ $? -eq 0 ]
-		then
-	        check_suma /tmp/img.source/7100-11-00-lpp_source "Preview Download" "TL TL" "7100-09 7100-09" "7100-11-00 7100-11-00"
-			if [ $? -eq 0 ]
-			then
-		        check_nim /tmp/img.source/7100-11-00-lpp_source "7100-11-00-lpp_source" 'master' 
-			fi 
-		fi
-	
-		echo '== aix_suma "Downloading Latest 7100-09" =='
-		check_directory '/tmp/img.source/9999-99-99-lpp_source'
-		if [ $? -eq 0 ]
-		then
-	        check_suma /tmp/img.source/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-09 7100-09" ""
-			if [ $? -eq 0 ]
-			then
-		        check_nim /tmp/img.source/9999-99-99-lpp_source "9999-99-99-lpp_source" 'master' 
-			fi 
-		fi
-	
-		echo '== aix_suma "Only preview (already download) 7100-09 >> 7100-09-05" =='
-		check_directory '/tmp/img.source/7100-09-05-lpp_source'
-		if [ $? -eq 0 ]
-		then
-	        check_suma /tmp/img.source/7100-09-05-lpp_source "Preview" "SP" "7100-09" "7100-09-05"
-			if [ $? -eq 0 ]
-			then
-		        check_nim /tmp/img.source/7100-09-05-lpp_source "" '' 
-			fi 
-		fi
 
-		echo '== aix_suma "Downloading SP 7100-09 >> 7100-09-03 with failure" =='
-		check_directory '/tmp/img.source/7100-09-03-lpp_source'
-		if [ $? -eq 0 ]
-		then
-	        check_suma /tmp/img.source/7100-09-03-lpp_source "Preview Download" "SP SP" "7100-09 7100-09" "7100-09-03 7100-09-03"
-			if [ $? -eq 0 ]
-			then
-		        check_nim /tmp/img.source/7100-09-03-lpp_source "" '' 
-			fi 
-		fi
-		 
-	fi
-fi
-
-if [ ! -z "$(echo $run_option | grep 'C')" ]
-then 
-	echo "---- Error and exception tests ----"
-	rm -rf /tmp/img.source
-	if [ ! -z "$(echo $run_option | grep '1')" ]
-	then 
-		echo '== aix_suma "error network (BSO) for test" =='
-		run_test "test_error_1" 1 0
-		if [ $? -eq 0 ]
-		then
-			check_directory '/tmp/img.source/7100-09-02-lpp_source'
-			if [ $? -eq 0 ]
-			then
-				error_msg=$(grep '0500-013' $current_dir/aixtest/chef.log)
-				if [ "$error_msg" != "0500-013 Failed to retrieve list from fix server." ]
-				then
-					show_error_chef
-					echo "error '$error_msg'"
-					let nb_failure+=1
-				fi
-				# suma return "0500-013 Failed to retrieve list from fix server."
-			fi 
-		fi
-	fi
-	if [ ! -z "$(echo $run_option | grep '2')" ]
-	then 
-		echo '== aix_suma "error network for test" =='
-		run_test "test_error_2" 1 0
-		if [ $? -eq 0 ]
-		then
-			check_directory '/tmp/img.source/7100-09-01-lpp_source'
-			if [ $? -eq 0 ]
-			then
-				error_msg=$(grep '0500-013' $current_dir/aixtest/chef.log)
-				if [ "$error_msg" != "0500-013 Failed to retrieve list from fix server." ]
-				then
-					show_error_chef
-					echo "error '$error_msg'"
-					let nb_failure+=1
-				fi
-				# suma return "0500-013 Failed to retrieve list from fix server."
-			fi 
-		fi
-	fi
-	if [ ! -z "$(echo $run_option | grep '3')" ]
-	then 
-		echo '== aix_suma "Suma configuration: not entitled" =='
-		run_test "test_error_3" 1 0
-		if [ $? -eq 0 ]
-		then
-			check_directory '/tmp/img.source/7100-09-05-lpp_source'
-			if [ $? -eq 0 ]
-			then
-				error_msg=$(grep '0500-059' $current_dir/aixtest/chef.log)
-				if [ "$error_msg" != "0500-059 Entitlement is required to download. The system's serial number is not entitled. Please go to the Fix Central website to download fixes." ]
-				then
-					show_error_chef
-					echo "error '$error_msg'"
-					let nb_failure+=1
-				fi
-				# suma return "0500-059 Entitlement is required to download.
-				#			   The system's serial number is not entitled.
-				#			   Please go to the Fix Central website to download fixes."
-			fi 
-		fi
-	fi	
-	if [ ! -z "$(echo $run_option | grep '4')" ]
-	then 
-		echo '== aix_suma "Suma with client unknown" =='
-		run_test "test_error_4" 1 0
-		if [ $? -eq 0 ]
-		then
-			if [ -d '/tmp/img.source/7100-09-03-lpp_source' ]
-			then
-				echo "** lpp_source folder '/tmp/img.source/7100-09-03-lpp_source' are created!"
-				show_error_chef
-				let nb_failure+=1
-			else
-				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-				if [ "$error_msg" != "Chef::Resource::AixSuma::InvalidTargetsProperty: SUMA-SUMA-SUMA cannot reach any clients!" ]
-				then
-					show_error_chef
-					echo "error '$error_msg'"
-					let nb_failure+=1
-				fi
-			fi 
-		fi
-	fi
-	if [ ! -z "$(echo $run_option | grep '5')" ]
-	then 
-		echo '== aix_suma "Suma with oslevel wrong" =='
-		run_test "test_error_5" 1 0
-		if [ $? -eq 0 ]
-		then
-			if [ -d '/tmp/img.source/7100-09-03-lpp_source' ]
-			then
-				echo "** lpp_source folder '/tmp/img.source/7100-09-03-lpp_source' are created!"
-				show_error_chef
-				let nb_failure+=1
-			else
-				error_msg=$(grep 'ERROR: aix_suma' $current_dir/aixtest/chef.log | sed 's|.*had an error: ||g')
-				if [ "$error_msg" != "Chef::Resource::AixSuma::InvalidOsLevelProperty: SUMA-SUMA-SUMA oslevel is not recognized!" ]
-				then
-					show_error_chef
-					echo "error '$error_msg'"
-					let nb_failure+=1
-				fi
-			fi 
-		fi
-	fi
-	if [ ! -z "$(echo $run_option | grep '6')" ]
-	then 
-		echo '== aix_suma "Suma with target empty" =='
-		run_test "test_error_6" 1 0
-		check_directory '/tmp/img.source/7100-10-00-lpp_source'
-		if [ $? -eq 0 ]
-		then
-	        check_suma /tmp/img.source/7100-10-00-lpp_source "Preview Download" "TL TL" "7100-10 7100-10" "7100-10-00 7100-10-00"
-			if [ $? -eq 0 ]
-			then
-		        check_nim /tmp/img.source/7100-10-00-lpp_source "" '' 
-			fi 
-		fi
-	fi
-	
-fi
 echo "--------- Result tests ---------"
 if [ $nb_failure -eq 0 ] 
 then
