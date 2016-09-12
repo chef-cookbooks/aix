@@ -10,4 +10,4 @@ issues_url       'https://github.com/chef-cookbooks/aix/issues'
 
 supports 'aix', '>= 6.1'
 
-chef_version '>= 12' if respond_to?(:chef_version)
+chef_version '>= 12.1'
