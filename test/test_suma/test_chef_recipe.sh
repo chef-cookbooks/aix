@@ -248,24 +248,24 @@ then
 		fi
 
 		echo '== aix_suma "16. Downloading latest SP for highest TL" =='
-		check_directory '/tmp/img.source/latest1/7100-02-08-lpp_source'
+		check_directory '/tmp/img.source/latest1/7100-02-08-1614-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/latest1/7100-02-08-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
+	        check_suma /tmp/img.source/latest1/7100-02-08-1614-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
 		fi
 
 		echo '== aix_suma "17. Default property oslevel (latest)" =='
-		check_directory '/tmp/img.source/latest2/7100-02-08-lpp_source'
+		check_directory '/tmp/img.source/latest2/7100-02-08-1614-lpp_source'
 		if [ $? -eq 0 ]
 		then
-			check_suma /tmp/img.source/latest2/7100-02-08-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
+			check_suma /tmp/img.source/latest2/7100-02-08-1614-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
 		fi
 
 		echo '== aix_suma "18. Empty property oslevel (latest)" =='
-		check_directory '/tmp/img.source/latest3/7100-02-08-lpp_source'
+		check_directory '/tmp/img.source/latest3/7100-02-08-1614-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/latest3/7100-02-08-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
+	        check_suma /tmp/img.source/latest3/7100-02-08-1614-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
 		fi
 
 		if [ $nb_failure -ne 0 ]
@@ -292,7 +292,7 @@ then
 	run_test "test_oslevel_error_metadata" 1 0
 	if [ $? -eq 0 ]
 	then
-		check_no_directory '/tmp/img.source/latest3/7100-02-08-lpp_source'
+		check_no_directory '/tmp/img.source/latest5/7100-02-08-1614-lpp_source'
 		if [ $? -eq 0 ]
 		then
 			check_error_chef_log "Chef::Resource::AixSuma::SumaMetadataError: SUMA-SUMA-SUMA suma metadata returns 1!" 

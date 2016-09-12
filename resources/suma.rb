@@ -20,6 +20,7 @@ property :desc, String, name_property: true
 property :oslevel, String
 property :location, String
 property :targets, String
+property :tmp_dir, String, default: "/suma_metadata"
 
 class OhaiNimPluginNotFound < StandardError
 end
@@ -57,15 +58,20 @@ action :download do
   Chef::Log.info("oslevel=#{oslevel}")
   Chef::Log.info("location=#{location}")
   Chef::Log.info("targets=#{targets}")
+  Chef::Log.info("tmp_dir=#{tmp_dir}")
 
   # compute suma request type based on oslevel property
   if property_is_set?(:oslevel)
-    if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-[0-9]{4})$/
+    if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/
       rq_type="TL"
       rq_name=$1
+      # TODO : find build number for specific TL
+
     elsif oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
       rq_type="SP"
       rq_name=$1
+      # TODO : find build number for specific SP
+
     elsif oslevel.empty? or oslevel.downcase.eql?("latest")
       rq_type="Latest"
     else
@@ -132,16 +138,18 @@ action :download do
   filter_ml=nil
   if rq_type.eql?("Latest")
     # find highest
-    filter_ml=hash.values.max
+    filter_ml=String.new(hash.values.max)
+    Chef::Log.info("filter_ml=#{filter_ml}")
     unless filter_ml.nil?
-      filter_ml.insert(4, '-')
+	  filter_ml.insert(4, '-')
       if filter_ml.to_i > hash.values.min.insert(4, '-').to_i
         Chef::Log.warn("Release level mismatch. Only targets at level \'#{filter_ml}\' will be updated !")
       end
 
       # find latest SP for highest TL
-      tmp_dir="/suma_metadata"
-      unless ::File.directory?("#{tmp_dir}")
+      if ::File.directory?("#{tmp_dir}")
+        shell_out!("rm -rf #{tmp_dir}/*")
+      else
         shell_out!("mkdir -p #{tmp_dir}")
       end
       suma_s="suma -x -a DisplayName=\"#{desc}\" -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{filter_ml}"
@@ -151,13 +159,17 @@ action :download do
         raise SumaMetadataError, "SUMA-SUMA-SUMA suma metadata returns 1!"
       else
         Chef::Log.info("suma metadata returns 0")
-        #shell_out!("rm -rf #{tmp_dir}")
-        toto=shell_out("ls #{tmp_dir}/installp/ppc/*.html").stdout.split
-        Chef::Log.info("toto=#{toto}")
-        toto.collect { |tl| tl.match(/\/([0-9]{4}-[0-9]{2}-[0-9]{2}).install.tips.html$/)[1].delete('-') }
-        rq_name=toto.max
+        sps=shell_out("ls #{tmp_dir}/installp/ppc/*.install.tips.html").stdout.split
+        Chef::Log.info("sps=#{sps}")
+        sps.collect! do |file|
+          file.gsub!("install.tips.html","xml")
+          text=::File.open(file).read
+          text.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1].delete('-')
+        end
+        rq_name=sps.max
         rq_name.insert(4, '-')
         rq_name.insert(7, '-')
+        rq_name.insert(10, '-')
         Chef::Log.info("rq_name=#{rq_name}")
       end
     end
@@ -226,9 +238,9 @@ action :download do
     if so.stdout =~ /([0-9]+) downloaded/
       downloaded=$1
       dl=so.stdout.match(/Total bytes of updates downloaded: ([0-9]+)/)[1].to_f/1024/1024/1024
-      timeout=600+dl.to_f*900  # 10 min + 15 min / GB
+      timeout=600+dl.to_f*600  # 10 min + 10 min / GB
       if downloaded.to_i > 0
-        Chef::Log.warn("#{downloaded} fixes (~ #{dl.to_f.round(2)} GB) will be downloaded to \'#{dl_target}\' directory. It may take up to #{Time.at(timeout).strftime("%Hh:%Mm:%Ss")}.")
+        Chef::Log.warn("#{downloaded} fixes (~ #{dl.to_f.round(2)} GB) will be downloaded to \'#{dl_target}\' directory. It may take up to #{Time.at(timeout).utc.strftime("%Hh:%Mm:%Ss")}.")
       end
     end
     if so.stdout =~ /([0-9]+) failed/
