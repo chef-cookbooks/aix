@@ -3,7 +3,7 @@ node.default['nim'] = {'clients'=>{'client1'=>{'oslevel'=>'7100-02-01'}},
 
 aix_suma "26. Existing lpp source but different location (ERROR)" do
   oslevel   '7100-02-03'
-  location  '/tmp/img.source/26/'
+  location  '/tmp/img.source/26'
   targets   'client1'
   action    :download
 end

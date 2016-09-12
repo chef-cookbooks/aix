@@ -23,20 +23,28 @@ property :targets, String
 
 class OhaiNimPluginNotFound < StandardError
 end
+
 class InvalidOsLevelProperty < StandardError
 end
+
 class InvalidLocationProperty < StandardError
 end
+
 class InvalidTargetsProperty < StandardError
 end
+
 class SumaError < StandardError
 end
+
 class SumaPreviewError < SumaError
 end
+
 class SumaDownloadError < SumaError
 end
+
 class SumaMetadataError < SumaError
 end
+
 class NimError < StandardError
 end
 
@@ -45,7 +53,7 @@ end
 
 action :download do
 
-  Chef::Log.info("desc=#{desc}")
+  Chef::Log.info("desc=\"#{desc}\"")
   Chef::Log.info("oslevel=#{oslevel}")
   Chef::Log.info("location=#{location}")
   Chef::Log.info("targets=#{targets}")
@@ -130,7 +138,7 @@ action :download do
       if filter_ml.to_i > hash.values.min.insert(4, '-').to_i
         Chef::Log.warn("Release level mismatch. Only targets at level \'#{filter_ml}\' will be updated !")
       end
-  
+
       # find latest SP for highest TL
       tmp_dir="/suma_metadata"
       unless ::File.directory?("#{tmp_dir}")
@@ -158,7 +166,7 @@ action :download do
     filter_ml=hash.values.min
     unless filter_ml.nil?
       filter_ml.insert(4, '-')
-    end 
+    end
   end
   if filter_ml.nil?
     raise InvalidTargetsProperty, "SUMA-SUMA-SUMA cannot reach any clients!"
@@ -167,6 +175,7 @@ action :download do
 
   # create location if it does not exist
   if property_is_set?(:location)
+    location.chomp!('\/')
     if location.start_with?("/")
       lpp_source="#{rq_name}-lpp_source"
       dl_target="#{location}/#{lpp_source}"
@@ -241,6 +250,7 @@ action :download do
     unless failed.to_i > 0 or node['nim']['lpp_sources'].fetch(lpp_source, nil) == nil
       # nim define
       nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
+      Chef::Log.info("NIM operation: #{nim_s}")
       converge_by("nim define lpp_source: \"#{nim_s}\"") do
         Chef::Log.info("Define #{lpp_source} ...")
         so=shell_out!("#{nim_s}")
