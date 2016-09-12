@@ -45,7 +45,7 @@ end
 
 action :download do
 
-  Chef::Log.info("desc=#{desc}")
+  Chef::Log.info("desc=\"#{desc}\"")
   Chef::Log.info("oslevel=#{oslevel}")
   Chef::Log.info("location=#{location}")
   Chef::Log.info("targets=#{targets}")
@@ -136,9 +136,9 @@ action :download do
       unless ::File.directory?("#{tmp_dir}")
         shell_out!("mkdir -p #{tmp_dir}")
       end
-      suma_s="suma -x -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{filter_ml}"
+      suma_s="/usr/sbin/suma -x -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{filter_ml}"
       Chef::Log.info("SUMA metadata operation: #{suma_s}")
-      so=shell_out("#{suma_s}")
+      so=shell_out!("#{suma_s}")
       if so.error?
         raise SumaMetadataError "SUMA-SUMA-SUMA suma metadata returns 1!"
       else
@@ -167,6 +167,7 @@ action :download do
 
   # create location if it does not exist
   if property_is_set?(:location)
+    location.chomp!('\/')
     if location.start_with?("/")
       lpp_source="#{rq_name}-lpp_source"
       dl_target="#{location}/#{lpp_source}"
@@ -241,6 +242,7 @@ action :download do
     unless failed.to_i > 0 or node['nim']['lpp_sources'].fetch(lpp_source, nil) == nil
       # nim define
       nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
+      Chef::Log.info("NIM operation: #{nim_s}")
       converge_by("nim define lpp_source: \"#{nim_s}\"") do
         Chef::Log.info("Define #{lpp_source} ...")
         so=shell_out!("#{nim_s}")

@@ -3,7 +3,7 @@ node.default['nim'] = {'clients'=>{'client1'=>{'oslevel'=>'7100-02-01'}},
 
 aix_suma "21. Existing directory (absolute path)" do
   oslevel	'7100-02-02'
-  location  '/tmp/img.source/21/'
+  location  '/tmp/img.source/21'
   targets   'client1'
   action    :download
 end

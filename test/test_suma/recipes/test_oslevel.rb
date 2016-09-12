@@ -37,21 +37,21 @@ end
 
 aix_suma "16. Downloading latest SP for highest TL" do
   oslevel   'laTEst'
-  location  '/tmp/img.source/latest1/'
+  location  '/tmp/img.source/latest1'
   targets   'client1'
   action    :download
 end
 
 aix_suma "17. Default property oslevel (latest)" do
   #oslevel	'latest'
-  location  '/tmp/img.source/latest2/'
+  location  '/tmp/img.source/latest2'
   targets   'client1'
   action    :download
 end
 
 aix_suma "18. Empty property oslevel (latest)" do
   oslevel   ''
-  location  '/tmp/img.source/latest3/'
+  location  '/tmp/img.source/latest3'
   targets   'client1'
   action    :download
 end

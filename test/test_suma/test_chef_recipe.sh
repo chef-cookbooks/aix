@@ -227,53 +227,53 @@ then
 		fi
 
 		echo '== aix_suma "13. Downloading TL 7100-03" =='
-		check_directory '/tmp/img.source/7100-03-00-lpp_source'
+		check_directory '/tmp/img.source/7100-03-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/7100-03-00-lpp_source "Preview Download" "TL TL" "7100-02 7100-02" "7100-03-00 7100-03-00"
+	        check_suma /tmp/img.source/7100-03-lpp_source "Preview Download" "TL TL" "7100-02 7100-02" "7100-03 7100-03"
 		fi
 
 		echo '== aix_suma "14. Downloading TL 7100-04-00" =='
-		check_directory '/tmp/img.source/7100-04-00-lpp_source'
+		check_directory '/tmp/img.source/7100-04-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/7100-04-00-lpp_source "Preview Download" "TL TL" "7100-02 7100-02" "7100-04-00 7100-04-00"
+	        check_suma /tmp/img.source/7100-04-lpp_source "Preview Download" "TL TL" "7100-02 7100-02" "7100-04 7100-04"
 		fi
 
 		echo '== aix_suma "15. Downloading TL 7100-05-00-0000" =='
-		check_directory '/tmp/img.source/7100-05-00-lpp_source'
+		check_directory '/tmp/img.source/7100-05-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/7100-05-00-lpp_source "Preview Download" "TL TL" "7100-02 7100-02" "7100-05-00 7100-05-00"
+	        check_suma /tmp/img.source/7100-05-lpp_source "Preview Download" "TL TL" "7100-02 7100-02" "7100-05 7100-05"
 		fi
 
 		echo '== aix_suma "16. Downloading latest SP for highest TL" =='
 		check_directory '/tmp/img.source/latest1/9999-99-99-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
+	        check_suma /tmp/img.source/latest1/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
 		fi
 
 		echo '== aix_suma "17. Default property oslevel (latest)" =='
 		check_directory '/tmp/img.source/latest2/9999-99-99-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
+	        check_suma /tmp/img.source/latest2/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
 		fi
 
 		echo '== aix_suma "18. Empty property oslevel (latest)" =='
 		check_directory '/tmp/img.source/latest3/9999-99-99-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
+	        check_suma /tmp/img.source/latest3/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
 		fi
 
 		if [ $nb_failure -ne 0 ]
 		then
-			echo ""
-			# show_error_chef
+			show_error_chef
 		fi
 	fi
+	
 	echo '== aix_suma "19. Unknown property oslevel (ERROR)" =='
 	run_test "test_oslevel_error_unknown" 1 0
 	if [ $? -eq 0 ]
