@@ -136,11 +136,11 @@ action :download do
       unless ::File.directory?("#{tmp_dir}")
         shell_out!("mkdir -p #{tmp_dir}")
       end
-      suma_s="suma -x -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{filter_ml}"
+      suma_s="suma -x -a DisplayName=\"#{desc}\" -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{filter_ml}"
       Chef::Log.info("SUMA metadata operation: #{suma_s}")
       so=shell_out("#{suma_s}")
       if so.error?
-        raise SumaMetadataError "SUMA-SUMA-SUMA suma metadata returns 1!"
+        raise SumaMetadataError, "SUMA-SUMA-SUMA suma metadata returns 1!"
       else
         Chef::Log.info("suma metadata returns 0")
         #shell_out!("rm -rf #{tmp_dir}")

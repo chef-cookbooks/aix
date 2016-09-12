@@ -248,24 +248,24 @@ then
 		fi
 
 		echo '== aix_suma "16. Downloading latest SP for highest TL" =='
-		check_directory '/tmp/img.source/latest1/9999-99-99-lpp_source'
+		check_directory '/tmp/img.source/latest1/7100-02-08-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
+	        check_suma /tmp/img.source/7100-02-08-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
 		fi
 
 		echo '== aix_suma "17. Default property oslevel (latest)" =='
-		check_directory '/tmp/img.source/latest2/9999-99-99-lpp_source'
+		check_directory '/tmp/img.source/latest2/7100-02-08-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
+	        check_suma /tmp/img.source/7100-02-08-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
 		fi
 
 		echo '== aix_suma "18. Empty property oslevel (latest)" =='
-		check_directory '/tmp/img.source/latest3/9999-99-99-lpp_source'
+		check_directory '/tmp/img.source/latest3/7100-02-08-lpp_source'
 		if [ $? -eq 0 ]
 		then
-	        check_suma /tmp/img.source/9999-99-99-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
+	        check_suma /tmp/img.source/7100-02-08-lpp_source "Preview Download" "Latest Latest" "7100-02 7100-02" ""
 		fi
 
 		if [ $nb_failure -ne 0 ]
@@ -282,6 +282,20 @@ then
 		if [ $? -eq 0 ]
 		then
 			check_error_chef_log "Chef::Resource::AixSuma::InvalidOsLevelProperty: SUMA-SUMA-SUMA oslevel is not recognized!"
+			if [ $? -ne 0 ]
+			then
+				show_error_chef
+			fi 
+		fi 
+	fi
+	echo '== aix_suma "19b. latest SP for TL unknown (ERROR metadata 0500-035)" =='
+	run_test "test_oslevel_error_metadata" 1 0
+	if [ $? -eq 0 ]
+	then
+		check_no_directory '/tmp/img.source/xxx-lpp_source'
+		if [ $? -eq 0 ]
+		then
+			check_error_chef_log "Chef::Resource::AixSuma::SumaMetadataError: SUMA-SUMA-SUMA suma metadata returns 1!" 
 			if [ $? -ne 0 ]
 			then
 				show_error_chef

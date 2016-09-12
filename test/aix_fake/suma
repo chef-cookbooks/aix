@@ -201,6 +201,32 @@ function run_action
     echo "" >> $log_file
 }
 
+
+#===============================================
+# create_metadata
+#===============================================
+function create_metadata
+{
+	error_managment
+    echo "Performing metadata."
+    mkdir -p "${fields['DLTarget']}/installp/ppc"
+    for sp_id in 0 1 2 3 4 5 6 7 8
+    do
+    	sp_name="${fields['FilterML']}-0${sp_id}"
+    	html_file="${fields['DLTarget']}/installp/ppc/${sp_name}.install.tips.html"
+    	touch $html_file
+    	xml_file="${fields['DLTarget']}/installp/ppc/${sp_name}.xml"
+    	rm -rf $xml_file
+		echo '<!DOCTYPE packages SYSTEM "package.dtd">' >> $xml_file 
+		echo '<packages>' >> $xml_file
+		echo '<FileModDate value="20081115 10:51"/>' >> $xml_file
+		echo '<SP name="'${sp_name}'-1614">' >> $xml_file
+		echo '    <Name>'${fields['FilterML']}' Service Pack '${sp_id}'</Name>' >> $xml_file
+		echo '</SP>' >> $xml_file
+		echo '</packages>' >> $xml_file    	
+    done
+}
+
 #=====================================
 : Parse command line
 #=====================================
@@ -253,10 +279,7 @@ then
 	fi
 	if [ "${fields['Action']}" == 'Metadata' ]
 	then
-	    echo "Performing metadata."
-	    mkdir -p "${fields['DLTarget']}/installp/ppc"
-	    html_file="${fields['DLTarget']}/installp/ppc/9999-99-99.install.tips.html"
-	    touch $html_file
+		create_metadata
 		exit 0
 	fi
 	echo "#### BAD ACTION (${fields['Action']}) ####"
