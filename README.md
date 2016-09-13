@@ -706,28 +706,28 @@ Create or modify a LVM volume group
 ```ruby
 # Create volume groupe 'datavg1' with 2 disks
 aix_volume_group 'datavg1' do
-    physical_volumes          ['hdisk1', 'hdisk2']
-    action :create
+  physical_volumes          ['hdisk1', 'hdisk2']
+  action :create
 end
 
 # Modify existing volume groupe 'datavg1' and add new disk
 aix_volume_group 'datavg1' do
-    physical_volumes          ['hdisk1', 'hdisk2', 'hdisk3']
-    action :create
+  physical_volumes          ['hdisk1', 'hdisk2', 'hdisk3']
+  action :create
 end
 
 # Create a volume group called `datavg2` comprising 3 disks and assign them to a mirror pool.
 aix_volume_group 'datavg2' do
-        physical_volumes ['hdisk4', 'hdisk5', 'hdisk6']
-        mirror_pool_name   'copy0pool'
-        action :create
+  physical_volumes ['hdisk4', 'hdisk5', 'hdisk6']
+  mirror_pool_name   'copy0pool'
+  action :create
 end
 
 # Add a disk as a hot spare to the same `datavg3` volume group
 aix_volume_group 'datavg3' do
-        physical_volumes ['hdisk7']
-        use_as_hot_spare   'y'
-        action :add
+  physical_volumes ['hdisk7']
+  use_as_hot_spare   'y'
+  action :add
 end
 ```
 
@@ -747,10 +747,10 @@ Create or modify a LVM logical volume
 ```ruby
 # create logical volume 'home' of 512MB with 2 copies in volume group 'datavg'
 aix_logical_volume 'home' do
-        group 'datavg'
-        size   512 //  MB
-        copies 2
-        action :create
+  group 'datavg'
+  size   512 //  MB
+  copies 2
+  action :create
 end
 ```
 
@@ -770,24 +770,24 @@ Create, modify, mount or defrag a LVM filesystem
 ```ruby
 # create filesystem of 256Mb in '/lvm/folder1' on logical volume 'part1' 
 aix_filesystem '/lvm/folder1' do
-    logical 'part1'
-    size   '256M'
-    action :create
+  logical 'part1'
+  size   '256M'
+  action :create
 end
 
 # mount '/lvm/folder1' filesystem
 aix_filesystem '/lvm/folder1' do
-    action :mount
+  action :mount
 end
 
 # defrag '/lvm/folder1' filesystem
 aix_filesystem '/lvm/folder1' do
-    action :defragfs
+  action :defragfs
 end
 
 # umount '/lvm/folder1' filesystem
 aix_filesystem '/lvm/folder1' do
-    action :umount
+  action :umount
 end
 ```
 
