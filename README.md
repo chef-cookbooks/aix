@@ -701,7 +701,7 @@ Actions:
 
 ### volume_group
 
-Create (or modify) a LVM volume group
+Create or modify a LVM volume group
 
 ```ruby
 # Create volume groupe 'datavg1' with 2 disks
@@ -742,7 +742,7 @@ Actions:
 
 ### logical_volume
 
-Create (or modify) a LVM logical volume
+Create or modify a LVM logical volume
 
 ```ruby
 # create logical volume 'home' of 512MB with 2 copies in volume group 'datavg'
@@ -765,15 +765,42 @@ Actions:
 
 ### filesystem
 
-Create (or modify) a LVM logical volume
+Create, modify, mount or defrag a LVM filesystem 
 
 ```ruby
+# create filesystem of 256Mb in '/lvm/folder1' on logical volume 'part1' 
+aix_filesystem '/lvm/folder1' do
+    logical 'part1'
+    size   '256M'
+    action :create
+end
+
+# mount '/lvm/folder1' filesystem
+aix_filesystem '/lvm/folder1' do
+    action :mount
+end
+
+# defrag '/lvm/folder1' filesystem
+aix_filesystem '/lvm/folder1' do
+    action :defragfs
+end
+
+# umount '/lvm/folder1' filesystem
+aix_filesystem '/lvm/folder1' do
+    action :umount
+end
 ```
 
 Parameters:
+* `name`: Mount point of the filesystem
+* `logical`: Specifies an existing logical volume on which to make the filesystem
+* `size`: Size of the filesystem. It's can be a set of 512k blocks, a size in M or a size in G 	
 
 Actions:
-
+* `create`: (default) Creates or modifies a filesystem
+* `mount`: Mount a filesystem
+* `umount`: Unmount a filesystem
+* `defragfs`: Defrag a filesystem
 
 ### wpar
 
