@@ -732,41 +732,13 @@ end
 ```
 
 Volume Group Parameters:
-<table>
-  <tr>
-    <th>Attribute</th>
-    <th>Description</th>
-    <th>Example</th>
-    <th>Default</th>
-  </tr>
-  <tr>
-    <td>name</td>
-    <td>(optional) Name of the volume group</td>
-    <td><tt>'datavg'</tt></td>
-    <td>system generated</td>
-  </tr>
-  <tr>
-    <td>physical_volumes</td>
-    <td>(required) The device or list of devices to use as physical volumes (if they haven't already been initialized as physical volumes, they will be initialized automatically)</td>
-    <td><tt>['hdisk0', 'hdisk1']</tt></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>use_as_hot_spare</td>
-    <td>(optional)Sets the sparing characteristics of the physical volume such that it can be used as a hot spare. Legal values are "y" or "n". "y" marks the disk as a hot spare within the volume group it belongs to. "n" removes the disk from the hot spare pool for the volume group.</td>
-    <td><tt>y</tt></td>
-    <td><tt>n</tt></td>
-  </tr>
-  <tr>
-    <td>mirror_pool_name</td>
-    <td>(optional)Assigns or reassigns the disk to the named mirror pool. The mirror pool is created if it does not exist already Mirror pool names can only contain alphanumeric characters, may not be longer than 15 characters, must be unique in the volume group.</td>
-    <td><tt>copy0pool</tt></td>
-    <td>none</td>
-  </tr>
-</table>
+* `name`: Name of the volume group
+* `physical_volumes`: The device or list of devices to use as physical volumes (if they haven't already been initialized as * `physical volumes, they will be initialized automatically)
+* `use_as_hot_spare`: (optional) Sets the sparing characteristics of the physical volume such that it can be used as a hot spare. Legal values are "y" or "n". "y" marks the disk as a hot spare within the volume group it belongs to. "n" removes the disk from the hot spare pool for the volume group.
+* `mirror_pool_name`:	(optional) Assigns or reassigns the disk to the named mirror pool. The mirror pool is created if it does not exist already Mirror pool names can only contain alphanumeric characters, may not be longer than 15 characters, must be unique in the volume group.
 
 Actions:
-* `create` - create or modify a volume group
+* `create` - (default) Creates or modify a volume group
 
 ### wpar
 
@@ -805,14 +777,14 @@ end
 * `hostname`: specify wpar hostname(can be different of wpar name)
 * `address`: ip address to use if no entry in /etc/hosts or DNS.
 * `interface`: network interface to use
-* `rootvg: to build a rootvg wpar
-* `rootvg_disk: hdisk to use for rootvg wpar
-* `wparvg: volume group to use for system wpar. Default: **rootvg**
-* `backupimage: backup image to restore when building wpar
-* `cpu: resource control CPU. Example: **10%-50%,100%**
-* `memory: resource control memory.
-* `autostart: auto start wpar at boot.
-* `live_stream: live stream wpar commands output
+* `rootvg`: to build a rootvg wpar
+* `rootvg_disk`: hdisk to use for rootvg wpar
+* `wparvg`: volume group to use for system wpar. Default: **rootvg**
+* `backupimage`: backup image to restore when building wpar
+* `cpu`: resource control CPU. Example: **10%-50%,100%**
+* `memory`: resource control memory.
+* `autostart`: auto start wpar at boot.
+* `live_stream`: live stream wpar commands output
 
 
 Actions:
