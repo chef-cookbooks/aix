@@ -717,21 +717,21 @@ aix_volume_group 'datavg1' do
 end
 
 # Create a volume group called `datavg2` comprising 3 disks and assign them to a mirror pool.
-aixlvm_volume_group 'datavg2' do
+aix_volume_group 'datavg2' do
         physical_volumes ['hdisk4', 'hdisk5', 'hdisk6']
         mirror_pool_name   'copy0pool'
         action :create
 end
 
 # Add a disk as a hot spare to the same `datavg3` volume group
-aixlvm_volume_group 'datavg3' do
+aix_volume_group 'datavg3' do
         physical_volumes ['hdisk7']
         use_as_hot_spare   'y'
         action :add
 end
 ```
 
-Volume Group Parameters:
+Parameters:
 * `name`: Name of the volume group
 * `physical_volumes`: The device or list of devices to use as physical volumes (if they haven't already been initialized as * `physical volumes, they will be initialized automatically)
 * `use_as_hot_spare`: (optional) Sets the sparing characteristics of the physical volume such that it can be used as a hot spare. Legal values are "y" or "n". "y" marks the disk as a hot spare within the volume group it belongs to. "n" removes the disk from the hot spare pool for the volume group.
@@ -739,6 +739,41 @@ Volume Group Parameters:
 
 Actions:
 * `create` - (default) Creates or modify a volume group
+
+### logical_volume
+
+Create (or modify) a LVM logical volume
+
+```ruby
+# create logical volume 'home' of 512MB with 2 copies in volume group 'datavg'
+aix_logical_volume 'home' do
+        group 'datavg'
+        size   512 //  MB
+        copies 2
+        action :create
+end
+```
+
+Parameters:
+* `name`: Name of the logical volume
+* `volume_group`: Volume group in which to create the new logical volume (not required if the volume is declared inside of an `lvm_volume_group` block)
+* `size`: Minimum size of the logical volume in MB. The actual size allocated my be slightly greater.
+* `copies`: (optional) Number of copies of each logical partition. Legal values are 1, 2, 3
+
+Actions:
+* `create` -	(default) Creates or modifies an AIX JFS2 logical volume
+
+### filesystem
+
+Create (or modify) a LVM logical volume
+
+```ruby
+```
+
+Parameters:
+
+Actions:
+
 
 ### wpar
 
@@ -771,7 +806,7 @@ aix_wpar 'delete wpar' do
 end
 ```
 
-### Parameters:
+Parameters:
 
 * `name`: WPAR name
 * `hostname`: specify wpar hostname(can be different of wpar name)
