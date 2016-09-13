@@ -1,38 +1,26 @@
-actions :add, :change
-default_action :add
+#
+# Author:: Laurent GAY for IBM (<lgay@us.ibm.com>)
+# Cookbook Name:: aix
+# Resource::  volume_group
+#
+# Copyright:: 2016, IBM
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+actions :create
+default_action :create
 attr_accessor :exists
 
-attribute :name, name_attribute: true, kind_of: String
-
-# Options for choosing disk(s)
-attribute :disks, kind_of: Array
-attribute :best_fit, kind_of: Fixnum, default: 0
-attribute :use_all_disks, kind_of: [TrueClass, FalseClass], default: false
-
-# User defined options
-attribute :options, kind_of: Hash
-
-# Options for mkvg command line execution
-attribute :big, kind_of: [TrueClass, FalseClass], default: false
-attribute :factor, kind_of: Fixnum
-attribute :scalable, kind_of: [TrueClass, FalseClass], default: false
-attribute :lv_number, kind_of: Fixnum
-attribute :partitions, kind_of: Fixnum, equal_to: [32, 64, 128, 256, 512, 768, 1024, 2048]
-attribute :powerha_concurrent, kind_of: [TrueClass, FalseClass], default: false
-attribute :force, kind_of: [TrueClass, FalseClass], default: false
-attribute :pre_53_compat, kind_of: [TrueClass, FalseClass], default: false
-attribute :pv_type, kind_of: String, equal_to: %w(none SSD)
-attribute :activate_on_boot, kind_of: String, equal_to: %w(yes no)
-attribute :major_number, kind_of: Fixnum
-attribute :mirror_pool_strictness, kind_of: String
-attribute :mirror_pool, kind_of: String, equal_to: %w(y n s)
-attribute :infinite_retry, kind_of: [TrueClass, FalseClass], default: false
-attribute :non_concurrent_varyon, kind_of: String
-attribute :critical_vg, kind_of: [TrueClass, FalseClass], default: false
-attribute :partition_size, kind_of: Fixnum
-
-# Options for chvg which are not in common with mkvg
-attribute :auto_synchronize, kind_of: String, equal_to: %w(on off)
-attribute :hotspare, kind_of: String, equal_to: %w(y Y n r)
-attribute :lost_quorom_varyoff, kind_of: String, equal_to: %w(yes no)
-attribute :jfs2_resync_only, kind_of: [TrueClass, FalseClass], default: false
+attribute :name, :name_attribute => true, :kind_of => String
+attribute :physical_volumes, :kind_of => Array, :required => true
+attribute :use_as_hot_spare, :kind_of => String, :default => 'n', :equal_to => ['y','n']
