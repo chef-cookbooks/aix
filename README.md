@@ -867,6 +867,7 @@ Actions:
 * Author:: Benoit Creau (<benoit.creau@chmod666.org>)
 * Author:: Alain Dejoux (<adejoux@djouxtech.net>)
 * Author:: Alan Thatcher (<alanwthatcher@gmail.com>)
+* Author:: Laurent GAY for IBM (<lgay@us.ibm.com>)
 ```text
 Copyright:: 2014-2015 Chef Software, Inc.
 
