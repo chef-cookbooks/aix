@@ -701,65 +701,72 @@ Actions:
 
 ### volume_group
 
-Create a LVM volume group
-Change an existing LVM  volume group
+Create (or modify) a LVM volume group
 
 ```ruby
-aix_volume_group "create vg with specified disks" do
- name "testvg"
- disks ['hdisk2']
+# Create volume groupe 'datavg1' with 2 disks
+aix_volume_group 'datavg1' do
+    physical_volumes          ['hdisk1', 'hdisk2']
+    action :create
 end
 
-aix_volume_group "create vg with best fit" do
- name "testvg"
- best_fit 10
+# Modify existing volume groupe 'datavg1' and add new disk
+aix_volume_group 'datavg1' do
+    physical_volumes          ['hdisk1', 'hdisk2', 'hdisk3']
+    action :create
 end
 
-aix_volume_group "create vg with all disks not in a vg" do
- name "testvg"
- use_all_disks true
+# Create a volume group called `datavg2` comprising 3 disks and assign them to a mirror pool.
+aixlvm_volume_group 'datavg2' do
+        physical_volumes ['hdisk4', 'hdisk5', 'hdisk6']
+        mirror_pool_name   'copy0pool'
+        action :create
 end
 
-aix_volume_group "convert vg to big" do
- name "testvg"
- big true
- action :change
+# Add a disk as a hot spare to the same `datavg3` volume group
+aixlvm_volume_group 'datavg3' do
+        physical_volumes ['hdisk7']
+        use_as_hot_spare   'y'
+        action :add
 end
 ```
 
-Volume Group Disk Selection Parameters, in order of precedence:
-* `disks` (optional) - List of named disks to use
-* `best_fit` (optional) - Takes desired size in GB and attempts to find suitable disk (smallest available disk that meets the requirements)
-* `use_all_disks` (optional) - Use all disks not currently in use by another Volume Group
-
 Volume Group Parameters:
-* `force` (optional) - add/change - Force override of restricted actions (i.e. disk previously assigned to a VG)
-* `big` (optional) - add/change - Big VG format
-* `factor` (optional) - add/change - Limit number of partitions
-* `activate_on_boot` (optional) - add/change - Varyon VG at boot time
-* `scalable` (optional) - add - Scalable-type volume group
-* `lv_number` (optional) - add - Number of LVs that can be created
-* `partitions` (optional) - add - Total number of partitions in VG
-* `powerha_concurrent` (optional) - add -  Enhanced Concurrent Capable volume group
-* `pre_53_compat` (optional) - add - VG that can be imported to pre 5.3 AIX
-* `pv_type` (optional) - add - Physical volume type restriction
-* `partition_size` (optional) - add - Megabytes in each partition
-* `major_number` (optional) - add - Specify major number to be used at creation
-* `mirror_pool_strictness` (optional) - add - Enable mirror pool strictness
-* `mirror_pool` (optional) - add - Specify mirror pool
-* `infinite_retry` (optional) - add - Enables the infinite retry option of the logical volume.
-* `non_concurrent_varyon` (optional) - add - Volume group not allowed to varyon in non-concurrent mode in more than one node at the same time.
-* `critical_vg` (optional) - add - Eneable critical VG option
-* `auto_synchronize` (optional) - change - Sets the synchronization characteristics for the volume group
-* `hotspare` (optional) - change - Sets the sparing characteristics for the volume group
-* `lost_quorom_varyoff` (optional) - change - Determines if the volume group is automatically varied off after losing its quorum of physical volumes.
-
-
+<table>
+  <tr>
+    <th>Attribute</th>
+    <th>Description</th>
+    <th>Example</th>
+    <th>Default</th>
+  </tr>
+  <tr>
+    <td>name</td>
+    <td>(optional) Name of the volume group</td>
+    <td><tt>'datavg'</tt></td>
+    <td>system generated</td>
+  </tr>
+  <tr>
+    <td>physical_volumes</td>
+    <td>(required) The device or list of devices to use as physical volumes (if they haven't already been initialized as physical volumes, they will be initialized automatically)</td>
+    <td><tt>['hdisk0', 'hdisk1']</tt></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>use_as_hot_spare</td>
+    <td>(optional)Sets the sparing characteristics of the physical volume such that it can be used as a hot spare. Legal values are "y" or "n". "y" marks the disk as a hot spare within the volume group it belongs to. "n" removes the disk from the hot spare pool for the volume group.</td>
+    <td><tt>y</tt></td>
+    <td><tt>n</tt></td>
+  </tr>
+  <tr>
+    <td>mirror_pool_name</td>
+    <td>(optional)Assigns or reassigns the disk to the named mirror pool. The mirror pool is created if it does not exist already Mirror pool names can only contain alphanumeric characters, may not be longer than 15 characters, must be unique in the volume group.</td>
+    <td><tt>copy0pool</tt></td>
+    <td>none</td>
+  </tr>
+</table>
 
 Actions:
-
-* `add` - add a volume group
-* `change` - change an existing volume group
+* `create` - create or modify a volume group
 
 ### wpar
 
