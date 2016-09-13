@@ -1,7 +1,7 @@
 #
 # Author:: Laurent GAY for IBM (<lgay@us.ibm.com>)
 # Cookbook Name:: aix
-# Provider::  volume_group
+# test::  all unit tests laucher
 #
 # Copyright:: 2016, IBM
 #
@@ -17,26 +17,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Support whyrun
-def whyrun_supported?
-  true
-end
-
-def load_current_resource
-  @volgroup = AIXLVM::VolumeGroup.new(@new_resource.name,AIXLVM::System.new())
-  @volgroup.physical_volumes=@new_resource.physical_volumes
-  @volgroup.use_as_hot_spare=@new_resource.use_as_hot_spare
-end
-
-action :create do
-  begin
-    if @volgroup.check_to_change()
-      converge_by(@volgroup.create().join(" | ")) do
-
-      end
-    end
-  rescue AIXLVM::LVMException => e
-    Chef::Log.fatal(e.message)
-  end
-end
-
+require 'test/unit'
+require_relative 'tc_aix_storage_objects.rb' if (/aix/ =~ RUBY_PLATFORM) !=nil
+require_relative 'tc_storage_objects.rb'
+require_relative 'tc_objects_vg'
+require_relative 'tc_objects_lv'
+require_relative 'tc_objects_fs'

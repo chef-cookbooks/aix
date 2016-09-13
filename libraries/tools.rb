@@ -1,7 +1,7 @@
 #
 # Author:: Laurent GAY for IBM (<lgay@us.ibm.com>)
 # Cookbook Name:: aix
-# Provider::  volume_group
+# Library::  tools.rb
 #
 # Copyright:: 2016, IBM
 #
@@ -16,27 +16,36 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+require 'open3'
 
-# Support whyrun
-def whyrun_supported?
-  true
-end
+module AIXLVM
+  class LVMException < Exception
+  end
 
-def load_current_resource
-  @volgroup = AIXLVM::VolumeGroup.new(@new_resource.name,AIXLVM::System.new())
-  @volgroup.physical_volumes=@new_resource.physical_volumes
-  @volgroup.use_as_hot_spare=@new_resource.use_as_hot_spare
-end
+  class BaseSystem
+    attr_reader :last_error
+    def initialize()
+      @last_error=''
+    end
 
-action :create do
-  begin
-    if @volgroup.check_to_change()
-      converge_by(@volgroup.create().join(" | ")) do
+    def run(cmd)
+      raise "Abstract!"
+    end
+  end
 
+  class System < BaseSystem
+    def run(cmd)
+      begin
+        stdout, @last_error, status = Open3.capture3({'LANG' => 'C'},*cmd)
+        if status.success?
+          return stdout.slice!(0..-(1 + $/.size))
+        else
+          return nil
+        end
+      rescue
+        return nil
       end
     end
-  rescue AIXLVM::LVMException => e
-    Chef::Log.fatal(e.message)
   end
-end
 
+end
