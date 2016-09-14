@@ -5,7 +5,7 @@
 target_lvl_sp='7100-03-04'
 target_lvl_tl='7100-04'
 target_lvl_latest='latest'
-package_dir='/nim/inst.images'
+package_dir='/export/extra/lpp_source'
 client_list='quimby*'
 
 #
@@ -30,23 +30,23 @@ end
 # And define NIM lpp_source object.
 #################
 
-aix_suma "Downloading SP image" do
-	oslevel		"#{target_lvl_sp}"		# Name of the oslevel to download (if empty, assume latest)
-	location	"#{package_dir}"		# Directory where the lpp will be stored and (if empty, assume /usr/sys/inst.images). If the directory does not exist, it will be created.
-	targets		"#{client_list}"		# Mandatory list of standalone or master NIM 'machines' resources
-	action 		:download
+# aix_suma "Downloading SP images" do
+	# oslevel		"#{target_lvl_sp}"		# Name of the oslevel to download (if empty, assume latest)
+	# location	"#{package_dir}"		# Directory where the lpp will be stored and (if empty, assume /usr/sys/inst.images). If the directory does not exist, it will be created.
+	# targets		"#{client_list}"		# Mandatory list of standalone or master NIM 'machines' resources
+	# action 		:download
 	#notifies	:reload, 'ohai[reload_nim]', :immediately
-end
+# end
 
-aix_suma "Downloading TL image" do
-	oslevel		"#{target_lvl_tl}"		# Name of the oslevel to download (if empty, assume latest)
-	location	"#{package_dir}"		# Directory where the lpp will be stored and (if empty, assume /usr/sys/inst.images). If the directory does not exist, it will be created.
-	targets		"#{client_list}"		# Mandatory list of standalone or master NIM 'machines' resources
-	action 		:download
+# aix_suma "Downloading TL images" do
+	# oslevel		"#{target_lvl_tl}"		# Name of the oslevel to download (if empty, assume latest)
+	# location	"#{package_dir}"		# Directory where the lpp will be stored and (if empty, assume /usr/sys/inst.images). If the directory does not exist, it will be created.
+	# targets		"#{client_list}"		# Mandatory list of standalone or master NIM 'machines' resources
+	# action 		:download
 	#notifies	:reload, 'ohai[reload_nim]', :immediately
-end
+# end
 
-aix_suma "Downloading LATEST image" do
+aix_suma "Downloading LATEST images" do
 	oslevel		"#{target_lvl_latest}"	# Name of the oslevel to download (if empty, assume latest)
 	location	"#{package_dir}"		# Directory where the lpp will be stored and (if empty, assume /usr/sys/inst.images). If the directory does not exist, it will be created.
 	targets		"#{client_list}"		# Mandatory list of standalone or master NIM 'machines' resources

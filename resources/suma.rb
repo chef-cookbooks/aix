@@ -20,7 +20,7 @@ property :desc, String, name_property: true
 property :oslevel, String
 property :location, String
 property :targets, String
-property :tmp_dir, String, default: "/suma_metadata"
+property :tmp_dir, String
 
 class OhaiNimPluginNotFound < StandardError
 end
@@ -49,29 +49,12 @@ end
 class NimError < StandardError
 end
 
-load_current_value do
-end
-
-action :download do
-
-  Chef::Log.info("desc=\"#{desc}\"")
-  Chef::Log.info("oslevel=#{oslevel}")
-  Chef::Log.info("location=#{location}")
-  Chef::Log.info("targets=#{targets}")
-  Chef::Log.info("tmp_dir=#{tmp_dir}")
-
-  # compute suma request type based on oslevel property
+def compute_rq_type
   if property_is_set?(:oslevel)
     if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/
       rq_type="TL"
-      rq_name=$1
-      # TODO : find build number for specific TL
-
     elsif oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
       rq_type="SP"
-      rq_name=$1
-      # TODO : find build number for specific SP
-
     elsif oslevel.empty? or oslevel.downcase.eql?("latest")
       rq_type="Latest"
     else
@@ -80,8 +63,10 @@ action :download do
   else
     rq_type="Latest"
   end
-  Chef::Log.info("rq_type=#{rq_type}")
-  Chef::Log.info("rq_name=#{rq_name}")
+  rq_type
+end
+
+def compute_filter_ml (rq_type)
 
   # get list of all NIM machines from Ohai
   begin
@@ -123,73 +108,119 @@ action :download do
   # build machine-oslevel hash
   hash=Hash[selected_machines.collect do |m|
     begin
-      oslevel=node['nim']['clients'].fetch(m).fetch('oslevel')
-      Chef::Log.info("Obtained OS level for machine \'#{m}\': #{oslevel}")
-      oslevel=oslevel.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
-      [ m, oslevel.delete('-') ]
+      client_oslevel=node['nim']['clients'].fetch(m).fetch('oslevel')
+      Chef::Log.info("Obtained OS level for machine \'#{m}\': #{client_oslevel}")
+      client_mllevel=client_oslevel.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
+      [ m, client_mllevel ]
     rescue Exception => e
       Chef::Log.warn("Cannot find OS level for machine \'#{m}\' into Ohai output")
       [ m, nil ]
     end
   end ]
   hash.delete_if { |key,value| value.nil? }
-
+  Chef::Log.info("Hash table (machine/mllevel) built #{hash}")
+  
   # discover FilterML level
-  filter_ml=nil
-  if rq_type.eql?("Latest")
-    # find highest
-    filter_ml=String.new(hash.values.max)
-    Chef::Log.info("filter_ml=#{filter_ml}")
-    unless filter_ml.nil?
-	  filter_ml.insert(4, '-')
-      if filter_ml.to_i > hash.values.min.insert(4, '-').to_i
-        Chef::Log.warn("Release level mismatch. Only targets at level \'#{filter_ml}\' will be updated !")
-      end
-
-      # find latest SP for highest TL
-      if ::File.directory?("#{tmp_dir}")
-        shell_out!("rm -rf #{tmp_dir}/*")
-      else
-        shell_out!("mkdir -p #{tmp_dir}")
-      end
-      suma_s="suma -x -a DisplayName=\"#{desc}\" -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{filter_ml}"
-      Chef::Log.info("SUMA metadata operation: #{suma_s}")
-      so=shell_out("#{suma_s}")
-      if so.error?
-        raise SumaMetadataError, "SUMA-SUMA-SUMA suma metadata returns 1!"
-      else
-        Chef::Log.info("suma metadata returns 0")
-        sps=shell_out("ls #{tmp_dir}/installp/ppc/*.install.tips.html").stdout.split
-        Chef::Log.info("sps=#{sps}")
-        sps.collect! do |file|
-          file.gsub!("install.tips.html","xml")
-          text=::File.open(file).read
-          text.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1].delete('-')
-        end
-        rq_name=sps.max
-        rq_name.insert(4, '-')
-        rq_name.insert(7, '-')
-        rq_name.insert(10, '-')
-        Chef::Log.info("rq_name=#{rq_name}")
-      end
+  ary=hash.values.collect { |ml| ml.delete('-') }
+  case rq_type
+  when 'Latest'
+    # check ml level of machines
+    if ary.min[0..3].to_i < ary.max[0..3].to_i
+	  Chef::Log.warn("Release level mismatch!")
     end
-  else
-    # find lowest
-    filter_ml=hash.values.min
-    unless filter_ml.nil?
-      filter_ml.insert(4, '-')
-    end
+    # find highest ML
+    filter_ml=ary.max
+  when 'SP', 'TL'
+    # find lowest ML
+    filter_ml=ary.min
   end
   if filter_ml.nil?
     raise InvalidTargetsProperty, "SUMA-SUMA-SUMA cannot reach any clients!"
+  else
+    filter_ml.insert(4, '-')
   end
-  Chef::Log.info("Discover filter ML level \'#{filter_ml}\'")
+  filter_ml
+end
 
-  # create location if it does not exist
+def compute_rq_name (rq_type, filter_ml)
+  if property_is_set?(:tmp_dir)
+    if tmp_dir.empty?
+      tmp_dir="/usr/sys/inst.images"
+    end
+  else
+    tmp_dir="/usr/sys/inst.images"
+  end
+  if ::File.directory?("#{tmp_dir}")
+    shell_out!("rm -rf #{tmp_dir}/*")
+  else
+    shell_out!("mkdir -p #{tmp_dir}")
+  end
+
+  case rq_type
+  when 'Latest'
+    # find latest SP for highest TL
+    suma_metadata_s="/usr/sbin/suma -x -a DisplayName=\"#{desc}\" -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{filter_ml}"
+    so=shell_out(suma_metadata_s)
+    if so.error?
+      raise SumaMetadataError, "SUMA-SUMA-SUMA \"#{suma_metadata_s}\" returns \'#{so.stderr}\'!\n#{so.stdout}"
+    else
+      Chef::Log.warn("Done suma metadata operation \"#{suma_metadata_s}\"")
+      sps=shell_out("ls #{tmp_dir}/installp/ppc/*.install.tips.html").stdout.split
+      Chef::Log.info("sps=#{sps}")
+      sps.collect! do |file|
+        file.gsub!("install.tips.html","xml")
+        text=::File.open(file).read
+        text.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1].delete('-')
+      end
+      rq_name=sps.max
+	  unless rq_name.nil?
+        rq_name.insert(4, '-')
+        rq_name.insert(7, '-')
+        rq_name.insert(10, '-')
+      end
+    end
+
+  when 'TL'
+    # pad with 0
+    rq_name="#{oslevel.match(/^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/)[1]}-00-0000"
+
+  when 'SP'
+    # find specific SP
+	rq_name=oslevel.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/)[1]
+	sp_filter_ml=oslevel.match(/^([0-9]{4}-[0-9]{2})-[0-9]{2}(|-[0-9]{4})$/)[1]
+    suma_metadata_s="/usr/sbin/suma -x -a DisplayName=\"#{desc}\" -a Action=Metadata -a RqType=Latest -a DLTarget=#{tmp_dir} -a FilterML=#{sp_filter_ml}"
+    so=shell_out(suma_metadata_s)
+    if so.error?
+      raise SumaMetadataError, "SUMA-SUMA-SUMA \"#{suma_metadata_s}\" returns \'#{so.stderr}\'!\n#{so.stdout}"
+    else
+      Chef::Log.warn("Done suma metadata operation \"#{suma_metadata_s}\"")
+      text=::File.open("#{tmp_dir}/installp/ppc/#{rq_name}.xml").read
+      rq_name=text.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1]
+    end
+  end
+  rq_name
+end
+
+def compute_lpp_source_name (rq_name)
+  if property_is_set?(:location)
+    location.chomp!('\/')
+    if location.start_with?("/") or location.empty?
+      # location is a directory
+	  lpp_source="#{rq_name}-lpp_source"
+    else
+      # location is a lpp source
+      lpp_source=location
+    end
+  else
+    lpp_source="#{rq_name}-lpp_source"
+  end
+  lpp_source
+end
+
+def compute_dl_target (lpp_source)
   if property_is_set?(:location)
     location.chomp!('\/')
     if location.start_with?("/")
-      lpp_source="#{rq_name}-lpp_source"
       dl_target="#{location}/#{lpp_source}"
       unless node['nim']['lpp_sources'].fetch(lpp_source, {}).fetch('location', nil) == nil
         Chef::Log.info("Found lpp source \'#{lpp_source}\' location")
@@ -198,11 +229,9 @@ action :download do
         end
       end
     elsif location.empty?
-      lpp_source="#{rq_name}-lpp_source"
       dl_target="/usr/sys/inst.images/#{lpp_source}"
     else
       begin
-        lpp_source=location
         dl_target=node['nim']['lpp_sources'].fetch(location).fetch('location')
         Chef::Log.info("Discover \'#{location}\' lpp source's location: \'#{dl_target}\'")
       rescue Exception => e
@@ -210,23 +239,65 @@ action :download do
       end
     end
   else
-    lpp_source="#{rq_name}-lpp_source"
     dl_target="/usr/sys/inst.images/#{lpp_source}"
   end
+  dl_target
+end
+
+load_current_value do
+end
+
+action :download do
+
+  # inputs
+  puts ""
+  Chef::Log.info("desc=\"#{desc}\"")
+  Chef::Log.info("oslevel=\"#{oslevel}\"")
+  Chef::Log.info("location=\"#{location}\"")
+  Chef::Log.info("targets=\"#{targets}\"")
+  Chef::Log.info("tmp_dir=\"#{tmp_dir}\"")
+
+  # compute suma request type based on oslevel property
+  rq_type=compute_rq_type
+  Chef::Log.info("rq_type=#{rq_type}")
+
+  # compute suma filter ml based on oslevel and targets property
+  filter_ml=compute_filter_ml(rq_type)
+  Chef::Log.info("filter_ml=#{filter_ml}")
+
+  # compute suma request name based on metadata info
+  rq_name=compute_rq_name(rq_type, filter_ml)
+  Chef::Log.info("rq_name=#{rq_name}")
+
+  # compute lpp source name based on request name
+  lpp_source=compute_lpp_source_name(rq_name)
+  Chef::Log.info("lpp_source=#{lpp_source}")
+
+  # compute dl target based on lpp source name
+  dl_target=compute_dl_target(lpp_source)
+  Chef::Log.info("dl_target=#{dl_target}")
+
+  # create directory
   unless ::File.directory?("#{dl_target}")
-    Chef::Log.info("Creating location \'#{dl_target}\'...")
     shell_out!("mkdir -p #{dl_target}")
     Chef::Log.warn("Directory \'#{dl_target}\' has been created.")
   end
 
   # suma preview
-  suma_s="suma -x -a DisplayName=\"#{desc}\" -a RqType=#{rq_type} -a DLTarget=#{dl_target} -a FilterML=#{filter_ml}"
-  unless rq_type.eql?("Latest")
+  suma_s="/usr/sbin/suma -x -a DisplayName=\"#{desc}\" -a RqType=#{rq_type} -a DLTarget=#{dl_target} -a FilterML=#{filter_ml}"
+  case rq_type
+  when 'SP'
     suma_s << " -a RqName=#{rq_name}"
+  when 'TL'
+    suma_s << " -a RqName=#{rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}"
   end
   dl=0
-  Chef::Log.info("SUMA preview operation: #{suma_s}")
-  so=shell_out("LANG=C #{suma_s} -a Action=Preview")
+  downloaded=0
+  failed=0
+  skipped=0
+  suma_preview_s="#{suma_s} -a Action=Preview"
+  Chef::Log.info("SUMA preview operation: #{suma_preview_s}")
+  so=shell_out(suma_preview_s, :environment => { "LANG" => "C" })
   if so.error?
     if so.stderr =~ /0500-035 No fixes match your query./
       Chef::Log.info("SUMA-SUMA-SUMA error: #{so.stderr}")
@@ -234,18 +305,14 @@ action :download do
       raise SumaPreviewError, "SUMA-SUMA-SUMA error:\n#{so.stderr}"
     end
   else
+    Chef::Log.warn("Done suma preview operation \"#{suma_preview_s}\"")
     Chef::Log.info("#{so.stdout}")
-    if so.stdout =~ /([0-9]+) downloaded/
+    if so.stdout =~ /([0-9]+) downloaded.*([0-9]+) failed.*([0-9]+) skipped/
       downloaded=$1
+	  failed=$2
+	  skipped=$3
+      Chef::Log.info("#{downloaded} downloaded, #{failed} failed, #{skipped} skipped fixes")
       dl=so.stdout.match(/Total bytes of updates downloaded: ([0-9]+)/)[1].to_f/1024/1024/1024
-      timeout=600+dl.to_f*600  # 10 min + 10 min / GB
-      if downloaded.to_i > 0
-        Chef::Log.warn("#{downloaded} fixes (~ #{dl.to_f.round(2)} GB) will be downloaded to \'#{dl_target}\' directory. It may take up to #{Time.at(timeout).utc.strftime("%Hh:%Mm:%Ss")}.")
-      end
-    end
-    if so.stdout =~ /([0-9]+) failed/
-      failed=$1
-      Chef::Log.info("#{failed} failed fixes")
       if failed.to_i > 0
         Chef::Log.warn("Preview of #{failed} fixes has failed. Only download will be done, no lpp source created.")
       end
@@ -254,12 +321,33 @@ action :download do
 
   unless dl.to_f == 0
     # suma download
-    converge_by("suma download operation: \"#{suma_s}\"") do
-      Chef::Log.info("Download fixes with #{timeout.to_i}s timeout...")
-      so=shell_out!("#{suma_s} -a Action=Download", :timeout => timeout.to_i)
+	suma_download_s="#{suma_s} -a Action=Download"
+    converge_by("suma download operation: \"#{suma_download_s}\"") do
+      #timeout=600+dl.to_f*600  # 10 min + 10 min / GB
+      Chef::Log.warn("Start downloading #{downloaded} fixes (~ #{dl.to_f.round(2)} GB) to \'#{dl_target}\' directory.") # It may take up to #{Time.at(timeout).utc.strftime("%Hh:%Mm:%Ss")}.")
+      #so=shell_out!(suma_download_s, :timeout => timeout.to_i)
+      success=0
+	  total=downloaded+failed+skipped
+	  exit_status=Open3.popen3(suma_download_s) do |stdin, stdout, stderr, wait_thr|
+        pid = wait_thr.pid # pid of the started process.
+        stdin.close
+        stdout.each_line do |line|
+          if line =~ /^Download SUCCEEDED:/
+            success+=1
+            print "#{success}/#{downloaded} out of #{total}\r"
+          end
+        end
+        stdout.close
+        stderr.each_line do |line|
+          puts line
+        end
+		stderr.close
+        wait_thr.value # Process::Status object returned.
+      end
+      Chef::Log.warn("Finish downloading #{success} fixes.")
     end
 
-    unless failed.to_i > 0 or node['nim']['lpp_sources'].fetch(lpp_source, nil) == nil
+    unless failed.to_i > 0 or node['nim']['lpp_sources'].fetch(lpp_source, nil) != nil
       # nim define
       nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
       Chef::Log.info("NIM operation: #{nim_s}")
