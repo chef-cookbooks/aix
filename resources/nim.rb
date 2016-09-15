@@ -16,57 +16,89 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-property :desc, [String,nil], name_property: true
+property :desc, String, name_property: true
 property :lpp_source, String
 property :targets, String
 
-load_current_value do
+class OhaiNimPluginNotFound < StandardError
+end
 
+class InvalidLppSourceProperty < StandardError
+end
+
+load_current_value do
+end
+
+def expand_targets
+  # get list of all NIM machines from Ohai
+  begin
+    all_machines=node.fetch('nim', {}).fetch('clients').keys
+    Chef::Log.info("Ohai client machine's list is #{all_machines}")
+  rescue Exception => e
+    raise OhaiNimPluginNotFound, "SUMA-SUMA-SUMA cannot find nim info from Ohai output"
+  end
+
+  selected_machines=Array.new
+
+  # compute list of machines based on targets property
+  if property_is_set?(:targets)
+    if !targets.empty?
+      targets.split(',').each do |machine|
+        if machine.match(/\*/)
+          # expand wildcard
+          machine.gsub!(/\*/,'.*?')
+          all_machines.collect do |m|
+            if m =~ /^#{machine}$/
+              selected_machines.concat(m.split)
+            end
+          end
+        else
+          selected_machines.concat(machine.split)
+        end
+      end
+      selected_machines=selected_machines.sort.uniq
+    else
+      selected_machines=all_machines.sort
+      Chef::Log.warn("No targets specified, consider all nim standalone machines as targets")
+    end
+  else
+    selected_machines=all_machines.sort
+    Chef::Log.warn("No targets specified, consider all nim standalone machines as targets!")
+  end
+  Chef::Log.info("List of targets expanded to #{selected_machines}")
+  selected_machines
+end
+
+def check_lpp_source_name (lpp_source)
+  begin
+    if node['nim']['lpp_sources'].fetch(lpp_source).eql?(lpp_source)
+      Chef::Log.info("Found lpp source #{lpp_source}")
+    end
+  rescue Exception => e
+    raise InvalidLppSourceProperty, "SUMA-SUMA-SUMA cannot find lpp_source \'#{lpp_source}\' from Ohai output"
+  end
 end
 
 action :update do
 
-  Chef::Log.info("desc=#{desc}")
+  # inputs
+  puts ""
+  Chef::Log.info("desc=\"#{desc}\"")
   Chef::Log.info("lpp_source=#{lpp_source}")
   Chef::Log.info("targets=#{targets}")
-  Chef::Log.info("node['nim']=#{node['nim']}")
 
-  # find lowest ML level by comparing each machine's oslevel from ohai
-  target_list=""
-  if property_is_set?(:targets)
-    targets.split(',').each do |machine|
-      begin
-        new_filter_ml=String.new(node.fetch('nim', {}).fetch('clients', {}).fetch(machine, {}).fetch('oslevel'))
-        Chef::Log.info("Obtained ML level for machine #{machine}: #{new_filter_ml}")
-        target_list+=machine
-        target_list+=" "
-      rescue Exception => e
-        Chef::Log.info("No ML level for machine #{machine}")
-      end
-    end
-  end
-  if target_list.strip.length == 0
-    raise "NIM-NIM-NIM no client targets specified!"
-  else
-    Chef::Log.info("client targets: #{target_list}")
-  end
+  check_lpp_source_name(lpp_source)
 
-  lpp_source_exist=false
-  begin
-    current_location=node.fetch('nim', {}).fetch('lpp_sources', {}).fetch(lpp_source, {}).fetch("location")
-    Chef::Log.info("Obtained lpp-source define for #{lpp_source}: #{current_location}")
-    lpp_source_exist=true
-  rescue Exception => e
-    Chef::Log.info("No lpp-source define for #{lpp_source}")
-  end
+  # build list of targets
+  target_list=expand_targets
+  Chef::Log.info("target_list: #{target_list}")
 
-  if lpp_source_exist
-    # nim install
-    nim_s="nim -o cust -a lpp_source=#{lpp_source} #{target_list}"
-    converge_by("nim custom operation: \"#{nim_s}\"") do
-      Chef::Log.info("Install fixes...")
-      shell_out!("#{nim_s}")
-    end
+  # nim install
+  nim_s="nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all #{target_list.join(' ')}"
+  Chef::Log.info("NIM operation: #{nim_s}")
+  converge_by("nim custom operation: \"#{nim_s}\"") do
+    Chef::Log.info("Install fixes...")
+    shell_out!(nim_s)
   end
 
 end
