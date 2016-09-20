@@ -1,15 +1,14 @@
-#
-# Author:: Laurent GAY for IBM (<lgay@us.ibm.com>)
+# Author:: IBM Corporation
 # Cookbook Name:: aix
-# Provider::  logical_volume
+# Provider:: logical_volume
 #
-# Copyright:: 2016, IBM
+# Copyright:: 2016, International Business Machines Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
