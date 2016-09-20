@@ -44,7 +44,7 @@ def expand_targets
   selected_machines=Array.new
   # compute list of machines based on targets property
   if property_is_set?(:targets)
-    if targets.any?
+    if !targets.empty?
       targets.split(',').each do |machine|
         # expand wildcard
         machine.gsub!(/\*/,'.*?')

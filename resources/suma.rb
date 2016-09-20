@@ -80,7 +80,7 @@ def compute_filter_ml (rq_type)
 
   # compute list of machines based on targets property
   if property_is_set?(:targets)
-    if targets.any?
+    if !targets.empty?
       targets.split(',').each do |machine|
         # expand wildcard
         machine.gsub!(/\*/,'.*?')
