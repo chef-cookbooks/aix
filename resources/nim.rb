@@ -26,6 +26,9 @@ end
 class InvalidLppSourceProperty < StandardError
 end
 
+class NimCustError < StandardError
+end
+
 load_current_value do
 end
 
@@ -33,29 +36,24 @@ def expand_targets
   # get list of all NIM machines from Ohai
   begin
     all_machines=node.fetch('nim', {}).fetch('clients').keys
-    Chef::Log.info("Ohai client machine's list is #{all_machines}")
+    Chef::Log.debug("Ohai client machine's list is #{all_machines}")
   rescue Exception => e
-    raise OhaiNimPluginNotFound, "SUMA-SUMA-SUMA cannot find nim info from Ohai output"
+    raise OhaiNimPluginNotFound, "NIM-NIM-NIM cannot find nim info from Ohai output"
   end
 
   selected_machines=Array.new
-
   # compute list of machines based on targets property
   if property_is_set?(:targets)
-    if !targets.empty?
+    if targets.any?
       targets.split(',').each do |machine|
-        if machine.match(/\*/)
-          # expand wildcard
-          machine.gsub!(/\*/,'.*?')
-          all_machines.collect do |m|
-            if m =~ /^#{machine}$/
-              selected_machines.concat(m.split)
-            end
+        # expand wildcard
+        machine.gsub!(/\*/,'.*?')
+        all_machines.collect do |m|
+          if m =~ /^#{machine}$/
+            selected_machines.concat(m.split)
           end
-        else
-          selected_machines.concat(machine.split)
         end
-      end
+       end
       selected_machines=selected_machines.sort.uniq
     else
       selected_machines=all_machines.sort
@@ -65,17 +63,21 @@ def expand_targets
     selected_machines=all_machines.sort
     Chef::Log.warn("No targets specified, consider all nim standalone machines as targets!")
   end
-  Chef::Log.info("List of targets expanded to #{selected_machines}")
+  Chef::Log.debug("List of targets expanded to #{selected_machines}")
+  
+  if selected_machines.empty?
+    raise InvalidTargetsProperty, "NIM-NIM-NIM cannot contact any machines"
+  end
   selected_machines
 end
 
 def check_lpp_source_name (lpp_source)
   begin
     if node['nim']['lpp_sources'].fetch(lpp_source).eql?(lpp_source)
-      Chef::Log.info("Found lpp source #{lpp_source}")
+      Chef::Log.debug("Found lpp source #{lpp_source}")
     end
   rescue Exception => e
-    raise InvalidLppSourceProperty, "SUMA-SUMA-SUMA cannot find lpp_source \'#{lpp_source}\' from Ohai output"
+    raise InvalidLppSourceProperty, "NIM-NIM-NIM cannot find lpp_source \'#{lpp_source}\' from Ohai output"
   end
 end
 
@@ -83,22 +85,47 @@ action :update do
 
   # inputs
   puts ""
-  Chef::Log.info("desc=\"#{desc}\"")
-  Chef::Log.info("lpp_source=#{lpp_source}")
-  Chef::Log.info("targets=#{targets}")
+  Chef::Log.debug("desc=\"#{desc}\"")
+  Chef::Log.debug("lpp_source=#{lpp_source}")
+  Chef::Log.debug("targets=#{targets}")
 
   check_lpp_source_name(lpp_source)
 
   # build list of targets
   target_list=expand_targets
-  Chef::Log.info("target_list: #{target_list}")
+  Chef::Log.debug("target_list: #{target_list}")
 
   # nim install
-  nim_s="nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all #{target_list.join(' ')}"
-  Chef::Log.info("NIM operation: #{nim_s}")
-  converge_by("nim custom operation: \"#{nim_s}\"") do
-    Chef::Log.info("Install fixes...")
-    shell_out!(nim_s)
+  target_list.each do |m|
+    nim_s="nim -o cust -a lpp_source=#{lpp_source} -a accept_licenses=yes -a fixes=update_all #{m}"
+    Chef::Log.warn("Start updating machine #{m} to #{lpp_source}.")
+    converge_by("nim custom operation: \"#{nim_s}\"") do
+	  do_not_error=false
+	  exit_status=Open3.popen3(nim_s) do |stdin, stdout, stderr, wait_thr|
+        stdin.close
+        stdout.each_line do |line|
+          if line =~ /^Filesets processed:.*?[0-9]+ of [0-9]+/
+            print "\r#{line.chomp}"
+          elsif line =~ /^Finished processing all filesets./
+            print "\r#{line.chomp}"
+          end
+        end
+        puts ""
+        stdout.close
+        stderr.each_line do |line|
+          if line =~ /Either the software is already at the same level as on the media, or/
+            do_not_error=true
+		  end
+		  puts line
+        end
+        stderr.close
+        wait_thr.value # Process::Status object returned.
+      end
+      Chef::Log.warn("Finish updating #{m}.")
+      unless exit_status.success? or do_not_error
+        raise NimCustError, "NIM-NIM-NIM error: Error updating"
+      end
+    end
   end
 
 end

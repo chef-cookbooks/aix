@@ -1,66 +1,90 @@
-###########
-# variables
-###########
+def print_hash_by_columns (data)
+  widths={}
+  data.keys.each do |key|
+    widths[key] = 5   # minimum column width
+    # longest string len of values
+    val_len = data[key].max_by{ |v| v.to_s.length }.to_s.length
+    widths[key] = (val_len > widths[key]) ? val_len : widths[key]
+    # length of key
+    widths[key] = (key.to_s.length > widths[key]) ? key.to_s.length : widths[key]
+  end
+  
+  print "+"
+  data.keys.each {|key| print "".center(widths[key]+2, '-') + "+" }
+  print "\n"
+  print "|"
+  data.keys.each {|key| print key.to_s.center(widths[key]+2) + "|" }
+  print "\n"
+  print "+"
+  data.keys.each {|key| print "".center(widths[key]+2, '-') + "+" }
+  print "\n"
+  length=data.values.max_by{ |v| v.length }.length
+  for i in 0.upto(length-1)
+    print "|"
+    data.keys.each { |key| print data[key][i].to_s.center(widths[key]+2) + "|" }
+    print "\n"
+  end
+  print "+"
+  data.keys.each {|key| print "".center(widths[key]+2, '-') + "+" }
+  print "\n"
+end
 
-target_lvl_sp='7100-03-04-1441'
-target_lvl_tl='7100-04-00'
-target_lvl_latest='laTEst'
-package_dir='/export/extra/lpp_source'
-suma_client_list='quimby*'
-nim_client_list='quimby07,quimby08,quimby09,quimby10,quimby11,quimby12'
+levels={ '7.1 TL0' => ['7100-00-00-0000', '7100-00-01-1037', '7100-00-02-1041', '7100-00-03-1115', '7100-00-04-1140', '7100-00-05-1207', '7100-00-06-1216', '7100-00-07-1228', '7100-00-08-1241', '7100-00-09-1316', '7100-00-10-1334'],
+		 '7.1 TL1' => ['7100-01-00-0000', '7100-01-01-1141', '7100-01-02-1150', '7100-01-03-1207', '7100-01-04-1216', '7100-01-05-1228', '7100-01-06-1241', '7100-01-07-1316', '7100-01-08-1334', '7100-01-09-1341', '7100-01-10-1415'],
+		 '7.1 TL2' => ['7100-02-00-0000', '7100-02-01-1245', '7100-02-02-1316', '7100-02-03-1334', '7100-02-04-1341', '7100-02-05-1415', '7100-02-06-1441', '7100-02-07-1524'],
+		 '7.1 TL3' => ['7100-03-00-0000', '7100-03-01-1341', '7100-03-02-1412', '7100-03-03-1415', '7100-03-04-1441', '7100-03-05-1524', '7100-03-06-1543', '7100-03-07-1614'],
+		 '7.1 TL4' => ['7100-04-00-0000', '7100-04-01-1543', '7100-04-02-1614'],
+		 '7.2 TL0' => ['7200-00-00-0000', '7200-00-01-1543', '7200-00-02-1614'],
+         'Latest' => [] }
 
-=begin
-Initial conditions
-------------------
-quimby07 => 7100-01-04-1216
-quimby08 => 7100-03-01-1341
-quimby09 => 7100-03-04-1441 (ref)
-quimby10 => 7100-03-05-1524
-quimby11 => 7100-04-00-0000
-quimby12 => 7200-00-02-1614
-=end
+#oslevel=Hash.new{ |h,k| h[k] = node['nim']['clients'][k]['oslevel'] }
+#node['nim']['clients'].keys.sort.each { |key| oslevel[key] }
+#puts oslevel
+#nodes=Hash.new{ |h,k| h[k] = { 'machine' => k, 'oslevel' => node['nim']['clients'][k]['oslevel'] } }
+#node['nim']['clients'].keys.sort.each { |key| nodes[key] }
+#puts nodes
+nodes=Hash.new{ |h,k| h[k] = {} }
+nodes['machine']=node['nim']['clients'].keys
+nodes['oslevel']=node['nim']['clients'].values.collect { |client| client['oslevel'] }
+
+puts ""
+puts "#########################################################"
+puts "Available machines and their corresponding oslevel are:"
+print_hash_by_columns nodes
+puts "Choose one or more (comma-separated) to update ?"
+client=STDIN.readline.chomp
+
+puts ""
+puts "#########################################################"
+puts "Available SP/TL levels are:"
+print_hash_by_columns levels
+puts "Choose one or latest to download and install ?"
+level=STDIN.readline.chomp
+
+directory='/export/extra/lpp_source'
 
 ohai 'reload_nim' do
   action :nothing
   plugin 'nim'
 end
 
-#################
-# SUMA
-# Download specific SP/TL or latest installation images.
-# And define NIM lpp_source object.
-#################
+aix_suma "Downloading installation images" do
+	oslevel		"#{level}"
+	location	"#{directory}"
+	targets		"#{client}"
+	action 		:download
+	notifies	:reload, 'ohai[reload_nim]', :immediately
+end
+
+aix_nim "Updating machine - 1st pass" do
+	lpp_source	"#{level}-lpp_source"
+	targets		"#{client}"
+	action		:update
+end
 =begin
-aix_suma "Downloading SP images" do
-	oslevel		"#{target_lvl_sp}"		# Name of the oslevel to download (if empty, assume latest)
-	location	"#{package_dir}"		# Directory where the lpp will be stored and (if empty, assume /usr/sys/inst.images). If the directory does not exist, it will be created.
-	targets		"#{suma_client_list}"	# Mandatory list of standalone or master NIM 'machines' resources
-	action 		:download
-end
-
-aix_suma "Downloading TL images" do
-	oslevel		"#{target_lvl_tl}"		# Name of the oslevel to download (if empty, assume latest)
-	location	"#{package_dir}"		# Directory where the lpp will be stored and (if empty, assume /usr/sys/inst.images). If the directory does not exist, it will be created.
-	targets		"#{suma_client_list}"	# Mandatory list of standalone or master NIM 'machines' resources
-	action 		:download
-end
-
-aix_suma "Downloading LATEST images" do
-	oslevel		"#{target_lvl_latest}"	# Name of the oslevel to download (if empty, assume latest)
-	location	"#{package_dir}"		# Directory where the lpp will be stored and (if empty, assume /usr/sys/inst.images). If the directory does not exist, it will be created.
-	targets		"#{suma_client_list}"	# Mandatory list of standalone or master NIM 'machines' resources
-	action 		:download
+aix_nim "Updating machine - 2nd pass" do
+	lpp_source	"#{level}-lpp_source"
+	targets		"#{client}"
+	action		:update
 end
 =end
-
-#################
-# NIM
-# Perfom nim cust operation on each targets based on their oslevel.
-#################
-
-aix_nim "Updating machines" do
-	lpp_source	"#{target_lvl_sp}-lpp_source"
-	targets		"#{nim_client_list}"
-	action		:update
-	#notifies	:reload, 'ohai[reload_nim]', :before
-end
