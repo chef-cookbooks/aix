@@ -58,7 +58,7 @@ def compute_rq_type
     elsif oslevel.empty? or oslevel.downcase.eql?("latest")
       rq_type="Latest"
     else
-      raise InvalidOsLevelProperty, "SUMA-SUMA-SUMA oslevel is not recognized"
+      raise InvalidOsLevelProperty, "SUMA-SUMA-SUMA error: oslevel is not recognized"
     end
   else
     rq_type="Latest"
@@ -73,7 +73,7 @@ def compute_filter_ml (rq_type)
     all_machines=node.fetch('nim', {}).fetch('clients').keys
     Chef::Log.debug("Ohai client machine's list is #{all_machines}")
   rescue Exception => e
-    raise OhaiNimPluginNotFound, "SUMA-SUMA-SUMA cannot find nim info from Ohai output"
+    raise OhaiNimPluginNotFound, "SUMA-SUMA-SUMA error: cannot find nim info from Ohai output"
   end
 
   selected_machines=Array.new
@@ -113,7 +113,7 @@ def compute_filter_ml (rq_type)
       [ m, nil ]
     end
   end ]
-  hash.delete_if { |key,value| value.nil? }
+  hash.delete_if { |key,value| value.nil? or value.eql?(oslevel) }
   Chef::Log.debug("Hash table (machine/mllevel) built #{hash}")
   
   # discover FilterML level
@@ -131,7 +131,7 @@ def compute_filter_ml (rq_type)
     filter_ml=ary.min
   end
   if filter_ml.nil?
-    raise InvalidTargetsProperty, "SUMA-SUMA-SUMA cannot discover filter ml"
+    raise InvalidTargetsProperty, "SUMA-SUMA-SUMA error: cannot discover filter ml"
   else
     filter_ml.insert(4, '-')
   end
@@ -158,7 +158,7 @@ def compute_rq_name (rq_type, filter_ml)
     suma_metadata_s="/usr/sbin/suma -x -a DisplayName=\"#{desc}\" -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{filter_ml}"
     so=shell_out(suma_metadata_s)
     if so.error?
-      raise SumaMetadataError, "SUMA-SUMA-SUMA \"#{suma_metadata_s}\" returns \'#{so.stderr.chomp!}\'!\n#{so.stdout}"
+      raise SumaMetadataError, "SUMA-SUMA-SUMA error: \"#{suma_metadata_s}\" returns \'#{so.stderr.chomp!}\'!\n#{so.stdout}"
     else
       Chef::Log.warn("Done suma metadata operation \"#{suma_metadata_s}\"")
       sps=shell_out("ls #{tmp_dir}/installp/ppc/*.install.tips.html").stdout.split
@@ -188,7 +188,7 @@ def compute_rq_name (rq_type, filter_ml)
       suma_metadata_s="/usr/sbin/suma -x -a DisplayName=\"#{desc}\" -a Action=Metadata -a RqType=Latest -a DLTarget=#{tmp_dir} -a FilterML=#{$1}"
       so=shell_out(suma_metadata_s)
       if so.error?
-        raise SumaMetadataError, "SUMA-SUMA-SUMA \"#{suma_metadata_s}\" returns \'#{so.stderr.chomp!}\'\n#{so.stdout}"
+        raise SumaMetadataError, "SUMA-SUMA-SUMA error: \"#{suma_metadata_s}\" returns \'#{so.stderr.chomp!}\'\n#{so.stdout}"
       else
         Chef::Log.warn("Done suma metadata operation \"#{suma_metadata_s}\"")
         text=::File.open("#{tmp_dir}/installp/ppc/#{oslevel}.xml").read
@@ -223,7 +223,7 @@ def compute_dl_target (lpp_source)
       unless node['nim']['lpp_sources'].fetch(lpp_source, {}).fetch('location', nil) == nil
         Chef::Log.debug("Found lpp source \'#{lpp_source}\' location")
         unless node['nim']['lpp_sources'][lpp_source]['location'] =~ /^#{dl_target}/
-          raise InvalidLocationProperty, "SUMA-SUMA-SUMA lpp source location mismatch"
+          raise InvalidLocationProperty, "SUMA-SUMA-SUMA error: lpp source location mismatch"
         end
       end
     elsif location.empty?
@@ -233,7 +233,7 @@ def compute_dl_target (lpp_source)
         dl_target=node['nim']['lpp_sources'].fetch(location).fetch('location')
         Chef::Log.debug("Discover \'#{location}\' lpp source's location: \'#{dl_target}\'")
       rescue Exception => e
-        raise InvalidLocationProperty, "SUMA-SUMA-SUMA cannot find lpp_source \'#{location}\' from Ohai output"
+        raise InvalidLocationProperty, "SUMA-SUMA-SUMA error: cannot find lpp_source \'#{location}\' from Ohai output"
       end
     end
   else
@@ -243,6 +243,23 @@ def compute_dl_target (lpp_source)
 end
 
 load_current_value do
+end
+
+def duration
+  secs  = self.to_int
+  mins  = secs / 60
+  hours = mins / 60
+  days  = hours / 24
+
+  if days > 0
+    "#{days} days and #{hours % 24} hours"
+  elsif hours > 0
+    "#{hours} hours and #{mins % 60} mins"
+  elsif mins > 0
+    "#{mins} mins #{secs % 60} secs"
+  elsif secs >= 0
+    "#{secs} secs"
+  end
 end
 
 action :download do
@@ -277,8 +294,10 @@ action :download do
 
   # create directory
   unless ::File.directory?("#{dl_target}")
-    shell_out!("mkdir -p #{dl_target}")
-    Chef::Log.warn("Directory \'#{dl_target}\' has been created")
+    mkdir_s="mkdir -p #{dl_target}"
+	converge_by("create directory \'#{dl_target}\'") do
+      shell_out!(mkdir_s)
+	end
   end
 
   # suma preview
@@ -297,8 +316,9 @@ action :download do
   Chef::Log.debug("SUMA preview operation: #{suma_preview_s}")
   so=shell_out(suma_preview_s, :environment => { "LANG" => "C" })
   if so.error?
-    if so.stderr =~ /0500-035 No fixes match your query./
+    if so.stderr =~ /^0500-035 No fixes match your query.$/
       Chef::Log.info("SUMA-SUMA-SUMA error:\n#{so.stderr.chomp!}")
+      Chef::Log.warn("Done suma preview operation \"#{suma_preview_s}\"")
     else
       raise SumaPreviewError, "SUMA-SUMA-SUMA error:\n#{so.stderr.chomp!}"
     end
@@ -321,9 +341,8 @@ action :download do
     # suma download
 	suma_download_s="#{suma_s} -a Action=Download"
     converge_by("suma download operation: \"#{suma_download_s}\"") do
-      #timeout=600+dl.to_f*600  # 10 min + 10 min / GB
-      Chef::Log.warn("Start downloading #{preview_downloaded} fixes (~ #{preview_dl.to_f.round(2)} GB) to \'#{dl_target}\' directory.") # It may take up to #{Time.at(timeout).utc.strftime("%Hh:%Mm:%Ss")}.")
-      #so=shell_out!(suma_download_s, :timeout => timeout.to_i)
+      Chef::Log.warn("Start downloading #{preview_downloaded} fixes (~ #{preview_dl.to_f.round(2)} GB) to \'#{dl_target}\' directory.")
+      start=Time.now
       download_downloaded=0
       download_failed=0
       download_skipped=0
@@ -347,7 +366,7 @@ action :download do
           else
             puts "\n#{line}"
 		  end
-          print "\rSUCCEEDED: #{succeeded}/#{preview_downloaded}\tFAILED: #{failed}/#{preview_failed}\tSKIPPED: #{skipped}/#{preview_skipped}"
+          print "\rSUCCEEDED: #{succeeded}/#{preview_downloaded}\tFAILED: #{failed}/#{preview_failed}\tSKIPPED: #{skipped}/#{preview_skipped}.  (Total time: #{(Time.now - start).duration})."
 		  stdout.flush
         end
 		puts ""
@@ -365,12 +384,12 @@ action :download do
 	  
     end
 
-    if failed.to_i == 0 and node['nim']['lpp_sources'].fetch(lpp_source, nil) == nil
-      # nim define
+	# create nim lpp source
+    if failed != 0 and node['nim']['lpp_sources'].fetch(lpp_source, nil) == nil
       nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
       Chef::Log.debug("NIM operation: #{nim_s}")
-      converge_by("nim define lpp_source: \"#{nim_s}\"") do
-        so=shell_out!(nim_s)
+      converge_by("create nim lpp source \'#{lpp_source}}\'") do
+        shell_out!(nim_s)
       end
     end
 

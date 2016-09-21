@@ -9,24 +9,25 @@ def print_hash_by_columns (data)
     widths[key] = (key.to_s.length > widths[key]) ? key.to_s.length : widths[key]
   end
   
-  print "+"
-  data.keys.each {|key| print "".center(widths[key]+2, '-') + "+" }
-  print "\n"
-  print "|"
-  data.keys.each {|key| print key.to_s.center(widths[key]+2) + "|" }
-  print "\n"
-  print "+"
-  data.keys.each {|key| print "".center(widths[key]+2, '-') + "+" }
-  print "\n"
+  result = "+"
+  data.keys.each {|key| result += "".center(widths[key]+2, '-') + "+" }
+  result += "\n"
+  result += "|"
+  data.keys.each {|key| result += key.to_s.center(widths[key]+2) + "|" }
+  result += "\n"
+  result += "+"
+  data.keys.each {|key| result += "".center(widths[key]+2, '-') + "+" }
+  result += "\n"
   length=data.values.max_by{ |v| v.length }.length
   for i in 0.upto(length-1)
-    print "|"
-    data.keys.each { |key| print data[key][i].to_s.center(widths[key]+2) + "|" }
-    print "\n"
+    result += "|"
+    data.keys.each { |key| result += data[key][i].to_s.center(widths[key]+2) + "|" }
+    result += "\n"
   end
-  print "+"
-  data.keys.each {|key| print "".center(widths[key]+2, '-') + "+" }
-  print "\n"
+  result += "+"
+  data.keys.each {|key| result += "".center(widths[key]+2, '-') + "+" }
+  result += "\n"
+  result
 end
 
 levels={ '7.1 TL0' => ['7100-00-00-0000', '7100-00-01-1037', '7100-00-02-1041', '7100-00-03-1115', '7100-00-04-1140', '7100-00-05-1207', '7100-00-06-1216', '7100-00-07-1228', '7100-00-08-1241', '7100-00-09-1316', '7100-00-10-1334'],
@@ -50,14 +51,14 @@ nodes['oslevel']=node['nim']['clients'].values.collect { |client| client['osleve
 puts ""
 puts "#########################################################"
 puts "Available machines and their corresponding oslevel are:"
-print_hash_by_columns nodes
+puts print_hash_by_columns(nodes)
 puts "Choose one or more (comma-separated) to update ?"
 client=STDIN.readline.chomp
 
 puts ""
 puts "#########################################################"
 puts "Available SP/TL levels are:"
-print_hash_by_columns levels
+puts print_hash_by_columns(levels)
 puts "Choose one or latest to download and install ?"
 level=STDIN.readline.chomp
 
@@ -81,6 +82,8 @@ aix_nim "Updating machine - 1st pass" do
 	targets		"#{client}"
 	action		:update
 end
+
+
 =begin
 aix_nim "Updating machine - 2nd pass" do
 	lpp_source	"#{level}-lpp_source"

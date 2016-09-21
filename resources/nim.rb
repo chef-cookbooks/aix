@@ -26,6 +26,9 @@ end
 class InvalidLppSourceProperty < StandardError
 end
 
+class InvalidTargetsProperty < StandardError
+end
+
 class NimCustError < StandardError
 end
 
@@ -38,7 +41,7 @@ def expand_targets
     all_machines=node.fetch('nim', {}).fetch('clients').keys
     Chef::Log.debug("Ohai client machine's list is #{all_machines}")
   rescue Exception => e
-    raise OhaiNimPluginNotFound, "NIM-NIM-NIM cannot find nim info from Ohai output"
+    raise OhaiNimPluginNotFound, "NIM-NIM-NIM error: cannot find nim info from Ohai output"
   end
 
   selected_machines=Array.new
@@ -66,7 +69,7 @@ def expand_targets
   Chef::Log.debug("List of targets expanded to #{selected_machines}")
   
   if selected_machines.empty?
-    raise InvalidTargetsProperty, "NIM-NIM-NIM cannot contact any machines"
+    raise InvalidTargetsProperty, "NIM-NIM-NIM error: cannot contact any machines"
   end
   selected_machines
 end
@@ -77,7 +80,7 @@ def check_lpp_source_name (lpp_source)
       Chef::Log.debug("Found lpp source #{lpp_source}")
     end
   rescue Exception => e
-    raise InvalidLppSourceProperty, "NIM-NIM-NIM cannot find lpp_source \'#{lpp_source}\' from Ohai output"
+    raise InvalidLppSourceProperty, "NIM-NIM-NIM error: cannot find lpp_source \'#{lpp_source}\' from Ohai output"
   end
 end
 
@@ -127,5 +130,9 @@ action :update do
       end
     end
   end
+
+end
+
+action :check do
 
 end
