@@ -17,7 +17,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 require 'chef/mixin/shell_out'
-require 'wpars'
+begin
+  require 'wpars'
+rescue LoadError
+  # This space left intentionally blank.
+end
 
 include Chef::Mixin::ShellOut
 
@@ -32,8 +36,12 @@ end
 def load_current_resource
   @current_resource = Chef::Resource::AixWpar.new(@new_resource.name)
 
+  unless defined?(::WPAR)
+    raise RuntimeError.new('The aix-wpar gem is not installed. Please `/opt/chef/embedded/bin/gem install aix-wpar` to use the aix_wpar resource')
+  end
+
   # get all WPAR on the system
-  wpars = WPAR::WPARS.new
+  wpars = ::WPAR::WPARS.new
 
   # get the current wpar
   @wpar = wpars[@new_resource.name]
