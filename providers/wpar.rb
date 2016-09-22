@@ -14,14 +14,11 @@
 # limitations under the License.
 #
 
-require 'chef/mixin/shell_out'
 begin
   require 'wpars'
 rescue LoadError # rubocop:disable Lint/HandleExceptions
   # This space left intentionally blank.
 end
-
-include Chef::Mixin::ShellOut
 
 use_inline_resources
 

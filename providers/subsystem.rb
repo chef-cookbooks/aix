@@ -15,10 +15,8 @@
 # limitations under the License.
 #
 
-require 'chef/mixin/shell_out'
 require 'etc'
 
-include Chef::Mixin::ShellOut
 use_inline_resources
 
 # Support whyrun
