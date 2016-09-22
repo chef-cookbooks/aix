@@ -171,12 +171,7 @@ action :customize do
   if @current_resource.exists
     Chef::Log.info('alt_disk: customize')
     disk = get_current_alt
-    customize = false
-    customize = if defined?(@new_resource.image_location)
-                  true
-                else
-                  false
-                end
+    customize = defined?(@new_resource.image_location)
     if disk != 'None' && customize
       converge_by('alt_disk: customize alt_disk (update)') do
         cmd = "alt_rootvg_op -C -b update_all -l #{@new_resource.image_location}"
@@ -252,7 +247,7 @@ def find_and_check_disk(type, value)
     if test == 'BIGGER' || test == 'EQUAL'
       Chef::Log.debug('alt_disk: disk is BIGGER or EQUAL')
       return disk
-      elif test == 'LESSER'
+    elsif test == 'LESSER'
       Chef::Log.debug('alt_disk: cannot find any disk usable for alt_disk')
       return 'None'
     end

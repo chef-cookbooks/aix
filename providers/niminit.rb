@@ -23,12 +23,11 @@ end
 
 def load_current_resource
   @current_resource = Chef::Resource::AixNiminit.new(@new_resource.name)
-  @current_resource.exists = false
 
   # we assume nim client is configured if niminfo exists ...
   # Idea, checking if nimsh running will tell us its runs but we can't get config this way
   # I don't know if there is a better way to do this
-  @current_resource.exists = true if ::File.exist?('/etc/niminfo')
+  @current_resource.exists = ::File.exist?('/etc/niminfo')
 end
 
 action :setup do
