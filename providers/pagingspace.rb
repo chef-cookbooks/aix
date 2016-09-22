@@ -202,9 +202,7 @@ action :create do
       # rename only if name are different
       if old_name != @new_resource.name
         shell_out!('chlv -n ' << @new_resource.name << ' ' << old_name)
-        if @new_resource.auto
-          shell_out!("chps -ay #{@new_resource.name}")
-        end
+        shell_out!("chps -ay #{@new_resource.name}") if @new_resource.auto
       end
     end
   end

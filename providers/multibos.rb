@@ -54,9 +54,7 @@ action :create do
       end
       Chef::Log.debug("multibos: creating standby bos with command #{string_shell_out}")
       so = shell_out!(string_shell_out, timeout: 7200)
-      if !so.stderr.empty?
-        raise('multibos: error creating standby bos')
-      end
+      raise('multibos: error creating standby bos') unless so.stderr.empty?
     end
   end
 end
@@ -68,9 +66,7 @@ action :remove do
     converge_by('multibos: removing standby multibos') do
       Chef::Log.debug('multibos: removing standby multibos with command multibos -RX')
       so = shell_out!('multibos -RX')
-      if !so.stderr.empty?
-        raise('multibos: error removing multibos')
-      end
+      raise('multibos: error removing multibos') unless so.stderr.empty?
     end
   end
 end
@@ -83,9 +79,7 @@ action :update do
       string_shell_out = 'multibos -ac -l ' << @new_resource.update_device
       Chef::Log.debug("multibos: updating standby multibos with command #{string_shell_out}")
       so = shell_out!(string_shell_out, timeout: 7200)
-      if !so.stderr.empty?
-        raise('multibos: error updating multibos')
-      end
+      raise('multibos: error updating multibos') unless so.stderr.empty?
     end
   end
 end
@@ -161,10 +155,7 @@ action :umount do
       Chef::Log.debug('multibos: umounting multibos')
       converge_by('multibos: umounting standby bos') do
         stby_bos = shell_out!('multibos -u')
-        if !stby_bos.stderr.empty?
-          Chef::Log.debug('multibos: error while multibos -m')
-          raise('multibos: error while multibos -u')
-        end
+        raise('multibos: error while multibos -u') unless stby_bos.stderr.empty?
       end
     else
       Chef::Log.debug('multibos: bos already umounted')
