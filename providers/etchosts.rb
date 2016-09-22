@@ -28,9 +28,7 @@ def load_current_resource
   # we say by default that the entry is no in the /etc/hosts file
   @current_resource.exists = false
 
-  hostent = Mixlib::ShellOut.new("hostent -s #{@new_resource.name}")
-  hostent.valid_exit_codes = 0
-  hostent.run_command
+  hostent = shell_out("hostent -s #{@new_resource.name}")
   if !hostent.error?
     Chef::Log.debug('etchosts: resource exists')
     @current_resource.exists = true
@@ -75,11 +73,7 @@ action :add do
     end
     converge_by("hostent: add #{@new_resource.name} in /etc/hosts file") do
       Chef::Log.debug("etchosts: running #{hostent_add_s}")
-      hostent_add = Mixlib::ShellOut.new(hostent_add_s)
-      hostent_add.valid_exit_codes = 0
-      hostent_add.run_command
-      hostent_add.error!
-      hostent_add.error?
+      shell_out!(hostent_add_s)
     end
   end
 end
@@ -90,11 +84,7 @@ action :delete do
     hostent_del_s = "hostent -d #{@new_resource.ip_address}"
     converge_by("hostent: delete #{@new_resource.ip_address}") do
       Chef::Log.debug("etchosts: running #{hostent_del_s}")
-      hostent_del = Mixlib::ShellOut.new(hostent_del_s)
-      hostent_del.valid_exit_codes = 0
-      hostent_del.run_command
-      hostent_del.error!
-      hostent_del.error?
+      shell_out!(hostent_del_s)
     end
   end
 end
@@ -146,11 +136,7 @@ action :change do
     if change
       converge_by("etchost: modifying #{@new_resource.name} in /etc/hosts") do
         Chef::Log.debug("etchosts: running #{hostent_change_s}")
-        hostent_change = Mixlib::ShellOut.new(hostent_change_s)
-        hostent_change.valid_exit_codes = 0
-        hostent_change.run_command
-        hostent_change.error!
-        hostent_change.error?
+        shell_out!(hostent_change_s)
       end
     end
   end
@@ -161,10 +147,6 @@ action :delete_all do
   hostent_del_all_s = 'hostent -X'
   converge_by('etchost: removing all entries') do
     Chef::Log.debug("etchosts: running #{hostent_del_all_s}")
-    hostent_del_all = Mixlib::ShellOut.new(hostent_del_all_s)
-    hostent_del_all.valid_exit_codes = 0
-    hostent_del_all.run_command
-    hostent_del_all.error!
-    hostent_del_all.error?
+    shell_out!(hostent_del_all_s)
   end
 end

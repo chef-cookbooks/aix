@@ -97,11 +97,7 @@ action :update do
       # we converge if the is a change to do
       converge_by("chsec: changing #{@new_resource.name} for stanza #{@new_resource.stanza}") do
         Chef::Log.debug("chsec: command #{chsec_s}")
-        chsec = Mixlib::ShellOut.new(chsec_s)
-        chsec.valid_exit_codes = 0
-        chsec.run_command
-        chsec.error!
-        chsec.error?
+        shell_out!(chsec_s)
       end
     end
   end

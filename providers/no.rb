@@ -28,8 +28,7 @@ def load_current_resource
   # no can always be modified so resource always exists
   @current_resource.exists = true
 
-  so = shell_out('no -x')
-  raise('no: error running no -x') if so.exitstatus != 0
+  so = shell_out!('no -x')
 
   # loading the tunables
   all_no_tunables = {}
@@ -110,9 +109,8 @@ action :update do
             end
             # TODO: here if type == B do a bosboot. Did not find any tunables with B type not implementing this
             Chef::Log.debug("command: #{string_shell_out}")
-            so = shell_out(string_shell_out)
+            shell_out!(string_shell_out)
             # if the command fails raise and exception
-            raise "no: #{string_shell_out} failed" if so.exitstatus != 0
             string_shell_out = 'no -p '
           end
         end
@@ -146,9 +144,7 @@ action :reset do
           end
           # TODO: here if type == B do a bosboot. Did not find any tunables with B type not implementing this
           Chef::Log.debug("command: #{string_shell_out}")
-          so = shell_out(string_shell_out)
-          # if the command fails raise and exception
-          raise "no: #{string_shell_out} failed" if so.exitstatus != 0
+          shell_out!(string_shell_out)
           string_shell_out = 'no -p '
         end
       else
@@ -163,7 +159,7 @@ action :reset_all do
   if @current_resource.exists
     converge_by('no : resetting all') do
       string_shell_out = 'no -D'
-      so = shell_out(string_shell_out)
+      shell_out(string_shell_out)
     end
   end
 end
@@ -173,7 +169,7 @@ action :reset_all_with_reboot do
   if @current_resource.exists
     converge_by('no : resetting all with reboot') do
       string_shell_out = 'yes | no -r -D '
-      so = shell_out(string_shell_out)
+      shell_out(string_shell_out)
     end
   end
 end

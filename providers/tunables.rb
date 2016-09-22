@@ -39,8 +39,7 @@ end
 def load_current_resource
   @current_resource = Chef::Resource::AixTunables.new(@new_resource.name)
 
-  so = shell_out("#{cmd} -x")
-  raise("#{cmd}: error running #{cmd} -x") if so.exitstatus != 0
+  so = shell_out!("#{cmd} -x")
 
   # initializing tunables attribute
   all_tunables = {}
@@ -98,9 +97,7 @@ action :update do
       converge_by("#{cmd}: setting tunable #{tunable}=#{value}") do
         string_shell_out = gen_shell_out params: "-o #{tunable}=#{value} ", tunable: tunable.to_sym
         Chef::Log.debug("command: #{string_shell_out}")
-        so = shell_out(string_shell_out)
-        # if the command fails raise and exception
-        raise "no: #{string_shell_out} failed" if so.exitstatus != 0
+        shell_out!(string_shell_out)
       end
     end
   end
@@ -135,7 +132,7 @@ action :reset_all do
   converge_by("#{cmd} : resetting all") do
     string_shell_out = "#{cmd} -D"
     string_shell_out = "yes | #{cmd} -r -D" if @new_resource.nextboot
-    so = shell_out(string_shell_out)
+    shell_out(string_shell_out)
   end
 end
 

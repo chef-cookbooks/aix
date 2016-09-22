@@ -43,11 +43,7 @@ action :setup do
       connect = @new_resource.connect
       niminit_s = 'niminit -a master=' << master << ' -a name=' << name << ' -a pif_name=' << pif_name << ' -a connect=' << connect
       Chef::Log.debug("niminit: running #{niminit_s}")
-      niminit = Mixlib::ShellOut.new(niminit_s)
-      niminit.valid_exit_codes = 0
-      niminit.run_command
-      niminit.error!
-      niminit.error?
+      shell_out!(niminit_s)
     end
   end
 end
@@ -58,8 +54,7 @@ action :remove do
     converge_by('niminit: removing nimclient configuration') do
       stopsrc_s = 'stopsrc -g nimclient'
       Chef::Log.debug("niminit: stoping nimclient running #{stopsrc_s}")
-      niminit = Mixlib::ShellOut.new(stopsrc_s)
-      niminit.run_command
+      shell_out(stopsrc_s)
       # we don't care here about return code, sometime nimsh will not be runing
       # removing /etc/niminfo
       Chef::Log.debug('niminit: removing /etc/niminfo')

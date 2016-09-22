@@ -25,8 +25,7 @@ end
 def load_current_resource
   @current_resource = Chef::Resource::AixBootlist.new(@new_resource.name)
 
-  so = shell_out("bootlist -m #{@new_resource.mode} -o")
-  raise("#{cmd}: error running #{cmd} -x") if so.exitstatus != 0
+  so = shell_out!("bootlist -m #{@new_resource.mode} -o")
 
   # initialize variables
   @current_resource.devices([])
@@ -65,9 +64,7 @@ def perform_bootlist
   end
 
   converge_by("bootlist: #{cmd}") do
-    so = shell_out(cmd)
-    # if the command fails raise and exception
-    raise "no: #{cmd} failed" if so.exitstatus != 0
+    shell_out!(cmd)
   end
 end
 
@@ -113,8 +110,6 @@ action :invalidate do
   converge_by("invalidate bootlist in mode #{@new_resource.mode}") do
     cmd = "bootlist -m #{@new_resource.mode} -i "
     Chef::Log.debug("command: #{cmd}")
-    so = shell_out(cmd)
-    # if the command fails raise and exception
-    raise "no: #{cmd} failed" if so.exitstatus != 0
+    shell_out!(cmd)
   end
 end

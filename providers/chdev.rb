@@ -93,11 +93,7 @@ action :update do
     if set_attr
       converge_by("chdev device #{@new_resource.name} with #{@new_resource.attributes}") do
         Chef::Log.debug("command: #{string_shell_out}")
-        so = shell_out(string_shell_out)
-        # if the command fails raise and exception
-        if so.exitstatus != 0
-          raise "chdev: device #{@current_resource.name} failed"
-        end
+        shell_out!(string_shell_out)
       end
     end
   end
