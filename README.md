@@ -765,10 +765,10 @@ Actions:
 
 ### filesystem
 
-Create, modify, mount or defrag a LVM filesystem 
+Create, modify, mount or defrag a LVM filesystem
 
 ```ruby
-# create filesystem of 256Mb in '/lvm/folder1' on logical volume 'part1' 
+# create filesystem of 256Mb in '/lvm/folder1' on logical volume 'part1'
 aix_filesystem '/lvm/folder1' do
   logical 'part1'
   size   '256M'
@@ -794,7 +794,7 @@ end
 Parameters:
 * `name`: Mount point of the filesystem
 * `logical`: Specifies an existing logical volume on which to make the filesystem
-* `size`: Size of the filesystem. It's can be a set of 512k blocks, a size in M or a size in G 	
+* `size`: Size of the filesystem. It's can be a set of 512k blocks, a size in M or a size in G
 
 Actions:
 * `create`: (default) Creates or modifies a filesystem
@@ -868,8 +868,14 @@ Actions:
 * Author:: Alain Dejoux (<adejoux@djouxtech.net>)
 * Author:: Alan Thatcher (<alanwthatcher@gmail.com>)
 * Author:: Laurent GAY for IBM (<lgay@us.ibm.com>)
+
 ```text
-Copyright:: 2014-2015 Chef Software, Inc.
+Copyright 2008-2016, Chef Software, Inc.
+Copyright 2015-2016, Alain Dejoux <adejoux@djouxtech.net>
+Copyright 2015-2016, Benoit Creau <benoit.creau@chmod666.org>
+Copyright 2015-2016, Bloomberg Finance L.P.
+Copyright 2016, Atos <jerome.hurstel@atos.net>
+Copyright 2016, International Business Machines Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
