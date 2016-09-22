@@ -22,16 +22,15 @@ def whyrun_supported?
 end
 
 def load_current_resource
-  @filesystem = AIXLVM::FileSystem.new(@new_resource.name,AIXLVM::System.new())
-  @filesystem.logical_volume=@new_resource.logical
-  @filesystem.size=@new_resource.size
+  @filesystem = AIXLVM::FileSystem.new(@new_resource.name, AIXLVM::System.new)
+  @filesystem.logical_volume = @new_resource.logical
+  @filesystem.size = @new_resource.size
 end
 
 action :create do
   begin
-    if @filesystem.check_to_change()
-      converge_by(@filesystem.create().join(" | ")) do
-
+    if @filesystem.check_to_change
+      converge_by(@filesystem.create.join(' | ')) do
       end
     end
   rescue AIXLVM::LVMException => e
@@ -42,8 +41,7 @@ end
 action :mount do
   begin
     if @filesystem.check_to_mount(true)
-      converge_by(@filesystem.mount().join(" | ")) do
-
+      converge_by(@filesystem.mount.join(' | ')) do
       end
     end
   rescue AIXLVM::LVMException => e
@@ -54,8 +52,7 @@ end
 action :umount do
   begin
     if @filesystem.check_to_mount(false)
-      converge_by(@filesystem.umount().join(" | ")) do
-
+      converge_by(@filesystem.umount.join(' | ')) do
       end
     end
   rescue AIXLVM::LVMException => e
@@ -66,8 +63,7 @@ end
 action :defragfs do
   begin
     if @filesystem.check_to_defrag
-      converge_by(@filesystem.defragfs().join(" | ")) do
-
+      converge_by(@filesystem.defragfs.join(' | ')) do
       end
     end
   rescue AIXLVM::LVMException => e

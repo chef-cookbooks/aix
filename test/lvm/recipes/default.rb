@@ -12,75 +12,74 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
- 
 aix_volume_group 'datavg' do
-    physical_volumes          ['hdisk1', 'hdisk2']
-    action :create
+  physical_volumes %w(hdisk1 hdisk2)
+  action :create
 end
 
 aix_volume_group 'foovg' do
-    physical_volumes          ['hdisk10']
-    action :create
+  physical_volumes ['hdisk10']
+  action :create
 end
 
 aix_logical_volume 'part1' do
-    group 'datavg'
-    size   512
-    action :create
+  group 'datavg'
+  size   512
+  action :create
 end
 
 aix_logical_volume 'part2' do
-    group 'datavg'
-    size   1024
-    copies 2
-    action :create
+  group 'datavg'
+  size   1024
+  copies 2
+  action :create
 end
 
 aix_logical_volume 'part3' do
-    group 'foovg'
-    size   2048
-    action :create
+  group 'foovg'
+  size   2048
+  action :create
 end
 
 aix_filesystem '/lvm/folder1' do
-    logical 'part1'
-    size   '256M'
-    action :create
+  logical 'part1'
+  size   '256M'
+  action :create
 end
 
 aix_filesystem '/lvm/folder2' do
-    logical 'part2'
-    size   '1024'
-    action :create
+  logical 'part2'
+  size   '1024'
+  action :create
 end
 
 aix_filesystem '/lvm/folder3' do
-    logical 'part2'
-    size   '128M'
-    action :create
+  logical 'part2'
+  size   '128M'
+  action :create
 end
 
 aix_volume_group 'datavg' do
-    physical_volumes          ['hdisk1', 'hdisk2', 'hdisk3']
-    action :create
+  physical_volumes %w(hdisk1 hdisk2 hdisk3)
+  action :create
 end
 
 aix_logical_volume 'part1' do
-    group 'datavg'
-    size   2048
-    action :create
+  group 'datavg'
+  size   2048
+  action :create
 end
 
 aix_filesystem '/lvm/folder2' do
-    logical 'part2'
-    size   '512'
-    action :create
+  logical 'part2'
+  size   '512'
+  action :create
 end
 
 aix_filesystem '/lvm/folder2' do
-    action :mount
+  action :mount
 end
 
 aix_filesystem '/lvm/folder2' do
-    action :defragfs
+  action :defragfs
 end

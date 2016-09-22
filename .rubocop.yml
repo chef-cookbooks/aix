@@ -1,3 +1,4 @@
+# rubocop todo
 
 Lint/AmbiguousRegexpLiteral:
   Exclude:
@@ -7,24 +8,50 @@ Lint/DuplicatedKey:
   Exclude:
     - 'libraries/helpers.rb'
 
+# Cop supports --auto-correct.
+# Configuration parameters: AlignWith, SupportedStyles, AutoCorrect.
+# SupportedStyles: keyword, variable, start_of_line
+Lint/EndAlignment:
+  Enabled: false
+
+Lint/RescueException:
+  Exclude:
+    - 'resources/nim.rb'
+    - 'resources/suma.rb'
+
 Lint/UnreachableCode:
   Exclude:
     - 'providers/altdisk.rb'
 
 Lint/UselessAssignment:
   Exclude:
+    - 'examples/update_by_suma.rb'
     - 'providers/altdisk.rb'
     - 'providers/chsec.rb'
     - 'providers/nimclient.rb'
     - 'providers/no.rb'
     - 'providers/tunables.rb'
+    - 'resources/nim.rb'
+    - 'resources/suma.rb'
 
 Metrics/BlockNesting:
   Max: 5
 
 Style/AccessorMethodName:
   Exclude:
+    - 'libraries/storage_objects.rb'
     - 'providers/altdisk.rb'
+    - 'test/lvm/unittests/mock.rb'
+
+Style/AsciiComments:
+  Exclude:
+    - 'resources/nim.rb'
+    - 'resources/suma.rb'
+
+Style/ClassAndModuleCamelCase:
+  Exclude:
+    - 'test/lvm/unittests/tc_aix_storage_objects.rb'
+    - 'test/lvm/unittests/tc_storage_objects.rb'
 
 # Cop supports --auto-correct.
 # Configuration parameters: Keywords.
@@ -33,15 +60,41 @@ Style/CommentAnnotation:
   Exclude:
     - 'resources/subserver.rb'
 
+# Configuration parameters: EnforcedStyle, SupportedStyles.
+# SupportedStyles: for, each
+Style/For:
+  Enabled: false
+
+# Configuration parameters: EnforcedStyle, SupportedStyles.
+# SupportedStyles: format, sprintf, percent
+Style/FormatString:
+  Exclude:
+    - 'libraries/lvmobj_fs.rb'
+    - 'libraries/lvmobj_lv.rb'
+    - 'libraries/lvmobj_vg.rb'
+    - 'libraries/storage_objects.rb'
+    - 'test/lvm/unittests/mock.rb'
+
 # Configuration parameters: MinBodyLength.
 Style/GuardClause:
   Exclude:
+    - 'libraries/lvmobj_fs.rb'
+    - 'libraries/storage_objects.rb'
     - 'providers/nimclient.rb'
-    - 'providers/volume_group.rb'
 
 Style/IdenticalConditionalBranches:
   Exclude:
     - 'providers/etchosts.rb'
+
+Style/IfInsideElse:
+  Exclude:
+    - 'libraries/storage_objects.rb'
+
+# Cop supports --auto-correct.
+# Configuration parameters: IncludeSemanticChanges.
+Style/NonNilCheck:
+  Exclude:
+    - 'test/lvm/unittests/ts_all.rb'
 
 # Configuration parameters: NamePrefix, NamePrefixBlacklist, NameWhitelist.
 # NamePrefix: is_, has_, have_
@@ -50,3 +103,8 @@ Style/IdenticalConditionalBranches:
 Style/PredicateName:
   Exclude:
     - 'providers/nimclient.rb'
+
+# Configuration parameters: EnforcedStyle, SupportedStyles.
+# SupportedStyles: compact, exploded
+Style/RaiseArgs:
+  Enabled: false
