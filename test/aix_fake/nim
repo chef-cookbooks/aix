@@ -1,0 +1,161 @@
+#!/bin/ksh93
+#KSH script to simulate "nim" command
+
+typeset operation=''
+typeset nimtype=''
+typeset object_name=''
+typeset -A fields
+fields['server']=''
+fields['location']='/tmp/img.source'
+fields['source']=''
+fields['packages']=''
+fields['comments']=''
+fields['lpp_source']=''
+
+
+#===============================================
+# Usage
+#===============================================
+function usage
+{
+    typeset cmd=$(basename $1)
+    print "++ Nim fake for tests ++
+usage:
+        nim -o <operation> [-F] [-t <type>] [ -S <YYMMDDhhmm> ] 
+        [-a <attr=value>]... <object name>
+
+        valid operations:
+                activate, allocate, alt_disk_install, alt_disk_mig,
+                bos_inst, change, check, chwpar, create, cust, dbts,
+                deactivate, deallocate, define, deploy, destroy,
+                diag, dkls_init, dtls_init, eject, fix_query,
+                linux_inst, load, lppchk, lppmgr, lslpp, lswpar,
+                maint, maint_boot, reboot, remove, reset, restvg,
+                select, showdump, showlog, showres, snap, swts,
+                sync, sync_roots, syncwpar, takeover, unconfig,
+                update, updateios
+
+        valid types:
+                machines: alternate_master, dataless, diskless, master,
+                standalone, wpar
+                networks: atm, ent, ent6, fddi, generic, hfi, tok
+                resources: adapter_def, boot, bosinst_data, devexports,
+                dump, exclude_files, fb_script, file_res,
+                fix_bundle, home, image_data, installp_bundle,
+                ios_mksysb, linux_source, log, lpp_source, mksysb,
+                nim_script, ovf_vm, paging, resolv_conf, root,
+                savevg, savewpar, script, secattrs, shared_home,
+                shared_root, spot, tmp, vg_data, vopt_iso,
+                wpar_spec
+                management: bcmm, cec, hmc, ivm, nas_filer, vios
+
+        ** Use lsnim -O <object name> or lsnim -POt <type> to list valid
+           operations for a particular object or object type.
+
+        ** Use lsnim -q <operation> <object name> or
+           lsnim -q <operation> -t <type> to list required and optional
+           resources and attributes for a particular NIM operation.
+"
+    return 0
+}
+
+#===============================================
+# error_managment
+#===============================================
+function error_managment
+{
+	error_message=""
+    if [ ! -z "$error_message" ]
+    then
+    	echo $error_message
+	    log_file="${fields['location']}/nim.error"
+	    echo "---- $(date) ----" >> $log_file
+    	echo $error_message >> $log_file
+    	echo "" >> $log_file
+    fi   
+}
+
+#===============================================
+# run_action
+#===============================================
+function run_action
+{
+    action_type=$1
+    if [ $action_type -eq 0 ]
+    then
+	    echo "Preparing to copy install images (this will take several minutes)..."
+	    echo ""
+	    echo "Now checking for missing install images..."
+    fi
+    if [ $action_type -eq 1 ]
+    then
+	    echo ""
+    fi
+    log_file="${fields['location']}/nim.log"
+    echo "---- $(date) ----" >> $log_file
+    echo "\tname : $object_name" >> $log_file
+    for key in "${!fields[@]}"
+    do
+        echo "\t$key : ${fields[$key]}" >> $log_file
+    done
+    echo "" >> $log_file
+}
+
+#=====================================
+: Parse command line
+#=====================================
+while getopts "o:Ft:S:a:h" opt ; do
+    case $opt in
+    a) 
+IFS='=' read key value <<END
+	$OPTARG
+END
+	   key=$(echo $key)
+	   if [ ! -z "$(echo ${!fields[@]} | grep $key)" ]
+	   then  
+			fields[$key]="$value"
+       fi
+       ;;
+    o) operation=$OPTARG
+    
+       ;;
+    t) nimtype=$OPTARG
+       ;;
+    h) usage $0
+       exit 0
+       ;;
+   \?) echo "Unrecognized parameter -$OPTARG" >&2
+       exit 1
+       ;;
+    :) echo "Option -$OPTARG requires an argument." >&2
+       exit 1
+       ;;
+    esac
+done
+shift $((OPTIND-1))
+object_name="$*"
+ 
+if [ ! -z "$operation"-a ! -z "$nimtype" ] 
+then
+	echo "### NIM FAKE ###"
+    if [ ! -z $(echo $object_name | grep "error") ]
+    then
+    	echo "-- Failure NIM --"
+		exit 1
+    fi	
+	if [ "$operation" == "define" -a "$nimtype" == "lpp_source" ]
+	then
+		run_action 0
+		exit 0
+	fi
+	if [ "$operation" == "cust" ]
+	then
+		run_action 1
+		exit 0
+	fi
+	echo "#### BAD OPERATION & TYPE ($operation/$nimtype) ####"
+	exit 1
+fi
+
+echo "#### NOT IMPLEMENTED ####"
+exit 1

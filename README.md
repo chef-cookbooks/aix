@@ -701,65 +701,106 @@ Actions:
 
 ### volume_group
 
-Create a LVM volume group
-Change an existing LVM  volume group
+Create or modify a LVM volume group
 
 ```ruby
-aix_volume_group "create vg with specified disks" do
- name "testvg"
- disks ['hdisk2']
+# Create volume groupe 'datavg1' with 2 disks
+aix_volume_group 'datavg1' do
+  physical_volumes          ['hdisk1', 'hdisk2']
+  action :create
 end
 
-aix_volume_group "create vg with best fit" do
- name "testvg"
- best_fit 10
+# Modify existing volume groupe 'datavg1' and add new disk
+aix_volume_group 'datavg1' do
+  physical_volumes          ['hdisk1', 'hdisk2', 'hdisk3']
+  action :create
 end
 
-aix_volume_group "create vg with all disks not in a vg" do
- name "testvg"
- use_all_disks true
+# Create a volume group called `datavg2` comprising 3 disks and assign them to a mirror pool.
+aix_volume_group 'datavg2' do
+  physical_volumes ['hdisk4', 'hdisk5', 'hdisk6']
+  mirror_pool_name   'copy0pool'
+  action :create
 end
 
-aix_volume_group "convert vg to big" do
- name "testvg"
- big true
- action :change
+# Add a disk as a hot spare to the same `datavg3` volume group
+aix_volume_group 'datavg3' do
+  physical_volumes ['hdisk7']
+  use_as_hot_spare   'y'
+  action :add
 end
 ```
 
-Volume Group Disk Selection Parameters, in order of precedence:
-* `disks` (optional) - List of named disks to use
-* `best_fit` (optional) - Takes desired size in GB and attempts to find suitable disk (smallest available disk that meets the requirements)
-* `use_all_disks` (optional) - Use all disks not currently in use by another Volume Group
-
-Volume Group Parameters:
-* `force` (optional) - add/change - Force override of restricted actions (i.e. disk previously assigned to a VG)
-* `big` (optional) - add/change - Big VG format
-* `factor` (optional) - add/change - Limit number of partitions
-* `activate_on_boot` (optional) - add/change - Varyon VG at boot time
-* `scalable` (optional) - add - Scalable-type volume group
-* `lv_number` (optional) - add - Number of LVs that can be created
-* `partitions` (optional) - add - Total number of partitions in VG
-* `powerha_concurrent` (optional) - add -  Enhanced Concurrent Capable volume group
-* `pre_53_compat` (optional) - add - VG that can be imported to pre 5.3 AIX
-* `pv_type` (optional) - add - Physical volume type restriction
-* `partition_size` (optional) - add - Megabytes in each partition
-* `major_number` (optional) - add - Specify major number to be used at creation
-* `mirror_pool_strictness` (optional) - add - Enable mirror pool strictness
-* `mirror_pool` (optional) - add - Specify mirror pool
-* `infinite_retry` (optional) - add - Enables the infinite retry option of the logical volume.
-* `non_concurrent_varyon` (optional) - add - Volume group not allowed to varyon in non-concurrent mode in more than one node at the same time.
-* `critical_vg` (optional) - add - Eneable critical VG option
-* `auto_synchronize` (optional) - change - Sets the synchronization characteristics for the volume group
-* `hotspare` (optional) - change - Sets the sparing characteristics for the volume group
-* `lost_quorom_varyoff` (optional) - change - Determines if the volume group is automatically varied off after losing its quorum of physical volumes.
-
-
+Parameters:
+* `name`: Name of the volume group
+* `physical_volumes`: The device or list of devices to use as physical volumes (if they haven't already been initialized as * `physical volumes, they will be initialized automatically)
+* `use_as_hot_spare`: (optional) Sets the sparing characteristics of the physical volume such that it can be used as a hot spare. Legal values are "y" or "n". "y" marks the disk as a hot spare within the volume group it belongs to. "n" removes the disk from the hot spare pool for the volume group.
+* `mirror_pool_name`:	(optional) Assigns or reassigns the disk to the named mirror pool. The mirror pool is created if it does not exist already Mirror pool names can only contain alphanumeric characters, may not be longer than 15 characters, must be unique in the volume group.
 
 Actions:
+* `create` - (default) Creates or modify a volume group
 
-* `add` - add a volume group
-* `change` - change an existing volume group
+### logical_volume
+
+Create or modify a LVM logical volume
+
+```ruby
+# create logical volume 'home' of 512MB with 2 copies in volume group 'datavg'
+aix_logical_volume 'home' do
+  group 'datavg'
+  size   512 //  MB
+  copies 2
+  action :create
+end
+```
+
+Parameters:
+* `name`: Name of the logical volume
+* `volume_group`: Volume group in which to create the new logical volume (not required if the volume is declared inside of an `lvm_volume_group` block)
+* `size`: Minimum size of the logical volume in MB. The actual size allocated my be slightly greater.
+* `copies`: (optional) Number of copies of each logical partition. Legal values are 1, 2, 3
+
+Actions:
+* `create` -	(default) Creates or modifies an AIX JFS2 logical volume
+
+### filesystem
+
+Create, modify, mount or defrag a LVM filesystem 
+
+```ruby
+# create filesystem of 256Mb in '/lvm/folder1' on logical volume 'part1' 
+aix_filesystem '/lvm/folder1' do
+  logical 'part1'
+  size   '256M'
+  action :create
+end
+
+# mount '/lvm/folder1' filesystem
+aix_filesystem '/lvm/folder1' do
+  action :mount
+end
+
+# defrag '/lvm/folder1' filesystem
+aix_filesystem '/lvm/folder1' do
+  action :defragfs
+end
+
+# umount '/lvm/folder1' filesystem
+aix_filesystem '/lvm/folder1' do
+  action :umount
+end
+```
+
+Parameters:
+* `name`: Mount point of the filesystem
+* `logical`: Specifies an existing logical volume on which to make the filesystem
+* `size`: Size of the filesystem. It's can be a set of 512k blocks, a size in M or a size in G 	
+
+Actions:
+* `create`: (default) Creates or modifies a filesystem
+* `mount`: Mount a filesystem
+* `umount`: Unmount a filesystem
+* `defragfs`: Defrag a filesystem
 
 ### wpar
 
@@ -792,20 +833,20 @@ aix_wpar 'delete wpar' do
 end
 ```
 
-### Parameters:
+Parameters:
 
 * `name`: WPAR name
 * `hostname`: specify wpar hostname(can be different of wpar name)
 * `address`: ip address to use if no entry in /etc/hosts or DNS.
 * `interface`: network interface to use
-* `rootvg: to build a rootvg wpar
-* `rootvg_disk: hdisk to use for rootvg wpar
-* `wparvg: volume group to use for system wpar. Default: **rootvg**
-* `backupimage: backup image to restore when building wpar
-* `cpu: resource control CPU. Example: **10%-50%,100%**
-* `memory: resource control memory.
-* `autostart: auto start wpar at boot.
-* `live_stream: live stream wpar commands output
+* `rootvg`: to build a rootvg wpar
+* `rootvg_disk`: hdisk to use for rootvg wpar
+* `wparvg`: volume group to use for system wpar. Default: **rootvg**
+* `backupimage`: backup image to restore when building wpar
+* `cpu`: resource control CPU. Example: **10%-50%,100%**
+* `memory`: resource control memory.
+* `autostart`: auto start wpar at boot.
+* `live_stream`: live stream wpar commands output
 
 
 Actions:
@@ -826,6 +867,7 @@ Actions:
 * Author:: Benoit Creau (<benoit.creau@chmod666.org>)
 * Author:: Alain Dejoux (<adejoux@djouxtech.net>)
 * Author:: Alan Thatcher (<alanwthatcher@gmail.com>)
+* Author:: Laurent GAY for IBM (<lgay@us.ibm.com>)
 ```text
 Copyright:: 2014-2015 Chef Software, Inc.
 

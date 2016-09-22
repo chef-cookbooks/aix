@@ -1,6 +1,6 @@
 # Author:: IBM Corporation
 # Cookbook Name:: aix
-# Provider:: volume_group
+# Library:: tools
 #
 # Copyright:: 2016, International Business Machines Corporation
 #
@@ -16,26 +16,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Support whyrun
-def whyrun_supported?
-  true
-end
+require 'open3'
 
-def load_current_resource
-  @volgroup = AIXLVM::VolumeGroup.new(@new_resource.name,AIXLVM::System.new())
-  @volgroup.physical_volumes=@new_resource.physical_volumes
-  @volgroup.use_as_hot_spare=@new_resource.use_as_hot_spare
-end
+module AIXLVM
+  class LVMException < Exception
+  end
 
-action :create do
-  begin
-    if @volgroup.check_to_change()
-      converge_by(@volgroup.create().join(" | ")) do
+  class BaseSystem
+    attr_reader :last_error
+    def initialize()
+      @last_error=''
+    end
 
+    def run(cmd)
+      raise "Abstract!"
+    end
+  end
+
+  class System < BaseSystem
+    def run(cmd)
+      begin
+        stdout, @last_error, status = Open3.capture3({'LANG' => 'C'},*cmd)
+        if status.success?
+          return stdout.slice!(0..-(1 + $/.size))
+        else
+          return nil
+        end
+      rescue
+        return nil
       end
     end
-  rescue AIXLVM::LVMException => e
-    Chef::Log.fatal(e.message)
   end
-end
 
+end

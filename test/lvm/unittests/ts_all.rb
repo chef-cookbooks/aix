@@ -1,7 +1,3 @@
-# Author:: IBM Corporation
-# Cookbook Name:: aix
-# Provider:: volume_group
-#
 # Copyright:: 2016, International Business Machines Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,27 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# Support whyrun
-def whyrun_supported?
-  true
-end
-
-def load_current_resource
-  @volgroup = AIXLVM::VolumeGroup.new(@new_resource.name,AIXLVM::System.new())
-  @volgroup.physical_volumes=@new_resource.physical_volumes
-  @volgroup.use_as_hot_spare=@new_resource.use_as_hot_spare
-end
-
-action :create do
-  begin
-    if @volgroup.check_to_change()
-      converge_by(@volgroup.create().join(" | ")) do
-
-      end
-    end
-  rescue AIXLVM::LVMException => e
-    Chef::Log.fatal(e.message)
-  end
-end
-
+require 'test/unit'
+require_relative 'tc_aix_storage_objects.rb' if (/aix/ =~ RUBY_PLATFORM) !=nil
+require_relative 'tc_storage_objects.rb'
+require_relative 'tc_objects_vg'
+require_relative 'tc_objects_lv'
+require_relative 'tc_objects_fs'

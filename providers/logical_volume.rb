@@ -1,6 +1,6 @@
 # Author:: IBM Corporation
 # Cookbook Name:: aix
-# Provider:: volume_group
+# Provider:: logical_volume
 #
 # Copyright:: 2016, International Business Machines Corporation
 #
@@ -22,15 +22,16 @@ def whyrun_supported?
 end
 
 def load_current_resource
-  @volgroup = AIXLVM::VolumeGroup.new(@new_resource.name,AIXLVM::System.new())
-  @volgroup.physical_volumes=@new_resource.physical_volumes
-  @volgroup.use_as_hot_spare=@new_resource.use_as_hot_spare
+  @logicalvol = AIXLVM::LogicalVolume.new(@new_resource.name,AIXLVM::System.new())
+  @logicalvol.group=@new_resource.group
+  @logicalvol.size=@new_resource.size
+  @logicalvol.copies=@new_resource.copies
 end
 
 action :create do
   begin
-    if @volgroup.check_to_change()
-      converge_by(@volgroup.create().join(" | ")) do
+    if @logicalvol.check_to_change()
+      converge_by(@logicalvol.create().join(" | ")) do
 
       end
     end
@@ -38,4 +39,3 @@ action :create do
     Chef::Log.fatal(e.message)
   end
 end
-
