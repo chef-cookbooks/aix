@@ -46,7 +46,17 @@ end
 class SumaMetadataError < SumaError
 end
 
-class NimError < StandardError
+class NimDefineError < StandardError
+end
+
+def check_ohai
+  # get list of all NIM machines from Ohai
+  begin
+    all_machines=node.fetch('nim', {}).fetch('clients').keys
+    Chef::Log.debug("Ohai client machine's list is #{all_machines}")
+  rescue Exception => e
+    raise OhaiNimPluginNotFound, "SUMA-SUMA-SUMA error: cannot find nim info from Ohai output"
+  end
 end
 
 def compute_rq_type
@@ -68,23 +78,14 @@ end
 
 def compute_filter_ml (rq_type)
 
-  # get list of all NIM machines from Ohai
-  begin
-    all_machines=node.fetch('nim', {}).fetch('clients').keys
-    Chef::Log.debug("Ohai client machine's list is #{all_machines}")
-  rescue Exception => e
-    raise OhaiNimPluginNotFound, "SUMA-SUMA-SUMA error: cannot find nim info from Ohai output"
-  end
-
   selected_machines=Array.new
-
   # compute list of machines based on targets property
   if property_is_set?(:targets)
     if !targets.empty?
-      targets.split(',').each do |machine|
+      targets.split(/[,\s]/).each do |machine|
         # expand wildcard
         machine.gsub!(/\*/,'.*?')
-        all_machines.collect do |m|
+        node['nim']['clients'].keys.collect do |m|
           if m =~ /^#{machine}$/
             selected_machines.concat(m.split)
           end
@@ -92,11 +93,11 @@ def compute_filter_ml (rq_type)
       end
       selected_machines=selected_machines.sort.uniq
     else
-      selected_machines=all_machines.sort
+      selected_machines=node['nim']['clients'].keys.sort
       Chef::Log.warn("No targets specified, consider all nim standalone machines as targets")
     end
   else
-    selected_machines=all_machines.sort
+    selected_machines=node['nim']['clients'].keys.sort
     Chef::Log.warn("No targets specified, consider all nim standalone machines as targets")
   end
   Chef::Log.debug("List of targets expanded to #{selected_machines}")
@@ -113,7 +114,7 @@ def compute_filter_ml (rq_type)
       [ m, nil ]
     end
   end ]
-  hash.delete_if { |key,value| value.nil? or value.eql?(oslevel) }
+  hash.delete_if { |key,value| value.nil? } #or value.eql?(oslevel.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]) }
   Chef::Log.debug("Hash table (machine/mllevel) built #{hash}")
   
   # discover FilterML level
@@ -131,7 +132,7 @@ def compute_filter_ml (rq_type)
     filter_ml=ary.min
   end
   if filter_ml.nil?
-    raise InvalidTargetsProperty, "SUMA-SUMA-SUMA error: cannot discover filter ml"
+    raise InvalidTargetsProperty, "SUMA-SUMA-SUMA error: cannot discover filter ml based on the list of targets"
   else
     filter_ml.insert(4, '-')
   end
@@ -245,22 +246,26 @@ end
 load_current_value do
 end
 
-def duration
-  secs  = self.to_int
-  mins  = secs / 60
-  hours = mins / 60
-  days  = hours / 24
+=begin
+class Numeric
+  def duration
+    secs  = self.to_int
+    mins  = secs / 60
+    hours = mins / 60
+    days  = hours / 24
 
-  if days > 0
-    "#{days} days and #{hours % 24} hours"
-  elsif hours > 0
-    "#{hours} hours and #{mins % 60} mins"
-  elsif mins > 0
-    "#{mins} mins #{secs % 60} secs"
-  elsif secs >= 0
-    "#{secs} secs"
+    if days > 0
+      "#{days} days and #{hours % 24} hours"
+    elsif hours > 0
+      "#{hours} hours and #{mins % 60} mins"
+    elsif mins > 0
+      "#{mins} mins #{secs % 60} secs"
+    elsif secs >= 0
+      "#{secs} secs"
+    end
   end
 end
+=end
 
 action :download do
 
@@ -271,6 +276,8 @@ action :download do
   Chef::Log.debug("location=\"#{location}\"")
   Chef::Log.debug("targets=\"#{targets}\"")
   Chef::Log.debug("tmp_dir=\"#{tmp_dir}\"")
+
+  check_ohai
 
   # compute suma request type based on oslevel property
   rq_type=compute_rq_type
@@ -342,7 +349,7 @@ action :download do
 	suma_download_s="#{suma_s} -a Action=Download"
     converge_by("suma download operation: \"#{suma_download_s}\"") do
       Chef::Log.warn("Start downloading #{preview_downloaded} fixes (~ #{preview_dl.to_f.round(2)} GB) to \'#{dl_target}\' directory.")
-      start=Time.now
+      #start=Time.now
       download_downloaded=0
       download_failed=0
       download_skipped=0
@@ -366,7 +373,8 @@ action :download do
           else
             puts "\n#{line}"
 		  end
-          print "\rSUCCEEDED: #{succeeded}/#{preview_downloaded}\tFAILED: #{failed}/#{preview_failed}\tSKIPPED: #{skipped}/#{preview_skipped}.  (Total time: #{(Time.now - start).duration})."
+          #time_s=(Time.now-start).duration
+		  print "\rSUCCEEDED: #{succeeded}/#{preview_downloaded}\tFAILED: #{failed}/#{preview_failed}\tSKIPPED: #{skipped}/#{preview_skipped}" #.  (Total time: #{time_s})."
 		  stdout.flush
         end
 		puts ""
@@ -379,7 +387,7 @@ action :download do
       end
       Chef::Log.warn("Finish downloading #{succeeded} fixes.")
       unless exit_status.success?
-        raise SumaDownloadError, "SUMA-SUMA-SUMA error: Error downloading"
+        raise SumaDownloadError, "SUMA-SUMA-SUMA error: cannot downloading fixes"
       end
 	  
     end
@@ -389,7 +397,10 @@ action :download do
       nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
       Chef::Log.debug("NIM operation: #{nim_s}")
       converge_by("create nim lpp source \'#{lpp_source}}\'") do
-        shell_out!(nim_s)
+        so=shell_out(nim_s)
+        if so.error?
+          raise NimDefineError, "SUMA-SUMA-SUMA error: cannot define lpp source.\n#{so.stderr.chomp!}"
+        end
       end
     end
 

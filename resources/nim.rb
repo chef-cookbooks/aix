@@ -35,7 +35,7 @@ end
 load_current_value do
 end
 
-def expand_targets
+def check_ohai
   # get list of all NIM machines from Ohai
   begin
     all_machines=node.fetch('nim', {}).fetch('clients').keys
@@ -43,7 +43,9 @@ def expand_targets
   rescue Exception => e
     raise OhaiNimPluginNotFound, "NIM-NIM-NIM error: cannot find nim info from Ohai output"
   end
+end
 
+def expand_targets
   selected_machines=Array.new
   # compute list of machines based on targets property
   if property_is_set?(:targets)
@@ -51,19 +53,19 @@ def expand_targets
       targets.split(',').each do |machine|
         # expand wildcard
         machine.gsub!(/\*/,'.*?')
-        all_machines.collect do |m|
+        node['nim']['clients'].keys.collect do |m|
           if m =~ /^#{machine}$/
             selected_machines.concat(m.split)
           end
         end
-       end
+      end
       selected_machines=selected_machines.sort.uniq
     else
-      selected_machines=all_machines.sort
+      selected_machines=node['nim']['clients'].keys.sort
       Chef::Log.warn("No targets specified, consider all nim standalone machines as targets")
     end
   else
-    selected_machines=all_machines.sort
+    selected_machines=node['nim']['clients'].keys.sort
     Chef::Log.warn("No targets specified, consider all nim standalone machines as targets!")
   end
   Chef::Log.debug("List of targets expanded to #{selected_machines}")
@@ -91,6 +93,8 @@ action :update do
   Chef::Log.debug("desc=\"#{desc}\"")
   Chef::Log.debug("lpp_source=#{lpp_source}")
   Chef::Log.debug("targets=#{targets}")
+
+  check_ohai
 
   check_lpp_source_name(lpp_source)
 
@@ -126,7 +130,7 @@ action :update do
       end
       Chef::Log.warn("Finish updating #{m}.")
       unless exit_status.success? or do_not_error
-        raise NimCustError, "NIM-NIM-NIM error: Error updating"
+        raise NimCustError, "NIM-NIM-NIM error: cannot update"
       end
     end
   end
