@@ -19,7 +19,7 @@
 require 'chef/mixin/shell_out'
 begin
   require 'wpars'
-rescue LoadError
+rescue LoadError # rubocop:disable Lint/HandleExceptions
   # This space left intentionally blank.
 end
 
