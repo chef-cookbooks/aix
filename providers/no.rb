@@ -100,7 +100,6 @@ action :update do
         # ... if this one is not set to the desired value add it to the no command
         else
           Chef::Log.debug("no: #{tunable} will be set to value #{value}")
-          old_string_shell_out = string_shell_out
           string_shell_out = string_shell_out << " -o #{tunable}=#{value} "
           converge_by("no: setting tunable #{tunable}=#{value}") do
             # if type is bosboot or reboot
@@ -135,7 +134,6 @@ action :reset do
       # check if attribute exists for current device, if not raising error
       if @current_resource.tunables.key?(tunable)
         Chef::Log.debug("no: reseting tunable #{tunable}")
-        old_string_shell_out = string_shell_out
         string_shell_out = string_shell_out << " -d #{tunable}"
         converge_by("no: reseting tunable #{tunable}") do
           # if type is bosboot or reboot or incremental
