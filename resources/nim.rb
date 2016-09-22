@@ -32,57 +32,52 @@ end
 def expand_targets
   # get list of all NIM machines from Ohai
   begin
-    all_machines=node.fetch('nim', {}).fetch('clients').keys
+    all_machines = node.fetch('nim', {}).fetch('clients').keys
     Chef::Log.info("Ohai client machine's list is #{all_machines}")
   rescue Exception => e
-    raise OhaiNimPluginNotFound, "SUMA-SUMA-SUMA cannot find nim info from Ohai output"
+    raise OhaiNimPluginNotFound, 'SUMA-SUMA-SUMA cannot find nim info from Ohai output'
   end
 
-  selected_machines=Array.new
+  selected_machines = []
 
   # compute list of machines based on targets property
   if property_is_set?(:targets)
     if !targets.empty?
       targets.split(',').each do |machine|
-        if machine.match(/\*/)
+        if machine =~ /\*/
           # expand wildcard
-          machine.gsub!(/\*/,'.*?')
+          machine.gsub!(/\*/, '.*?')
           all_machines.collect do |m|
-            if m =~ /^#{machine}$/
-              selected_machines.concat(m.split)
-            end
+            selected_machines.concat(m.split) if m =~ /^#{machine}$/
           end
         else
           selected_machines.concat(machine.split)
         end
       end
-      selected_machines=selected_machines.sort.uniq
+      selected_machines = selected_machines.sort.uniq
     else
-      selected_machines=all_machines.sort
-      Chef::Log.warn("No targets specified, consider all nim standalone machines as targets")
+      selected_machines = all_machines.sort
+      Chef::Log.warn('No targets specified, consider all nim standalone machines as targets')
     end
   else
-    selected_machines=all_machines.sort
-    Chef::Log.warn("No targets specified, consider all nim standalone machines as targets!")
+    selected_machines = all_machines.sort
+    Chef::Log.warn('No targets specified, consider all nim standalone machines as targets!')
   end
   Chef::Log.info("List of targets expanded to #{selected_machines}")
   selected_machines
 end
 
-def check_lpp_source_name (lpp_source)
-  begin
-    if node['nim']['lpp_sources'].fetch(lpp_source).eql?(lpp_source)
-      Chef::Log.info("Found lpp source #{lpp_source}")
-    end
-  rescue Exception => e
-    raise InvalidLppSourceProperty, "SUMA-SUMA-SUMA cannot find lpp_source \'#{lpp_source}\' from Ohai output"
+def check_lpp_source_name(lpp_source)
+  if node['nim']['lpp_sources'].fetch(lpp_source).eql?(lpp_source)
+    Chef::Log.info("Found lpp source #{lpp_source}")
   end
+rescue Exception => e
+  raise InvalidLppSourceProperty, "SUMA-SUMA-SUMA cannot find lpp_source \'#{lpp_source}\' from Ohai output"
 end
 
 action :update do
-
   # inputs
-  puts ""
+  puts ''
   Chef::Log.info("desc=\"#{desc}\"")
   Chef::Log.info("lpp_source=#{lpp_source}")
   Chef::Log.info("targets=#{targets}")
@@ -90,15 +85,14 @@ action :update do
   check_lpp_source_name(lpp_source)
 
   # build list of targets
-  target_list=expand_targets
+  target_list = expand_targets
   Chef::Log.info("target_list: #{target_list}")
 
   # nim install
-  nim_s="nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all #{target_list.join(' ')}"
+  nim_s = "nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all #{target_list.join(' ')}"
   Chef::Log.info("NIM operation: #{nim_s}")
   converge_by("nim custom operation: \"#{nim_s}\"") do
-    Chef::Log.info("Install fixes...")
+    Chef::Log.info('Install fixes...')
     shell_out!(nim_s)
   end
-
 end

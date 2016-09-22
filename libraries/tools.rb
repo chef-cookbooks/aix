@@ -24,28 +24,25 @@ module AIXLVM
 
   class BaseSystem
     attr_reader :last_error
-    def initialize()
-      @last_error=''
+    def initialize
+      @last_error = ''
     end
 
-    def run(cmd)
-      raise "Abstract!"
+    def run(_cmd)
+      raise 'Abstract!'
     end
   end
 
   class System < BaseSystem
     def run(cmd)
-      begin
-        stdout, @last_error, status = Open3.capture3({'LANG' => 'C'},*cmd)
-        if status.success?
-          return stdout.slice!(0..-(1 + $/.size))
-        else
-          return nil
-        end
-      rescue
+      stdout, @last_error, status = Open3.capture3({ 'LANG' => 'C' }, *cmd)
+      if status.success?
+        return stdout.slice!(0..-(1 + $INPUT_RECORD_SEPARATOR.size))
+      else
         return nil
       end
+    rescue
+      return nil
     end
   end
-
 end
