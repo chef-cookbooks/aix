@@ -244,7 +244,6 @@ end
 
 action :download do
   # inputs
-  puts ''
   Chef::Log.info("desc=\"#{desc}\"")
   Chef::Log.info("oslevel=\"#{oslevel}\"")
   Chef::Log.info("location=\"#{location}\"")

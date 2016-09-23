@@ -75,7 +75,6 @@ end
 
 action :update do
   # inputs
-  puts ''
   Chef::Log.info("desc=\"#{desc}\"")
   Chef::Log.info("lpp_source=#{lpp_source}")
   Chef::Log.info("targets=#{targets}")
