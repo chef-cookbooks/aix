@@ -19,18 +19,11 @@ Lint/RescueException:
     - 'resources/nim.rb'
     - 'resources/suma.rb'
 
-Lint/UnreachableCode:
-  Exclude:
-    - 'providers/altdisk.rb'
-
 Lint/UselessAssignment:
   Exclude:
     - 'examples/update_by_suma.rb'
-    - 'providers/altdisk.rb'
     - 'providers/chsec.rb'
     - 'providers/nimclient.rb'
-    - 'providers/no.rb'
-    - 'providers/tunables.rb'
     - 'resources/nim.rb'
     - 'resources/suma.rb'
 
@@ -42,11 +35,6 @@ Style/AccessorMethodName:
     - 'libraries/storage_objects.rb'
     - 'providers/altdisk.rb'
     - 'test/lvm/unittests/mock.rb'
-
-Style/AsciiComments:
-  Exclude:
-    - 'resources/nim.rb'
-    - 'resources/suma.rb'
 
 Style/ClassAndModuleCamelCase:
   Exclude:
