@@ -1,4 +1,19 @@
 #!/bin/ksh93
+#
+# Copyright 2016, Atos <jerome.hurstel@atos.net>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 function show_error_chef
 {
@@ -13,7 +28,7 @@ function check_nim
 {
     expected_lpp_source=$1
     expected_name=$2
-	
+
 	if [ -z "$expected_name" -a -z "$expected_server" ]
 	then
 		if [ -f "/tmp/img.source/nim.log" ]
@@ -75,7 +90,7 @@ function run_test
 	nb_test_wanted=$2
 	must_be_success=$3
 	log_manage=$4
-	
+
     rm -rf $current_dir/aixtest/trace.log
     rm -rf $current_dir/aixtest/chef.log
 	echo "{\n\"run_list\": [ \"recipe[aixtest::${ruby_test_name}]\" ]\n}\n" > $current_dir/firstrun.json
@@ -94,7 +109,7 @@ function run_test
 	else # chef exit with success
 		res=0 # return success
 		[ $must_be_success -eq 0 ] && res=1 # if not be success => error
-	fi 	
+	fi
 	if [ $res -ne 0 ]
 	then
 		show_error_chef
@@ -130,7 +145,7 @@ echo "--------- Run tests recipes ---------"
 
 nb_failure=0
 if [ ! -z "$(echo $run_option | grep 'A')" ]
-then 
+then
 	echo "---- Nominal tests ----"
 	rm -rf /tmp/img.source
 	mkdir -p /tmp/img.source/7100-09-04-lpp_source
@@ -156,7 +171,7 @@ rm -rf /tmp/img.source
 mkdir -p /tmp/img.source/7100-09-04-lpp_source
 suma -x -a RqName=7100-09-04 -a RqType=SP -a Action=Download -a DLTarget=/tmp/img.source/7100-09-04-lpp_source -a FilterML=7100-09 > /dev/null
 if [ ! -z "$(echo $run_option | grep '1')" ]
-then 
+then
 	echo '== aix_nim "Updating client unknown" =='
 	run_test "test_error_1" 1 0
 	if [ $? -eq 0 ]
@@ -173,11 +188,11 @@ then
 				echo "error '$error_msg'"
 				let nb_failure+=1
 			fi
-		fi 
+		fi
 	fi
 fi
 if [ ! -z "$(echo $run_option | grep '2')" ]
-then 
+then
 	echo '== aix_nim "Updating but failure" =='
 	run_test "test_error_2" 1 0
 	if [ $? -eq 0 ]
@@ -194,12 +209,12 @@ then
 				echo "error '$error_msg'"
 				let nb_failure+=1
 			fi
-		fi 
+		fi
 	fi
 fi
 
 echo "--------- Result tests ---------"
-if [ $nb_failure -eq 0 ] 
+if [ $nb_failure -eq 0 ]
 then
 	echo "====== SUCCESS ====== "
 else
