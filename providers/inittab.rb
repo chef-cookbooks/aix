@@ -14,9 +14,6 @@
 # limitations under the License.
 #
 
-require 'chef/mixin/shell_out'
-
-include Chef::Mixin::ShellOut
 use_inline_resources
 
 # Support whyrun
@@ -29,7 +26,7 @@ def load_current_resource
   @current_resource.exists = false
 
   so = shell_out("lsitab #{@new_resource.identifier}")
-  if so.exitstatus == 0
+  unless so.error?
     @current_resource.exists = true
     fields = so.stdout.lines.first.chomp.split(':')
     # perfstat:2:once:/usr/lib/perf/libperfstat_updt_dictionary >/dev/console 2>&1

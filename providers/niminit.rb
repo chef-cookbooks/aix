@@ -14,9 +14,6 @@
 # limitations under the License.
 #
 
-require 'chef/mixin/shell_out'
-
-include Chef::Mixin::ShellOut
 use_inline_resources
 
 # Support whyrun
@@ -26,12 +23,11 @@ end
 
 def load_current_resource
   @current_resource = Chef::Resource::AixNiminit.new(@new_resource.name)
-  @current_resource.exists = false
 
   # we assume nim client is configured if niminfo exists ...
   # Idea, checking if nimsh running will tell us its runs but we can't get config this way
   # I don't know if there is a better way to do this
-  @current_resource.exists = true if ::File.exist?('/etc/niminfo')
+  @current_resource.exists = ::File.exist?('/etc/niminfo')
 end
 
 action :setup do
@@ -46,11 +42,7 @@ action :setup do
       connect = @new_resource.connect
       niminit_s = 'niminit -a master=' << master << ' -a name=' << name << ' -a pif_name=' << pif_name << ' -a connect=' << connect
       Chef::Log.debug("niminit: running #{niminit_s}")
-      niminit = Mixlib::ShellOut.new(niminit_s)
-      niminit.valid_exit_codes = 0
-      niminit.run_command
-      niminit.error!
-      niminit.error?
+      shell_out!(niminit_s)
     end
   end
 end
@@ -61,8 +53,7 @@ action :remove do
     converge_by('niminit: removing nimclient configuration') do
       stopsrc_s = 'stopsrc -g nimclient'
       Chef::Log.debug("niminit: stoping nimclient running #{stopsrc_s}")
-      niminit = Mixlib::ShellOut.new(stopsrc_s)
-      niminit.run_command
+      shell_out(stopsrc_s)
       # we don't care here about return code, sometime nimsh will not be runing
       # removing /etc/niminfo
       Chef::Log.debug('niminit: removing /etc/niminfo')
