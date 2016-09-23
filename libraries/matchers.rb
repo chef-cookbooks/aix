@@ -158,7 +158,7 @@ if defined?(ChefSpec)
     ChefSpec::Matchers::ResourceMatcher.new(:aix_nimclient, :disable_push, resource_name)
   end
 
-  def set_date_aix_nimclient(resource_name)
+  def set_date_aix_nimclient(resource_name) # rubocop:disable Style/AccessorMethodName
     ChefSpec::Matchers::ResourceMatcher.new(:aix_nimclient, :set_date, resource_name)
   end
 
