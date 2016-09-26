@@ -1,4 +1,4 @@
-# Author:: Jérôme Hurstel (<jerome.hurstel@atos.ne>) & Laurent Gay (<laurent.gay@atos.net>)
+# Author:: IBM Corporation
 # Cookbook Name:: aix
 # Provider:: suma
 #
@@ -102,6 +102,10 @@ def compute_filter_ml (rq_type)
   end
   Chef::Log.debug("List of targets expanded to #{selected_machines}")
 
+  if selected_machines.empty?
+    raise InvalidTargetsProperty, "SUMA-SUMA-SUMA error: cannot contact any machines"
+  end
+
   # build machine-oslevel hash
   hash=Hash[selected_machines.collect do |m|
     begin
@@ -128,6 +132,10 @@ def compute_filter_ml (rq_type)
     # find highest ML
     filter_ml=ary.max
   when 'SP', 'TL'
+    # check ml level of machines against expected oslevel
+    if ary.min[0..3].to_i < oslevel.match(/^([0-9]{4})-[0-9]{2}(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].to_i
+      raise InvalidTargetsProperty, "SUMA-SUMA-SUMA error: cannot upgrade to a new release using suma"
+    end
     # find lowest ML
     filter_ml=ary.min
   end
@@ -393,7 +401,7 @@ action :download do
     end
 
 	# create nim lpp source
-    if failed != 0 and node['nim']['lpp_sources'].fetch(lpp_source, nil) == nil
+    if failed == 0 and node['nim']['lpp_sources'].fetch(lpp_source, nil) == nil
       nim_s="nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
       Chef::Log.debug("NIM operation: #{nim_s}")
       converge_by("create nim lpp source \'#{lpp_source}}\'") do

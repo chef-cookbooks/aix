@@ -38,15 +38,17 @@ levels={ '7.1 TL0' => ['7100-00-00-0000', '7100-00-01-1037', '7100-00-02-1041', 
 		 '7.2 TL0' => ['7200-00-00-0000', '7200-00-01-1543', '7200-00-02-1614'],
          'Latest' => [] }
 
-#oslevel=Hash.new{ |h,k| h[k] = node['nim']['clients'][k]['oslevel'] }
-#node['nim']['clients'].keys.sort.each { |key| oslevel[key] }
-#puts oslevel
+#machines=Hash.new{ |h,k| h[k] = [ node['nim']['clients'][k]['oslevel'] ]}#, node['nim']['clients'][k]['Cstate'] ] }
+#machines['machine']=['oslevel'] #,'Cstate']
+#node['nim']['clients'].keys.sort.each { |key| machines[key] }
+#puts machines
 #nodes=Hash.new{ |h,k| h[k] = { 'machine' => k, 'oslevel' => node['nim']['clients'][k]['oslevel'] } }
 #node['nim']['clients'].keys.sort.each { |key| nodes[key] }
 #puts nodes
 nodes=Hash.new{ |h,k| h[k] = {} }
 nodes['machine']=node['nim']['clients'].keys
 nodes['oslevel']=node['nim']['clients'].values.collect { |client| client['oslevel'] }
+nodes['Cstate']=node['nim']['clients'].values.collect { |client| client['lsnim']['Cstate'] }
 
 puts ""
 puts "#########################################################"
@@ -69,7 +71,7 @@ ohai 'reload_nim' do
   plugin 'nim'
 end
 
-aix_suma "Downloading installation images" do
+aix_suma "Downloading #{level} installation images" do
 	oslevel		"#{level}"
 	location	"#{directory}"
 	targets		"#{client}"
@@ -80,6 +82,7 @@ end
 aix_nim "Updating machine - 1st pass" do
 	lpp_source	"#{level}-lpp_source"
 	targets		"#{client}"
+	async		false
 	action		:update
 end
 
