@@ -21,90 +21,7 @@ property :lpp_source, String
 property :targets, String
 property :async, [true, false], default: false
 
-class OhaiNimPluginNotFound < StandardError
-end
-
-class InvalidLppSourceProperty < StandardError
-end
-
-class InvalidTargetsProperty < StandardError
-end
-
-class NimCustError < StandardError
-end
-
 load_current_value do
-end
-
-def check_ohai
-  # get list of all NIM machines from Ohai
-  begin
-    all_machines=node.fetch('nim', {}).fetch('clients').keys
-    Chef::Log.debug("Ohai client machine's list is #{all_machines}")
-  rescue Exception => e
-    raise OhaiNimPluginNotFound, "NIM-NIM-NIM error: cannot find nim info from Ohai output"
-  end
-end
-
-def expand_targets
-  selected_machines=Array.new
-  # compute list of machines based on targets property
-  if property_is_set?(:targets)
-    if !targets.empty?
-      targets.split(',').each do |machine|
-        # expand wildcard
-        machine.gsub!(/\*/,'.*?')
-        node['nim']['clients'].keys.collect do |m|
-          if m =~ /^#{machine}$/
-            selected_machines.concat(m.split)
-          end
-        end
-      end
-      selected_machines=selected_machines.sort.uniq
-    else
-      selected_machines=node['nim']['clients'].keys.sort
-      Chef::Log.warn("No targets specified, consider all nim standalone machines as targets")
-    end
-  else
-    selected_machines=node['nim']['clients'].keys.sort
-    Chef::Log.warn("No targets specified, consider all nim standalone machines as targets!")
-  end
-  Chef::Log.debug("List of targets expanded to #{selected_machines}")
-  
-  if selected_machines.empty?
-    raise InvalidTargetsProperty, "NIM-NIM-NIM error: cannot contact any machines"
-  end
-  selected_machines
-end
-
-def check_lpp_source_name (lpp_source)
-  oslevel=''
-  begin
-    if node['nim']['lpp_sources'].fetch(lpp_source)
-      Chef::Log.debug("Found lpp source #{lpp_source}")
-      oslevel=lpp_source.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})-lpp_source$/)[1]
-    end
-  rescue Exception => e
-    raise InvalidLppSourceProperty, "NIM-NIM-NIM error: cannot find lpp_source \'#{lpp_source}\' from Ohai output"
-  end
-  oslevel
-end
-
-class OsLevel
-  include Comparable
-  attr :str
-  def <=>(oslevel)
-    if str.delete('-').to_i < oslevel.str.delete('-').to_i
-      -1
-    elsif str.delete('-').to_i > oslevel.str.delete('-').to_i
-      1
-    else
-      0
-    end
-  end
-  def initialize(str)
-    @str = str
-  end
 end
 
 action :update do
@@ -134,14 +51,14 @@ action :update do
       so=shell_out!(nim_s)
       if so.error?
         unless so.stdout =~ /Either the software is already at the same level as on the media, or/m
-          raise NimCustError, "NIM-NIM-NIM error: cannot update"
+          raise NimCustError, "Error: cannot update"
         end
       end 
     end
   else
     target_list.each do |m|
 	  current_os_level=node['nim']['clients'][m]['oslevel']
-	  if OsLevel(current_os_level) >= OsLevel(os_level)
+	  if OsLevel.new(current_os_level) >= OsLevel.new(os_level)
         Chef::Log.warn("Machine #{m} is already at same or higher level than #{os_level}")
       else
         nim_s="nim -o cust -a lpp_source=#{lpp_source} -a accept_licenses=yes -a fixes=update_all #{m}"
@@ -170,7 +87,7 @@ action :update do
           end
           Chef::Log.warn("Finish updating #{m}.")
           unless exit_status.success? or do_not_error
-            raise NimCustError, "NIM-NIM-NIM error: cannot update"
+            raise NimCustError, "Error: cannot update"
           end
         end
       end
@@ -179,6 +96,47 @@ action :update do
 
 end
 
-action :check do
+action :setup do
+  # Example of nim_master_setup
+  # nim_master_setup -a mk_resource=no -B -a device=/mnt
+  nim_master_setup_s="nim_master_setup -B -a mk_resource=no"
 
+  unless mount_point.nil?
+    nimmster_setup_s = nim_master_setup_s << ' -a device=' << mount_point
+  end
+
+  # converge here
+  converge_by("nim: setup master \"#{nim_master_setup_s}\"") do
+    nim = Mixlib::ShellOut.new(nim_master_setup_s)
+    nim.valid_exit_codes = 0
+    nim.run_command
+    nim.error!
+    nim.error?
+  end
+end
+
+action :check do
+  check_ohai
+  # build hash table
+  nodes=Hash.new{ |h,k| h[k] = {} }
+  nodes['machine']=node['nim']['clients'].keys
+  nodes['oslevel']=node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
+  nodes['Cstate']=node['nim']['clients'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }
+  # converge here
+  so=print_hash_by_columns(nodes)
+  converge_by("check update status:\n#{so}") do
+  end
+end
+
+action :compare do
+  check_ohai
+  # build list of targets
+  target_list=expand_targets
+  Chef::Log.debug("target_list: #{target_list}")
+  # run niminv command
+  niminv_s="niminv -o invcmp -a targets=master,#{target_list.join(',')} -a base=any"
+  so=shell_out!(niminv_s).stdout
+  # converge here
+  converge_by("compare installation inventory:\n#{so}") do
+  end
 end
