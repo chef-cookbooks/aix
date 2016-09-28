@@ -96,7 +96,7 @@ action :update do
 
 end
 
-action :setup do
+action :master_setup do
   # Example of nim_master_setup
   # nim_master_setup -a mk_resource=no -B -a device=/mnt
   nim_master_setup_s="nim_master_setup -B -a mk_resource=no"
@@ -134,10 +134,38 @@ action :compare do
   target_list=expand_targets
   Chef::Log.debug("target_list: #{target_list}")
   # run niminv command
-  niminv_s="niminv -o invcmp -a targets=master,#{target_list.join(',')} -a base=any"
+  niminv_s="niminv -o invcmp -a targets=#{target_list.join(',')} -a base=any"
   so=shell_out!(niminv_s).stdout
   # converge here
   converge_by("compare installation inventory:\n#{so}") do
+  end
+end
+
+action :allocate do
+  Chef::Log.debug("target: #{target}")
+  Chef::Log.debug("lpp_source: #{lpp_source}")
+  nim_s="nim -o allocate -a lpp_source=#{lpp_source} #{target}"
+  # converge here
+  converge_by("nim: allocate operation \"#{nim_s}\"") do
+    nim = Mixlib::ShellOut.new(nim_s)
+    nim.valid_exit_codes = 0
+    nim.run_command
+    nim.error!
+    nim.error?
+  end
+end
+
+action :deallocate do
+  Chef::Log.debug("target: #{target}")
+  Chef::Log.debug("lpp_source: #{lpp_source}")
+  nim_s="nim -o deallocate -a lpp_source=#{lpp_source} #{target}"
+  # converge here
+  converge_by("nim: deallocate operation \"#{nim_s}\"") do
+    nim = Mixlib::ShellOut.new(nim_s)
+    nim.valid_exit_codes = 0
+    nim.run_command
+    nim.error!
+    nim.error?
   end
 end
 

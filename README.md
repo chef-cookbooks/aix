@@ -377,6 +377,130 @@ Actions:
 * `delete_all` - remove all entries in /etc/hosts
 * `change` - change an entry in /etc/hosts
 
+### suma
+
+Use suma to download fixes on a nim server.
+You can download service pack, or technology level.
+You can also download latest service pack of latest technology level for the HIGHEST release in the client list.
+It means if you provide AIX 7.1 and 7.2 clients, only last 7.2 TL and SP will be downloaded.
+
+In some cases a metadata operation is performed to discover the oslevel build number or the latest service pack level.
+The tmp_dir is used to store metadata files and is automatically created if it does not exist.
+
+It will create the location directory if it does not exist.
+
+It will also create the NIM lpp_source resource if needed meeting the following requirement.
+Name contains build number and ends with the type of resource:
+ * 7100-04-00-0000-lpp_source
+ * 7100-03-01-1341-lpp_source
+ * 7100-03-02-1412-lpp_source
+
+You can provide a nim lpp_source as oslevel property.
+
+You may want to reload Ohai info after a successfull download by adding:
+ * the following resource to your recipe:
+ohai 'reload_nim' do
+  action :nothing
+  plugin 'nim'
+end
+ * the following notifies property to your resource:
+aix_suma
+  [...]
+  notifies :reload, 'ohai[reload_nim]', :immediately
+end
+
+```ruby
+aix_suma "download needed fixes to update client list to 7.1 TL3 SP1" do
+  oslevel "7100-03-01-1341"
+  location "/export/extra/nim"
+  targets "client1,client2,client3"
+  action :download
+end
+
+aix_suma "... additionally perform suma metadata operation to discover the build number and store files in tmp_dir" do
+  oslevel "7100-03-01"
+  location "/export/extra/nim"
+  targets "client1,client2,client3"
+  tmp_dir "/tmp/suma/metadata"
+  action :download
+end
+
+aix_suma "download needed fixes to update client list to 7.1 TL4" do
+  oslevel "7100-04"
+  location "/export/extra/nim"
+  targets "client1,client2,client3"
+  action :download
+end
+
+aix_suma "download needed fixes to update client list to last TL and last SP" do
+  oslevel "latest"
+  location "/export/extra/nim"
+  targets "client1,client2,client3"
+  action :download
+end
+
+aix_suma "update nim lpp_source with needed fixes" do
+  oslevel "7100-03-01-1341-lpp_source"
+  location "/export/extra/nim"
+  targets "client1,client2,client3"
+  action :download
+end
+
+```
+Parameters:
+
+* `oslevel` - service pack, technology level or 'latest' (with or without build number)
+* `location` - directory to store downloaded fixes
+* `targets` - space or comma separated list of clients to consider for update process (star wildcard accepted)
+* `tmp_dir` - directory to store suma metadata files
+
+Actions:
+* `download` - preview and download fixes
+
+### nim
+
+Use nim to setup a nim server or install packages, update service pack, or technology level.
+Your NIM lpp_source must match the exact oslevel output
+ * 7100-04-00-0000-lpp_source
+ * 7100-03-01-1341-lpp_source
+ * 7100-03-02-1412-lpp_source
+
+```ruby
+aix_nim "setup nim server" do
+  device "/mnt"
+  action :master_setup
+end
+
+aix_nim "updating clients" do
+  lpp_source "7100-03-01-1341-lpp_source"
+  targets "client1,client2,client3"
+  async	true
+  action :update
+end
+
+aix_nim "check client status" do
+  action :check
+end
+
+aix_nim "compare machines installation" do
+  targets "master,client1,client2,client3"
+  action :compare
+end
+
+```
+Parameters:
+
+* `device` - NFS mount directory containing bos.sysmgt.nim.master package
+* `lpp_source` - name of nim lpp_source resource
+* `targets` - comma or space separated list of clients to update (star wildcard accepted)
+* `async` - if true, customization is performed asynchronously
+
+Actions:
+* `master_setup` - setup the nim server
+* `update` - install downloaded fixes
+* `check` - display all nim standalone clients status
+* `compare` - display installation inventory comparison
+
 ### niminit
 
 Use niminit to configure the nimclient package.
