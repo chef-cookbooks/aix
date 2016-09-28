@@ -37,13 +37,21 @@ action :download do
 
   check_ohai
 
-  # compute suma filter ml based on oslevel and targets property
-  filter_ml=compute_filter_ml
-  Chef::Log.debug("filter_ml=#{filter_ml}")
-
   # compute suma request type based on oslevel property
   rq_type=compute_rq_type
   Chef::Log.debug("rq_type=#{rq_type}")
+
+  # compute suma filter ml based on targets property
+  filter_ml=compute_filter_ml(rq_type)
+  Chef::Log.debug("filter_ml=#{filter_ml}")
+
+  # check ml level of machines against expected oslevel
+  case rq_type
+  when 'SP','TL'
+    if filter_ml[0..3].to_i < oslevel.match(/^([0-9]{4})-[0-9]{2}(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].to_i
+      raise InvalidOsLevelProperty, "Error: cannot upgrade machines to a new release using suma"
+    end
+  end
 
   # compute suma request name based on metadata info
   rq_name=compute_rq_name(rq_type)

@@ -203,38 +203,17 @@ def compute_rq_type
   rq_type
 end
 
-def compute_filter_ml
+def compute_filter_ml (rq_type)
 
   # build machine-oslevel hash
   hash=Hash.new{ |h,k| h[k] = node['nim']['clients'].fetch(k,{}).fetch('oslevel',nil) }
   expand_targets.each { |k| hash[k] }
   hash.delete_if { |k,v| v.nil? }
   Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
-=begin  
-  hash=Hash[expand_targets.collect do |m|
-    begin
-      client_oslevel=node['nim']['clients'].fetch(m).fetch('oslevel')
-      Chef::Log.info("Obtained OS level for machine \'#{m}\': #{client_oslevel}")
-      client_mllevel=client_oslevel.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]
-      [ m, client_mllevel ]
-    rescue Exception => e
-      Chef::Log.warn("Cannot find OS level for machine \'#{m}\' from Ohai output")
-      [ m, nil ]
-    end
-  end ]
-  hash.delete_if { |key,value| value.nil? }
-  Chef::Log.debug("Hash table (machine/mllevel) built #{hash}")
-=end
+
   # discover FilterML level
   ary=hash.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
 
-  # check ml level of machines against expected oslevel
-  unless oslevel.downcase =~ /latest/
-    if ary.min[0..3].to_i < oslevel.match(/^([0-9]{4})-[0-9]{2}(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].to_i
-      raise InvalidTargetsProperty, "Error: cannot upgrade to a new release using suma"
-    end
-  end
-  
   # find lowest ML
   filter_ml=ary.min
 
