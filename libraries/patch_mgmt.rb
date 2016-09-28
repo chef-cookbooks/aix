@@ -139,13 +139,22 @@ def expand_targets
   if property_is_set?(:targets)
     if !targets.empty?
       targets.split(/[,\s]/).each do |machine|
-        # expand wildcard
-        machine.gsub!(/\*/,'.*?')
-        node['nim']['clients'].keys.each do |m|
-          if m =~ /^#{machine}$/
-            selected_machines.concat(m.split)
+        #if machine =~ /$\/.*?\/^/
+          # machine is a regexp
+		  #node['nim']['clients'].keys.each do |m|
+            #if m =~ machine
+              #selected_machines.concat(m.split)
+            #end
+          #end
+		#else
+          # expand wildcard
+          machine.gsub!(/\*/,'.*?')
+          node['nim']['clients'].keys.each do |m|
+            if m =~ /^#{machine}$/
+              selected_machines.concat(m.split)
+            end
           end
-        end
+        #end
       end
       selected_machines=selected_machines.sort.uniq
     else
@@ -194,9 +203,14 @@ def compute_rq_type
   rq_type
 end
 
-def compute_filter_ml (rq_type)
+def compute_filter_ml
 
   # build machine-oslevel hash
+  hash=Hash.new{ |h,k| h[k] = node['nim']['clients'].fetch(k,{}).fetch('oslevel',nil) }
+  expand_targets.each { |k| hash[k] }
+  hash.delete_if { |k,v| v.nil? }
+  Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
+=begin  
   hash=Hash[expand_targets.collect do |m|
     begin
       client_oslevel=node['nim']['clients'].fetch(m).fetch('oslevel')
@@ -208,27 +222,22 @@ def compute_filter_ml (rq_type)
       [ m, nil ]
     end
   end ]
-  hash.delete_if { |key,value| value.nil? } #or value.eql?(oslevel.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1]) }
+  hash.delete_if { |key,value| value.nil? }
   Chef::Log.debug("Hash table (machine/mllevel) built #{hash}")
-  
+=end
   # discover FilterML level
-  ary=hash.values.collect { |ml| ml.delete('-') }
-  case rq_type
-  when 'Latest'
-    # check ml level of machines
-    if ary.min[0..3].to_i < ary.max[0..3].to_i
-	  Chef::Log.warn("Release level mismatch")
-    end
-    # find highest ML
-    filter_ml=ary.max
-  when 'SP', 'TL'
-    # check ml level of machines against expected oslevel
+  ary=hash.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
+
+  # check ml level of machines against expected oslevel
+  unless oslevel.downcase =~ /latest/
     if ary.min[0..3].to_i < oslevel.match(/^([0-9]{4})-[0-9]{2}(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].to_i
       raise InvalidTargetsProperty, "Error: cannot upgrade to a new release using suma"
     end
-    # find lowest ML
-    filter_ml=ary.min
   end
+  
+  # find lowest ML
+  filter_ml=ary.min
+
   if filter_ml.nil?
     raise InvalidTargetsProperty, "Error: cannot discover filter ml based on the list of targets"
   else
@@ -237,7 +246,7 @@ def compute_filter_ml (rq_type)
   filter_ml
 end
 
-def compute_rq_name (rq_type, filter_ml)
+def compute_rq_name (rq_type)
   if property_is_set?(:tmp_dir)
     if tmp_dir.empty?
       tmp_dir="/usr/sys/inst.images"
@@ -253,8 +262,27 @@ def compute_rq_name (rq_type, filter_ml)
 
   case rq_type
   when 'Latest'
+    # build machine-oslevel hash
+    hash=Hash.new{ |h,k| h[k] = node['nim']['clients'].fetch(k,{}).fetch('oslevel',nil) }
+    expand_targets.each { |key| hash[key] }
+    hash.delete_if { |k,v| v.nil? }
+    Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
+    # discover FilterML level
+    ary=hash.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
+    # check ml level of machines
+    if ary.min[0..3].to_i < ary.max[0..3].to_i
+      Chef::Log.warn("Release level mismatch")
+    end
+	# find highest ML
+    metadata_filter_ml=ary.max
+    if metadata_filter_ml.nil?
+      raise InvalidTargetsProperty, "Error: cannot discover filter ml based on the list of targets"
+    else
+      metadata_filter_ml.insert(4, '-')
+    end
+
     # find latest SP for highest TL
-    suma_metadata_s="/usr/sbin/suma -x -a DisplayName=\"#{desc}\" -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{filter_ml}"
+    suma_metadata_s="/usr/sbin/suma -x -a DisplayName=\"#{desc}\" -a Action=Metadata -a RqType=#{rq_type} -a DLTarget=#{tmp_dir} -a FilterML=#{metadata_filter_ml}"
     so=shell_out(suma_metadata_s)
     if so.error?
       raise SumaMetadataError, "Error: \"#{suma_metadata_s}\" returns \'#{so.stderr.chomp!}\'!\n#{so.stdout}"

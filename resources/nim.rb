@@ -48,7 +48,7 @@ action :update do
     nim_s="nim -o cust -a lpp_source=#{lpp_source} -a accept_licenses=yes -a fixes=update_all -a async=yes #{str}"
     Chef::Log.warn("Start updating machines \'#{str}\' to #{lpp_source}.")
     converge_by("nim custom operation: \"#{nim_s}\"") do
-      so=shell_out!(nim_s)
+      so=shell_out!(nim_s, timeout: 3000)
       if so.error?
         unless so.stdout =~ /Either the software is already at the same level as on the media, or/m
           raise NimCustError, "Error: cannot update"
@@ -87,7 +87,7 @@ action :update do
           end
           Chef::Log.warn("Finish updating #{m}.")
           unless exit_status.success? or do_not_error
-            raise NimCustError, "Error: cannot update"
+            raise NimCustError, "Error: cannot update machine #{m}"
           end
         end
       end
@@ -138,5 +138,18 @@ action :compare do
   so=shell_out!(niminv_s).stdout
   # converge here
   converge_by("compare installation inventory:\n#{so}") do
+  end
+end
+
+action :bos_inst do
+  group="#{lpp_source.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})-[0-9]{4}-lpp_source$/)[1]}_resources"
+  nim_s="nim -o bos_inst -a source=mksysb -a group=#{group} -a target=#{targets.split(/[,\s]/)}"
+  # converge here
+  converge_by("nim: bos_inst operation \"#{nim_s}\"") do
+    nim = Mixlib::ShellOut.new(nim_s)
+    nim.valid_exit_codes = 0
+    nim.run_command
+    nim.error!
+    nim.error?
   end
 end

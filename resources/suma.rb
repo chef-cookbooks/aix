@@ -37,23 +37,23 @@ action :download do
 
   check_ohai
 
+  # compute suma filter ml based on oslevel and targets property
+  filter_ml=compute_filter_ml
+  Chef::Log.debug("filter_ml=#{filter_ml}")
+
   # compute suma request type based on oslevel property
   rq_type=compute_rq_type
   Chef::Log.debug("rq_type=#{rq_type}")
 
-  # compute suma filter ml based on oslevel and targets property
-  filter_ml=compute_filter_ml(rq_type)
-  Chef::Log.debug("filter_ml=#{filter_ml}")
-
   # compute suma request name based on metadata info
-  rq_name=compute_rq_name(rq_type, filter_ml)
+  rq_name=compute_rq_name(rq_type)
   Chef::Log.debug("rq_name=#{rq_name}")
 
   # compute lpp source name based on request name
   lpp_source=compute_lpp_source_name(rq_name)
   Chef::Log.debug("lpp_source=#{lpp_source}")
 
-  # compute dl target based on lpp source name
+  # compute suma dl target based on lpp source name
   dl_target=compute_dl_target(lpp_source)
   Chef::Log.debug("dl_target=#{dl_target}")
 

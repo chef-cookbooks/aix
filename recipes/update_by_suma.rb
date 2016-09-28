@@ -38,10 +38,21 @@ aix_suma "Downloading #{level} installation images" do
 	notifies	:reload, 'ohai[reload_nim]', :immediately
 end
 
+=begin
+In case latest, we do not know the level. we have to guess it depending on target's list.
+If 7.2 target present, latest level is 7200-00-02-1614.
+If only 7.1 targets, latest level is 7100-04-02-1614.
+=end
+if level =~ /Latest/
+  level='7100-04-02-1614'
+end
+puts level
 aix_nim "Updating machine(s) #{client}" do
 	lpp_source	"#{level}-lpp_source"
 	targets		"#{client}"
-	async		false
+	async		true
 	action		[:update,:check]
 	only_if		"lsnim -t lpp_source #{level}-lpp_source"
+	notifies	:reload, 'ohai[reload_nim]', :immediately
+	ignore_failure true
 end
