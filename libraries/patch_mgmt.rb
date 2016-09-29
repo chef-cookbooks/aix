@@ -157,16 +157,16 @@ def expand_targets
         #end
       end
       selected_machines=selected_machines.sort.uniq
-    else
+    else # empty
       selected_machines=node['nim']['clients'].keys.sort
       Chef::Log.warn("No targets specified, consider all nim standalone machines as targets")
     end
-  else
+  else # default
     selected_machines=node['nim']['clients'].keys.sort
     Chef::Log.warn("No targets specified, consider all nim standalone machines as targets!")
   end
   Chef::Log.debug("List of targets expanded to #{selected_machines}")
-  
+
   if selected_machines.empty?
     raise InvalidTargetsProperty, "Error: cannot contact any machines"
   end
@@ -174,7 +174,6 @@ def expand_targets
 end
 
 def check_lpp_source_name (lpp_source)
-  oslevel=''
   begin
     if node['nim']['lpp_sources'].fetch(lpp_source)
       Chef::Log.debug("Found lpp source #{lpp_source}")
@@ -197,17 +196,17 @@ def compute_rq_type
     else
       raise InvalidOsLevelProperty, "Error: oslevel is not recognized"
     end
-  else
+  else # default
     rq_type="Latest"
   end
   rq_type
 end
 
-def compute_filter_ml (rq_type)
+def compute_filter_ml (targets)
 
   # build machine-oslevel hash
   hash=Hash.new{ |h,k| h[k] = node['nim']['clients'].fetch(k,{}).fetch('oslevel',nil) }
-  expand_targets.each { |k| hash[k] }
+  targets.each { |k| hash[k] }
   hash.delete_if { |k,v| v.nil? }
   Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
 
@@ -225,12 +224,12 @@ def compute_filter_ml (rq_type)
   filter_ml
 end
 
-def compute_rq_name (rq_type)
+def compute_rq_name (rq_type, targets)
   if property_is_set?(:tmp_dir)
     if tmp_dir.empty?
       tmp_dir="/usr/sys/inst.images"
     end
-  else
+  else # default
     tmp_dir="/usr/sys/inst.images"
   end
   if ::File.directory?("#{tmp_dir}")
@@ -243,7 +242,7 @@ def compute_rq_name (rq_type)
   when 'Latest'
     # build machine-oslevel hash
     hash=Hash.new{ |h,k| h[k] = node['nim']['clients'].fetch(k,{}).fetch('oslevel',nil) }
-    expand_targets.each { |key| hash[key] }
+    targets.each { |key| hash[key] }
     hash.delete_if { |k,v| v.nil? }
     Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
     # discover FilterML level
@@ -315,7 +314,7 @@ def compute_lpp_source_name (rq_name)
       # location is a lpp source
       lpp_source=location
     end
-  else
+  else # default
     lpp_source="#{rq_name}-lpp_source"
   end
   lpp_source
@@ -332,9 +331,9 @@ def compute_dl_target (lpp_source)
           raise InvalidLocationProperty, "Error: lpp source location mismatch"
         end
       end
-    elsif location.empty?
+    elsif location.empty? # empty
       dl_target="/usr/sys/inst.images/#{lpp_source}"
-    else
+    else # directory
       begin
         dl_target=node['nim']['lpp_sources'].fetch(location).fetch('location')
         Chef::Log.debug("Discover \'#{location}\' lpp source's location: \'#{dl_target}\'")
@@ -342,7 +341,7 @@ def compute_dl_target (lpp_source)
         raise InvalidLocationProperty, "Error: cannot find lpp_source \'#{location}\' from Ohai output"
       end
     end
-  else
+  else # default
     dl_target="/usr/sys/inst.images/#{lpp_source}"
   end
   dl_target

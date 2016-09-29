@@ -37,12 +37,16 @@ action :download do
 
   check_ohai
 
+  # build list of targets
+  target_list=expand_targets
+  Chef::Log.debug("target_list=#{target_list}")
+
   # compute suma request type based on oslevel property
   rq_type=compute_rq_type
   Chef::Log.debug("rq_type=#{rq_type}")
 
   # compute suma filter ml based on targets property
-  filter_ml=compute_filter_ml(rq_type)
+  filter_ml=compute_filter_ml(target_list)
   Chef::Log.debug("filter_ml=#{filter_ml}")
 
   # check ml level of machines against expected oslevel
@@ -54,7 +58,7 @@ action :download do
   end
 
   # compute suma request name based on metadata info
-  rq_name=compute_rq_name(rq_type)
+  rq_name=compute_rq_name(rq_type, target_list)
   Chef::Log.debug("rq_name=#{rq_name}")
 
   # compute lpp source name based on request name
