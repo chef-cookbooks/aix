@@ -81,12 +81,16 @@ function error_managment
 function run_action
 {
     action_type=$1
+
+    # NIM Define lpp_source
     if [ $action_type -eq 0 ]
     then
 	    echo "Preparing to copy install images (this will take several minutes)..."
 	    echo ""
 	    echo "Now checking for missing install images..."
     fi
+
+    # NIM Customisation operation
     if [ $action_type -eq 1 ]
     then
 	    echo ""

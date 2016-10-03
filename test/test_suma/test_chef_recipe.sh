@@ -72,15 +72,15 @@ function check_nim
 		    check_server=$(check_value_log 'server' $lpp_source/nim.log)
 		    if [ "$check_name" != "$expected_name" -o "$check_location" != "$expected_location" -o "$check_server" != "$expected_server" ]
 		    then
-			    echo "********* SUMA FAILURE ********"
-		        echo "\texpected name = $expected_name"
-		        echo "\texpected location = $expected_location"
-		        echo "\texpected server = $expected_server"
-		        echo ""
-			    cat $lpp_source/nim.log
-			    echo "*******************************"
-			    let nb_failure+=1
-		    fi
+                echo "********* NIM FAILURE ********"
+                echo "\texpected name = $expected_name"
+                echo "\texpected location = $expected_location"
+                echo "\texpected server = $expected_server"
+                echo ""
+                cat $lpp_source/nim.log
+                echo "*******************************"
+                let nb_failure+=1
+            fi
 		#else
 		    #echo "********* NIM FAILURE (no log file '$lpp_source/nim.log') ********"
 		    #let nb_failure+=1
@@ -157,10 +157,12 @@ function run_test
 	echo "{\n\"run_list\": [ \"recipe[aixtest::${ruby_test_name}]\" ]\n}\n" > $current_dir/firstrun.json
     if [ ! -z "$log_manage" ]
     then
-    	chef-solo -l info -c $current_dir/solo.rb -j $current_dir/firstrun.json 2>&1
+#    	chef-solo                -l info -c $current_dir/solo.rb -j $current_dir/firstrun.json 2>&1
+    	chef-client --local-mode -l info -c $current_dir/solo.rb -j $current_dir/firstrun.json 2>&1
         chefres=$?
     else
-    	chef-solo -l info --logfile "$current_dir/aixtest/chef.log" -c $current_dir/solo.rb -j $current_dir/firstrun.json 2>&1 > $current_dir/aixtest/trace.log
+#    	chef-solo                -l info --logfile "$current_dir/aixtest/chef.log" -c $current_dir/solo.rb -j $current_dir/firstrun.json 2>&1 > $current_dir/aixtest/trace.log
+    	chef-client --local-mode -l info --logfile "$current_dir/aixtest/chef.log" -c $current_dir/solo.rb -j $current_dir/firstrun.json 2>&1 > $current_dir/aixtest/trace.log
         chefres=$?
     fi
 	if [ $chefres -ne 0 ] # chef exit with error
