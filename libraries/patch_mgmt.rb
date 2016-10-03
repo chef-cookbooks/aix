@@ -174,13 +174,15 @@ def expand_targets
 end
 
 def check_lpp_source_name (lpp_source)
-  begin
-    if node['nim']['lpp_sources'].fetch(lpp_source)
-      Chef::Log.debug("Found lpp source #{lpp_source}")
-      oslevel=lpp_source.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})-lpp_source$/)[1]
+  unless lpp_source == 'latest_tl' or lpp_source == 'latest_sp'
+    begin
+      if node['nim']['lpp_sources'].fetch(lpp_source)
+        Chef::Log.debug("Found lpp source #{lpp_source}")
+        oslevel=lpp_source.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})-lpp_source$/)[1]
+      end
+    rescue Exception => e
+      raise InvalidLppSourceProperty, "Error: cannot find lpp_source \'#{lpp_source}\' from Ohai output"
     end
-  rescue Exception => e
-    raise InvalidLppSourceProperty, "Error: cannot find lpp_source \'#{lpp_source}\' from Ohai output"
   end
   oslevel
 end
@@ -345,4 +347,52 @@ def compute_dl_target (lpp_source)
     dl_target="/usr/sys/inst.images/#{lpp_source}"
   end
   dl_target
+end
+
+# this function is used to search a lpp_source resource
+# find_resource("sp","latest") --> search the latest available service pack for your system
+# find_resource("sp","next")   --> search the next available service pack for your system
+# find_resource("tl","latest") --> search the latest available technology level for your system
+# find_resource("tl","next")   --> search the next available technology level for your system
+def find_resource(type, time, client)
+  Chef::Log.debug("nim: finding #{time} #{type}")
+  # not performing any test on this shell
+  current_oslevel = node['nim']['clients'][client]['oslevel'].split('-')
+  # this command should show an outpout like this on
+  # 7100-01-01-1210-lppsource
+  # 7100-01-02-1415-lppsource
+  # 7100-03-04-1415-lppsource
+  # 7100-03-05-1514-lppsource
+  aixlevel = current_oslevel[0]
+  tllevel = current_oslevel[1]
+  splevel = current_oslevel[2]
+  lppsource = ''
+  if type == 'tl'
+    # reading output until I have found the good tl
+    node['nim']['lpp_sources'].keys.each do |key|
+      a_key = key.split('-')
+      if a_key[0] == aixlevel && a_key[1] > tllevel
+        lppsource = key
+        break if time == 'next'
+      end
+    end
+  elsif type == 'sp'
+    # reading output until I have found the good sp
+    node['nim']['lpp_sources'].keys.each do |key|
+      a_key = key.split('-')
+      if a_key[0] == aixlevel && a_key[1] == tllevel && a_key[2] > splevel
+        lppsource = key
+        break if time == 'next'
+      end
+    end
+  end
+  if lppsource.empty?
+    Chef::Log.debug("nim: server already to the #{time} #{type}, or no lpp_source were found")
+    # setting lpp_source to current oslevel
+    lppsource = current_oslevel[0] << '-' << current_oslevel[1] << '-' << current_oslevel[2] << '-' << current_oslevel[3].chomp << '-lpp_source'
+  else
+    Chef::Log.debug("nim: we found the #{time} lpp_source, #{lppsource} will be utilized")
+    # chomp the return, we need to remove newline here
+    return lppsource.chomp
+  end
 end

@@ -1,3 +1,4 @@
+# recipe example setup nim master
 =begin
 Assume that lpp_source has already been allocated by nim server and fs exported.
 # nim -o allocate -a lpp_source=7143lpp_res quimby01

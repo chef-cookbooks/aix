@@ -55,12 +55,18 @@ action :update do
         end
       end 
     end
-  else
+  else # synchronous update
     target_list.each do |m|
 	  current_os_level=node['nim']['clients'][m]['oslevel']
 	  if OsLevel.new(current_os_level) >= OsLevel.new(os_level)
         Chef::Log.warn("Machine #{m} is already at same or higher level than #{os_level}")
       else
+	    if lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
+          lpp_source_array = lpp_source.split('_')
+          time = lpp_source_array[0]
+          type = lpp_source_array[1]
+          lpp_source = find_resource(type, time, m)
+        end
         nim_s="nim -o cust -a lpp_source=#{lpp_source} -a accept_licenses=yes -a fixes=update_all #{m}"
         Chef::Log.warn("Start updating machine #{m} from #{current_os_level} to #{lpp_source}.")
         converge_by("nim custom operation: \"#{nim_s}\"") do
