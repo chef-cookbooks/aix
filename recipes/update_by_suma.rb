@@ -1,5 +1,8 @@
 # recipe example update using suma and nim
 # This recipe is interactive and allows upgrade of AIX 7.1 and 7.2 machines
+
+Chef::Recipe.send(:include, AIX::PatchMgmt)
+
 nodes=Hash.new{ |h,k| h[k] = {} }
 nodes['machine']=node['nim']['clients'].keys
 nodes['oslevel']=node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
@@ -52,8 +55,12 @@ aix_nim "Updating machine(s) #{client}" do
 	lpp_source	"#{level}-lpp_source"
 	targets		"#{client}"
 	async		true
-	action		[:update,:check]
+	action		:update
 	only_if		"lsnim -t lpp_source #{level}-lpp_source"
 	notifies	:reload, 'ohai[reload_nim]', :immediately
 	ignore_failure true
+end
+
+aix_nim "Check update status" do
+	action		:check
 end

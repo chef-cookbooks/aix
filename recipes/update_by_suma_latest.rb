@@ -1,5 +1,8 @@
 # recipe example update to latest sp or tl using suma and nim
 # This recipe is interactive
+
+Chef::Recipe.send(:include, AIX::PatchMgmt)
+
 nodes=Hash.new{ |h,k| h[k] = {} }
 nodes['machine']=node['nim']['clients'].keys
 nodes['oslevel']=node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
@@ -11,7 +14,7 @@ puts print_hash_by_columns(nodes)
 puts "Choose one or more (comma-separated) to update ?"
 client=STDIN.readline.chomp
 
-level='Latest'
+lpp_source='latest_sp'
 directory='/export/extra/lpp_source'
 
 ohai 'reload_nim' do
@@ -27,10 +30,9 @@ aix_suma "Downloading latest installation images" do
 end
 
 aix_nim "Updating machine(s) #{client}" do
-	lpp_source	"latest_sp"
+	lpp_source	"#{lpp_source}"
 	targets		"#{client}"
 	async		true
-	action		[:update,:check]
-	notifies	:reload, 'ohai[reload_nim]', :immediately
+	action		:update
 	ignore_failure true
 end
