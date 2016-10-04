@@ -28,7 +28,6 @@ load_current_value do
 end
 
 action :download do
-
   # inputs
   Chef::Log.debug("desc=\"#{desc}\"")
   Chef::Log.debug("oslevel=\"#{oslevel}\"")
@@ -74,33 +73,27 @@ action :download do
   # create directory
   unless ::File.directory?("#{dl_target}")
     mkdir_s = "mkdir -p #{dl_target}"
-	converge_by("create directory \'#{dl_target}\'") do
+    converge_by("create directory \'#{dl_target}\'") do
       shell_out!(mkdir_s)
-	end
+    end
   end
 
   # suma preview
   suma = Suma.new(desc, rq_type, rq_name, filter_ml, dl_target)
   suma.preview
 
-  unless suma.dl.to_f == 0
+  if suma.dl.to_f > 0
     # suma download
-    converge_by("suma download #{suma.downloaded} fixes") do
+    converge_by("download #{suma.downloaded} fixes") do
       suma.download
     end
 
-	# create nim lpp source
-    if failed == 0 and node['nim']['lpp_sources'].fetch(lpp_source, nil) == nil
-      nim_s = "nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
-      Chef::Log.debug("NIM operation: #{nim_s}")
-      converge_by("create nim lpp source \'#{lpp_source}\'") do
-        so = shell_out(nim_s)
-        if so.error?
-          raise NimDefineError, "Error: cannot define lpp source.\n#{so.stderr.chomp!}"
-        end
+    # create nim lpp source
+    if suma.failed.to_i == 0 && node['nim']['lpp_sources'].fetch(lpp_source, nil).nil?
+      nim = Nim.new
+      converge_by("define nim lpp source \'#{lpp_source}\'") do
+        nim.define_lpp_source(lpp_source, dl_target)
       end
     end
-
   end
-
 end

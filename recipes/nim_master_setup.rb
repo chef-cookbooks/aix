@@ -13,9 +13,9 @@ mount '/mnt' do
 end
 
 # setup nim master
-aix_nim "Install nim package" do
-    device		'/mnt'
-	action		:master_setup
+aix_nim 'Install nim package' do
+  device '/mnt'
+  action :master_setup
 end
 
 # unmount /mnt

@@ -27,7 +27,6 @@ load_current_value do
 end
 
 action :update do
-
   # inputs
   Chef::Log.debug("desc=\"#{desc}\"")
   Chef::Log.debug("lpp_source=#{lpp_source}")
@@ -44,57 +43,25 @@ action :update do
   Chef::Log.debug("target_list: #{target_list}")
 
   # nim install
+  nim = Nim.new
   if async
-    str = target_list.join(' ')
-    nim_s = "nim -o cust -a lpp_source=#{lpp_source} -a accept_licenses=yes -a fixes=update_all -a async=yes #{str}"
-    Chef::Log.warn("Start updating machines \'#{str}\' to #{lpp_source}.")
-    converge_by("nim custom operation: \"#{nim_s}\"") do
-      so = shell_out!(nim_s, timeout: 3000)
-      if so.error?
-        unless so.stdout =~ /Either the software is already at the same level as on the media, or/m
-          raise NimCustError, "Error: cannot update"
-        end
-      end 
+    converge_by('perform software customization') do
+      nim.perform_customization(lpp_source, target_list.join(' '), async)
     end
   else # synchronous update
     target_list.each do |m|
-	  current_os_level = node['nim']['clients'][m]['oslevel']
-	  if OsLevel.new(current_os_level) >= OsLevel.new(os_level)
+      current_os_level = node['nim']['clients'][m]['oslevel']
+      if OsLevel.new(current_os_level) >= OsLevel.new(os_level)
         Chef::Log.warn("Machine #{m} is already at same or higher level than #{os_level}")
       else
-	    if lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
+        if lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
           lpp_source_array = lpp_source.split('_')
           time = lpp_source_array[0]
           type = lpp_source_array[1]
           lpp_source = find_resource(type, time, m)
         end
-        nim_s = "nim -o cust -a lpp_source=#{lpp_source} -a accept_licenses=yes -a fixes=update_all #{m}"
-        Chef::Log.warn("Start updating machine #{m} from #{current_os_level} to #{lpp_source}.")
-        converge_by("nim custom operation: \"#{nim_s}\"") do
-	      do_not_error = false
-	      exit_status = Open3.popen3(nim_s) do |stdin, stdout, stderr, wait_thr|
-            stdin.close
-            stdout.each_line do |line|
-              if line =~ /^Filesets processed:.*?[0-9]+ of [0-9]+/
-                print "\r#{line.chomp}"
-              elsif line =~ /^Finished processing all filesets./
-                print "\r#{line.chomp}"
-              end
-            end
-            stdout.close
-            stderr.each_line do |line|
-              if line =~ /Either the software is already at the same level as on the media, or/
-                do_not_error=true
-		      end
-		      puts line
-            end
-            stderr.close
-            wait_thr.value # Process::Status object returned.
-          end
-          Chef::Log.warn("Finish updating #{m}.")
-          unless exit_status.success? or do_not_error
-            raise NimCustError, "Error: cannot update machine #{m}"
-          end
+        converge_by('perform software customization') do
+          nim.perform_customization(lpp_source, m, async)
         end
       end
     end
@@ -105,10 +72,10 @@ end
 action :master_setup do
   # Example of nim_master_setup
   # nim_master_setup -a mk_resource=no -B -a device=/mnt
-  nim_master_setup_s = "nim_master_setup -B -a mk_resource=no"
+  nim_master_setup_s = 'nim_master_setup -B -a mk_resource=no'
 
   unless mount_point.nil?
-    nimmster_setup_s = nim_master_setup_s << ' -a device=' << mount_point
+    nim_master_setup_s = nim_master_setup_s << ' -a device=' << mount_point
   end
 
   # converge here
@@ -124,7 +91,7 @@ end
 action :check do
   check_ohai
   # build hash table
-  nodes=Hash.new{ |h,k| h[k] = {} }
+  nodes = Hash.new{ |h, k| h[k] = {} }
   nodes['machine'] = node['nim']['clients'].keys
   nodes['oslevel'] = node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
   nodes['Cstate'] = node['nim']['clients'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }
