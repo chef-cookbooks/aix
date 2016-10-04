@@ -54,7 +54,7 @@ action :download do
   case rq_type
   when 'SP', 'TL'
     if filter_ml[0..3].to_i < oslevel.match(/^([0-9]{4})-[0-9]{2}(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].to_i
-      raise InvalidOsLevelProperty, "Error: cannot upgrade machines to a new release using suma"
+      raise InvalidOsLevelProperty, 'Error: cannot upgrade machines to a new release using suma'
     end
   end
 
@@ -71,7 +71,7 @@ action :download do
   Chef::Log.debug("dl_target=#{dl_target}")
 
   # create directory
-  unless ::File.directory?("#{dl_target}")
+  unless ::File.directory?(dl_target)
     mkdir_s = "mkdir -p #{dl_target}"
     converge_by("create directory \'#{dl_target}\'") do
       shell_out!(mkdir_s)

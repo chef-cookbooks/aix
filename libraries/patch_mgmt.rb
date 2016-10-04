@@ -95,7 +95,7 @@ module AIX
         when 'TL'
           suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}"
         end
-        
+
         Chef::Log.debug("SUMA preview operation: #{suma_s}")
         so = shell_out(suma_s, environment: { 'LANG' => 'C' }, timeout: 3000)
         if so.stderr =~ /^0500-035 No fixes match your query.$/
@@ -112,7 +112,7 @@ module AIX
           raise SumaPreviewError, "Error: Command \"#{suma_s}\" returns \'#{so.stderr.chomp!}\'!\n#{so.stdout}"
         end
       end
-      
+
       def download
         suma_s = "/usr/sbin/suma -x -a Action=Download -a DisplayName=\"#{@display_name}\" -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
         case @rq_type
@@ -222,7 +222,7 @@ module AIX
             stdout.close
             stderr.each_line do |line|
               if line =~ /Either the software is already at the same level as on the media, or/
-                do_not_error=true
+                do_not_error = true
               end
               puts line
             end
@@ -254,7 +254,7 @@ module AIX
     end
 
     def print_hash_by_columns(data)
-      widths={}
+      widths = {}
       data.keys.each do |key|
         widths[key] = 5 # minimum column width
         # longest string len of values
@@ -287,38 +287,25 @@ module AIX
 
     def check_ohai
       # get list of all NIM machines from Ohai
-      begin
-        all_machines = node.fetch('nim', {}).fetch('clients').keys
-        Chef::Log.debug("Ohai client machine's list is #{all_machines}")
-        all_lpp_sources = node.fetch('nim', {}).fetch('lpp_sources').keys
-        Chef::Log.debug("Ohai lpp source's list is #{all_lpp_sources}")
-      rescue KeyError => e
-        raise OhaiNimPluginNotFound, 'Error: cannot find nim info from Ohai output'
-      end
+      all_machines = node.fetch('nim', {}).fetch('clients').keys
+      Chef::Log.debug("Ohai client machine's list is #{all_machines}")
+      all_lpp_sources = node.fetch('nim', {}).fetch('lpp_sources').keys
+      Chef::Log.debug("Ohai lpp source's list is #{all_lpp_sources}")
+    rescue KeyError
+      raise OhaiNimPluginNotFound, 'Error: cannot find nim info from Ohai output'
     end
 
     def expand_targets
-      selected_machines=Array.new
+      selected_machines = Array.new
       # compute list of machines based on targets property
       if property_is_set?(:targets)
         if !targets.empty?
           targets.split(/[,\s]/).each do |machine|
-            # if machine =~ /$\/.*?\/^/
-              # machine is a regexp
-              # node['nim']['clients'].keys.each do |m|
-                # if m =~ machine
-                  # selected_machines.concat(m.split)
-                # end
-              # end
-            # else
-              # expand wildcard
-            machine.gsub!(/\*/,'.*?')
+            # expand wildcard
+            machine.gsub!(/\*/, '.*?')
             node['nim']['clients'].keys.each do |m|
-              if m =~ /^#{machine}$/
-                selected_machines.concat(m.split)
-              end
+              selected_machines.concat(m.split) if m =~ /^#{machine}$/
             end
-            # end
           end
           selected_machines = selected_machines.sort.uniq
         else # empty
@@ -344,7 +331,7 @@ module AIX
             Chef::Log.debug("Found lpp source #{lpp_source}")
             oslevel = lpp_source.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})-lpp_source$/)[1]
           end
-        rescue KeyError => e
+        rescue KeyError
           raise InvalidLppSourceProperty, "Error: cannot find lpp_source \'#{lpp_source}\' from Ohai output"
         end
       end
@@ -357,10 +344,10 @@ module AIX
           rq_type = 'TL'
         elsif oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
           rq_type = 'SP'
-        elsif oslevel.empty? || oslevel.downcase.eql?("latest")
+        elsif oslevel.empty? || oslevel.casecmp?('latest')
           rq_type = 'Latest'
         else
-          raise InvalidOsLevelProperty, "Error: oslevel is not recognized"
+          raise InvalidOsLevelProperty, 'Error: oslevel is not recognized'
         end
       else # default
         rq_type = 'Latest'
@@ -404,7 +391,7 @@ module AIX
         # build machine-oslevel hash
         hash = Hash.new { |h, k| h[k] = node['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
         targets.each { |key| hash[key] }
-        hash.delete_if { |k, v| v.nil? }
+        hash.delete_if { |_k, v| v.nil? }
         Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
         # discover FilterML level
         ary = hash.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
@@ -438,7 +425,7 @@ module AIX
           rq_name.insert(7, '-')
           rq_name.insert(10, '-')
         end
-        
+
       when 'TL'
         # pad with 0
         rq_name = "#{oslevel.match(/^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/)[1]}-00-0000"
@@ -452,8 +439,8 @@ module AIX
           suma.metadata
 
           # find SP build number
-          text=::File.open("#{tmp_dir}/installp/ppc/#{oslevel}.xml").read
-          rq_name=text.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1]
+          text = ::File.open("#{tmp_dir}/installp/ppc/#{oslevel}.xml").read
+          rq_name = text.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1]
         end
       end
       rq_name
@@ -492,7 +479,7 @@ module AIX
           begin
             dl_target = node['nim']['lpp_sources'].fetch(location).fetch('location')
             Chef::Log.debug("Discover \'#{location}\' lpp source's location: \'#{dl_target}\'")
-          rescue KeyError => e
+          rescue KeyError
             raise InvalidLocationProperty, "Error: cannot find lpp_source \'#{location}\' from Ohai output"
           end
         end
@@ -549,6 +536,5 @@ module AIX
         return lppsource.chomp
       end
     end
-
   end
 end

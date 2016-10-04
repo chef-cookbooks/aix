@@ -30,7 +30,7 @@ aix_suma 'Downloading latest installation images' do
 end
 
 aix_nim "Updating machine(s) #{client}" do
-  lpp_source lpp_source}
+  lpp_source lpp_source
   targets client
   async true
   action :update

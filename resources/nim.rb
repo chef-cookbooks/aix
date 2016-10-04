@@ -66,7 +66,6 @@ action :update do
       end
     end
   end
-
 end
 
 action :master_setup do
@@ -91,7 +90,7 @@ end
 action :check do
   check_ohai
   # build hash table
-  nodes = Hash.new{ |h, k| h[k] = {} }
+  nodes = Hash.new { |h, k| h[k] = {} }
   nodes['machine'] = node['nim']['clients'].keys
   nodes['oslevel'] = node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
   nodes['Cstate'] = node['nim']['clients'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }

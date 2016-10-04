@@ -3,7 +3,7 @@
 
 Chef::Recipe.send(:include, AIX::PatchMgmt)
 
-nodes = Hash.new { |h,k| h[k] = {} }
+nodes = Hash.new { |h, k| h[k] = {} }
 nodes['machine'] = node['nim']['clients'].keys
 nodes['oslevel'] = node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
 nodes['Cstate'] = node['nim']['clients'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }
@@ -23,7 +23,7 @@ levels = { '7.1 TL0' => ['7100-00-00-0000', '7100-00-01-1037', '7100-00-02-1041'
 levels.each do |k, v|
   levels[k] = v.collect do |oslevel|
     if node['nim']['lpp_sources'].keys.include?("#{oslevel}-lpp_source")
-      oslevel += '*'
+      oslevel + '*'
     else
       oslevel
     end
