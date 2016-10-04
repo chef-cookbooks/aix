@@ -1,0 +1,123 @@
+require 'fileutils'
+
+#task :default => [:hello, :copy_recipes, :run_location, :run_oslevel, :run_suma, :run_targets ]
+task :default => [ :copy_recipes, :run_location, :run_oslevel, :run_suma, :run_targets ]
+
+
+task :hello  do
+    puts 'Running RAKE for AIX CHEF'
+end
+
+# %n returns the file name without the extension and directory portions !
+#test_ohai_list     = FileList.new('aix/recipes/*ohai*.rb').pathmap("%n")
+test_location_list = FileList.new('../test_suma/recipes/*location*.rb').pathmap("%n")
+test_oslevel_list  = FileList.new('../test_suma/recipes/*oslevel*.rb').pathmap("%n")
+test_suma_list     = FileList.new('../test_suma/recipes/*suma*.rb').pathmap("%n")
+test_targets_list  = FileList.new('../test_suma/recipes/*targets*.rb').pathmap("%n")
+test_error_list    = FileList.new('../test_suma/recipes/*error*.rb').pathmap("%n")
+
+
+##########################################################
+## Variable definition
+##########################################################
+
+LOG_DIR      = Time.new.strftime("%F_%H%M%S")
+COOKBOOK_DIR = Dir.pwd + '/../../..'
+
+##########################################################
+## Function definition
+##########################################################
+
+desc 'Build client.rb file which is used to specify the configuration details for the chef-client.'
+def build_config_file(config)
+
+    ## Create LOGS Directory
+    FileUtils.mkdir_p(Dir.pwd + '/LOGS/log_' + LOG_DIR )
+
+    ## Fill in client.rb
+    File.open("client.rb", "w") do |file|
+        file.puts 'cookbook_path "' + Dir.pwd + '/../../.."'
+        file.puts 'log_level :info'
+        file.puts 'log_location "' + Dir.pwd + '/LOGS/log_' + LOG_DIR + '/'+ config.to_s + '.log"'
+        file.puts 'verbose_logging true'
+    end
+    return 'client.rb'
+end
+
+##########################################################
+## Task definition
+##########################################################
+
+desc 'Copy Test recipes to Cookbook recipes'
+task :copy_recipes do
+    FileUtils.cp_r Dir.pwd + '/recipes/.', COOKBOOK_DIR + '/aix/recipes', :verbose => true
+end
+
+
+desc 'Run all LOCATION tests'
+task :run_location do
+    puts '/////////////////////////////////////////////////////////////////////'
+    puts '                    Running LOCATION tests'
+    puts '/////////////////////////////////////////////////////////////////////'
+    test_location_list.each do |fl|
+        build_config_file(fl)
+        puts 'Running recipe: ' + fl
+        sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']" || true'
+    end
+end
+
+
+desc 'Run all OSLEVEL tests'
+task :run_oslevel do
+    puts '/////////////////////////////////////////////////////////////////////'
+    puts '                    Running OSLEVEL tests'
+    puts '/////////////////////////////////////////////////////////////////////'
+    test_oslevel_list.each do |fl|
+        build_config_file(fl)
+        puts 'Running recipe: ' + fl
+        sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']" || true'
+    end
+end
+
+desc 'Run all SUMA tests'
+task :run_suma do
+    puts '/////////////////////////////////////////////////////////////////////'
+    puts '                    Running SUMA tests'
+    puts '/////////////////////////////////////////////////////////////////////'
+    test_suma_list.each do |fl|
+        build_config_file(fl)
+        puts 'Running recipe: ' + fl
+        sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']" || true'
+    end
+end
+
+desc 'Run all TARGETS tests'
+task :run_targets do
+    puts '/////////////////////////////////////////////////////////////////////'
+    puts '                    Running TARGETS tests'
+    puts '/////////////////////////////////////////////////////////////////////'
+    test_targets_list.each do |fl|
+        build_config_file(fl)
+        puts 'Running recipe: ' + fl
+        sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']" || true'
+    end
+end
+
+desc 'Run all ERROR tests'
+task :run_error do
+    puts '/////////////////////////////////////////////////////////////////////'
+    puts '                    Running ERROR tests'
+    puts '/////////////////////////////////////////////////////////////////////'
+    test_error_list.each do |fl|
+        build_config_file(fl)
+        puts 'Running recipe: ' + fl
+        sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']" || true'
+    end
+end
+
+
+# task :test_11  do
+#     puts 'Launching OSLEVEL Test 11'
+#     sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::test_oslevel_11]" || true'
+# end
+
