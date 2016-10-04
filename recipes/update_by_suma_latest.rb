@@ -3,7 +3,7 @@
 
 Chef::Recipe.send(:include, AIX::PatchMgmt)
 
-nodes = Hash.new{ |h, k| h[k] = {} }
+nodes = Hash.new { |h, k| h[k] = {} }
 nodes['machine'] = node['nim']['clients'].keys
 nodes['oslevel'] = node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
 nodes['Cstate'] = node['nim']['clients'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }

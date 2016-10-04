@@ -101,10 +101,10 @@ module AIX
         if so.stderr =~ /^0500-035 No fixes match your query.$/
           Chef::Log.warn("Done suma preview operation \"#{suma_s}\"")
         elsif so.stdout =~ /Total bytes of updates downloaded: ([0-9]+).*?([0-9]+) downloaded.*?([0-9]+) failed.*?([0-9]+) skipped/m
-          @dl = $1.to_f / 1024 / 1024 / 1024
-          @downloaded = $2
-          @failed = $3
-          @skipped = $4
+          @dl = so.stdout.match(/Total bytes of updates downloaded: ([0-9]+)/)[1].to_f / 1024 / 1024 / 1024
+          @downloaded = so.stdout.match(/([0-9]+) downloaded/)[1]
+          @failed = so.stdout.match(/([0-9]+) failed/)[1]
+          @skipped = so.stdout.match(/([0-9]+) skipped/)[1]
           Chef::Log.debug(so.stdout)
           Chef::Log.info("#{@downloaded} downloaded (#{@dl} GB), #{@failed} failed, #{@skipped} skipped fixes")
           Chef::Log.warn("Done suma preview operation \"#{suma_s}\"")
@@ -140,11 +140,11 @@ module AIX
             elsif line =~ /^Download SKIPPED:/
               skipped += 1
             elsif line =~ /([0-9]+) downloaded/
-              download_downloaded = $1
+              download_downloaded = line.match(/([0-9]+) downloaded/)[1]
             elsif line =~ /([0-9]+) failed/
-              download_failed = $1
+              download_failed = line.match(/([0-9]+) failed/)[1]
             elsif line =~ /([0-9]+) skipped/
-              download_skipped = $1
+              download_skipped = line.match(/([0-9]+) skipped/)[1]
             elsif line =~ /(Total bytes of updates downloaded|Summary|Partition id|Filesystem size changed to)/
               # do nothing
             else
@@ -273,8 +273,8 @@ module AIX
       result += '+'
       data.keys.each { |key| result += ''.center(widths[key] + 2, '-') + '+' }
       result += "\n"
-      length = data.values.max_by { |v| v.length }.length
-      for i in 0.upto(length - 1)
+      length = data.values.max_by(&:length).length
+      0.upto(length - 1).each do |i|
         result += '|'
         data.keys.each { |key| result += data[key][i].to_s.center(widths[key] + 2) + '|' }
         result += "\n"
@@ -296,7 +296,7 @@ module AIX
     end
 
     def expand_targets
-      selected_machines = Array.new
+      selected_machines = []
       # compute list of machines based on targets property
       if property_is_set?(:targets)
         if !targets.empty?
@@ -431,11 +431,12 @@ module AIX
         rq_name = "#{oslevel.match(/^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/)[1]}-00-0000"
 
       when 'SP'
-        if oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})$/
-          rq_name = $1
-        elsif oslevel =~ /^([0-9]{4}-[0-9]{2})-[0-9]{2}$/
+        if oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}$/
+          rq_name = oslevel
+        elsif oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/
           # suma metadata
-          suma = Suma.new(desc, 'Latest', nil, $1, tmp_dir)
+		  metadata_filter_ml = oslevel.match(/^([0-9]{4}-[0-9]{2})-[0-9]{2}$/)[1]
+          suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
           suma.metadata
 
           # find SP build number
@@ -449,13 +450,7 @@ module AIX
     def compute_lpp_source_name(rq_name)
       if property_is_set?(:location)
         location.chomp!('\/')
-        if location.start_with?('/') || location.empty?
-          # location is a directory
-          lpp_source = "#{rq_name}-lpp_source"
-        else
-          # location is a lpp source
-          lpp_source = location
-        end
+        lpp_source = (location.start_with?('/') || location.empty?) ? "#{rq_name}-lpp_source" : location
       else # default
         lpp_source = "#{rq_name}-lpp_source"
       end
