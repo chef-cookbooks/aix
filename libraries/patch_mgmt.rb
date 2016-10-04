@@ -329,7 +329,7 @@ module AIX
         begin
           if node['nim']['lpp_sources'].fetch(lpp_source)
             Chef::Log.debug("Found lpp source #{lpp_source}")
-            oslevel = lpp_source.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})-lpp_source$/)[1]
+            oslevel = lpp_source.scan(/^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})-lpp_source$/).to_s
           end
         rescue KeyError
           raise InvalidLppSourceProperty, "Error: cannot find lpp_source \'#{lpp_source}\' from Ohai output"

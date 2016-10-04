@@ -1,0 +1,56 @@
+require 'fileutils'
+
+task :default => [ :copy_recipes, :run_nim ]
+
+task :hello  do
+  puts 'Running RAKE for AIX CHEF'
+end
+
+# %n returns the file name without the extension and directory portions !
+test_nim_list = FileList.new('../test_nim/recipes/*.rb').pathmap("%n")
+
+##########################################################
+## Variable definition
+##########################################################
+
+LOG_DIR = Time.new.strftime("%F_%H%M%S")
+COOKBOOK_DIR = Dir.pwd + '/../../..'
+
+##########################################################
+## Function definition
+##########################################################
+
+desc 'Build client.rb file which is used to specify the configuration details for the chef-client.'
+def build_config_file(config)
+  ## Create LOGS Directory
+  FileUtils.mkdir_p(Dir.pwd + '/LOGS/log_' + LOG_DIR )
+  ## Fill in client.rb
+  File.open("client.rb", "w") do |file|
+    file.puts 'cookbook_path "' + Dir.pwd + '/../../.."'
+    file.puts 'log_level :info'
+    file.puts 'log_location "' + Dir.pwd + '/LOGS/log_' + LOG_DIR + '/'+ config.to_s + '.log"'
+    file.puts 'verbose_logging true'
+  end
+  return 'client.rb'
+end
+
+##########################################################
+## Task definition
+##########################################################
+
+desc 'Copy Test recipes to Cookbook recipes'
+task :copy_recipes do
+  FileUtils.cp_r Dir.pwd + '/recipes/.', COOKBOOK_DIR + '/aix/recipes', :verbose => true
+end
+
+desc 'Run all NIM tests'
+task :run_nim do
+  puts '/////////////////////////////////////////////////////////////////////'
+  puts '                    Running NIM tests'
+  puts '/////////////////////////////////////////////////////////////////////'
+  test_nim_list.each do |fl|
+    build_config_file(fl)
+    puts 'Running recipe: ' + fl
+    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']" || true'
+  end
+end
