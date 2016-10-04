@@ -1,6 +1,6 @@
-node.default['nim']['clients'] = {'client1'=>{'oslevel'=>'7100-02-01'}}
+node.default['nim']['clients'] = {'client1' => {'oslevel' => '7100-02-01' }}
 
-aix_suma "19. latest SP for TL unknown (ERROR metadata 0500-035)" do
+aix_suma '19. latest SP for TL unknown (ERROR metadata 0500-035)' do
   oslevel   'latest'
   location  '/tmp/img.source/latest5'
   targets   'client1'
