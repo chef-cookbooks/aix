@@ -1,4 +1,4 @@
-node.default['nim']['clients'] = {'client1' => {'oslevel' => '7100-02-01' }}
+node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 
 aix_suma '47. failed fixes (Preview + Download)' do
   oslevel   '7100-02-02'

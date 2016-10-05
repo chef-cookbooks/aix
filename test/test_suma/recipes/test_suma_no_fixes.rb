@@ -1,4 +1,4 @@
-node.default['nim']['clients'] = {'client1' => {'oslevel' => '7100-02-01' }}
+node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 
 aix_suma '45. error no fixes 0500-035 (Preview only)' do
   oslevel   '7100-02-02'

@@ -1,4 +1,4 @@
-node.default['nim']['clients'] = {'client1' => {'oslevel' => '7100-02-01' }}
+node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 
 aix_suma '43. error entitlement 0500-059 (Preview ERROR)' do
   oslevel   '7100-02-02'
