@@ -6,4 +6,3 @@ aix_suma '41. error no more space 0500-004 (Download ERROR)' do
   targets   'client1'
   action    :download
 end
-
