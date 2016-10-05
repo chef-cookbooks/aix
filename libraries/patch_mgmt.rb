@@ -57,9 +57,9 @@ module AIX
       attr_reader :str
 
       def <=>(other)
-        if str.delete('-').to_i < other.str.delete('-').to_i
+        if @str.delete('-').to_i < other.str.delete('-').to_i
           -1
-        elsif str.delete('-').to_i > other.str.delete('-').to_i
+        elsif @str.delete('-').to_i > other.str.delete('-').to_i
           1
         else
           0
@@ -191,7 +191,7 @@ module AIX
         nim_s = "/usr/sbin/nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
         so = shell_out(nim_s)
         if so.error?
-          raise NimDefineError, "Error: Command \"#{nim_s}\" returns \'#{so.stderr.chomp!}\'!\n#{so.stdout}"
+          raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         else
           Chef::Log.warn("Done nim define operation \"#{nim_s}\"")
         end
@@ -200,15 +200,15 @@ module AIX
       def perform_customization(lpp_source, clients, async = true)
         async_s = async ? 'no' : 'yes'
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a accept_licenses=yes -a fixes=update_all -a async=#{async_s} #{clients}"
-        Chef::Log.warn("Start updating machines \'#{clients}\' to #{lpp_source}.")
+        Chef::Log.warn("Start updating machine(s) \'#{clients}\' to #{lpp_source}.")
         if async # asynchronous
           so = shell_out(nim_s, timeout: 3000)
           if so.error? && so.stdout !~ /Either the software is already at the same level as on the media, or/m
-            raise NimCustError, "Error: Command \"#{nim_s}\" returns \'#{so.stderr.chomp!}\'!\n#{so.stdout}"
+            raise NimCustError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
           else
             Chef::Log.warn("Done nim customize operation \"#{nim_s}\"")
           end
-        else # asynchronous
+        else # synchronous
           do_not_error = false
           exit_status = Open3.popen3(nim_s) do |stdin, stdout, stderr, wait_thr|
             stdin.close
@@ -231,7 +231,7 @@ module AIX
           end
           Chef::Log.warn("Finish updating #{clients}.")
           unless exit_status.success? || do_not_error
-            raise NimCustError, "Error: Command \"#{nim_s}\" returns \'#{so.stderr.chomp!}\'!\n#{so.stdout}"
+            raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!"
           end
         end
       end
@@ -325,17 +325,11 @@ module AIX
     end
 
     def check_lpp_source_name(lpp_source)
-      unless lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
-        begin
-          if node['nim']['lpp_sources'].fetch(lpp_source)
-            Chef::Log.debug("Found lpp source #{lpp_source}")
-            oslevel = lpp_source.scan(/^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})-lpp_source$/).to_s
-          end
-        rescue KeyError
-          raise InvalidLppSourceProperty, "Error: cannot find lpp_source \'#{lpp_source}\' from Ohai output"
-        end
+      if node['nim']['lpp_sources'].fetch(lpp_source)
+        Chef::Log.debug("Found lpp source #{lpp_source}")
       end
-      oslevel
+    rescue KeyError
+      raise InvalidLppSourceProperty, "Error: cannot find lpp_source \'#{lpp_source}\' from Ohai output"
     end
 
     def compute_rq_type
@@ -489,15 +483,15 @@ module AIX
     # find_resource("sp","next")   --> search the next available service pack for your system
     # find_resource("tl","latest") --> search the latest available technology level for your system
     # find_resource("tl","next")   --> search the next available technology level for your system
-    def find_resource(type, time, client)
+    def find_resource_by_client(type, time, client)
       Chef::Log.debug("nim: finding #{time} #{type}")
       # not performing any test on this shell
       current_oslevel = node['nim']['clients'][client]['oslevel'].split('-')
       # this command should show an outpout like this on
-      # 7100-01-01-1210-lppsource
-      # 7100-01-02-1415-lppsource
-      # 7100-03-04-1415-lppsource
-      # 7100-03-05-1514-lppsource
+      # 7100-01-01-1210-lpp_source
+      # 7100-01-02-1415-lpp_source
+      # 7100-03-04-1415-lpp_source
+      # 7100-03-05-1514-lpp_source
       aixlevel = current_oslevel[0]
       tllevel = current_oslevel[1]
       splevel = current_oslevel[2]
@@ -522,14 +516,14 @@ module AIX
         end
       end
       if lppsource.empty?
-        Chef::Log.debug("nim: server already to the #{time} #{type}, or no lpp_source were found")
         # setting lpp_source to current oslevel
-        lppsource = current_oslevel[0] << '-' << current_oslevel[1] << '-' << current_oslevel[2] << '-' << current_oslevel[3].chomp << '-lpp_source'
+        lppsource = current_oslevel[0] + '-' + current_oslevel[1] + '-' + current_oslevel[2] + '-' + current_oslevel[3] + '-lpp_source'
+        Chef::Log.debug("nim: server already to the #{time} #{type}, or no lpp_source were found, #{lppsource} will be utilized")
       else
         Chef::Log.debug("nim: we found the #{time} lpp_source, #{lppsource} will be utilized")
-        # chomp the return, we need to remove newline here
-        return lppsource.chomp
       end
+      # chomp the return, we need to remove newline here
+      return lppsource
     end
   end
 end

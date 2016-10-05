@@ -1,6 +1,8 @@
 require 'fileutils'
 
-task :default => [ :copy_recipes, :run_nim ]
+task :default => [ :copy_recipes, :install_fake, :run_nim, :deinstall_fake ]
+
+task :toto => [ :copy_recipes, :install_fake, :run_toto, :deinstall_fake ]
 
 task :hello  do
   puts 'Running RAKE for AIX CHEF'
@@ -43,6 +45,26 @@ task :copy_recipes do
   FileUtils.cp_r Dir.pwd + '/recipes/.', COOKBOOK_DIR + '/aix/recipes', :verbose => true
 end
 
+desc 'Set up fake nim & suma'
+task :install_fake do
+  FileUtils.cp '/usr/sbin/nim', '/usr/sbin/nim.old', :verbose => true
+  FileUtils.cp Dir.pwd + '/../aix_fake/nim', '/usr/sbin/nim', :verbose => true
+  FileUtils.cp '/usr/sbin/suma', '/usr/sbin/suma.old', :verbose => true
+  FileUtils.cp Dir.pwd + '/../aix_fake/suma', '/usr/sbin/suma', :verbose => true
+end
+
+desc 'Remove fake from machine'
+task :deinstall_fake do
+  FileUtils.cp '/usr/sbin/nim.old', '/usr/sbin/nim', :verbose => true
+  FileUtils.cp '/usr/sbin/suma.old', '/usr/sbin/suma', :verbose => true
+end
+
+task :run_toto do
+  build_config_file('test_nim_sync_mono_latest_sp')
+  puts 'Running recipe: ' + 'test_nim_sync_mono_latest_sp'
+  sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + 'test_nim_sync_mono_latest_sp' + ']" || true'
+end
+
 desc 'Run all NIM tests'
 task :run_nim do
   puts '/////////////////////////////////////////////////////////////////////'
@@ -50,7 +72,9 @@ task :run_nim do
   puts '/////////////////////////////////////////////////////////////////////'
   test_nim_list.each do |fl|
     build_config_file(fl)
-    puts 'Running recipe: ' + fl
+    puts '----------------------' + '-' * fl.length + '------'
+    puts '----- Running recipe: ' + fl + ' -----'
+    puts '----------------------' + '-' * fl.length + '------'
     sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']" || true'
   end
 end

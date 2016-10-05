@@ -34,9 +34,10 @@ action :update do
 
   check_ohai
 
-  # get targetted oslevel
-  os_level = check_lpp_source_name(lpp_source)
-  Chef::Log.debug("os_level: #{os_level}")
+  # force latest_sp/tl synchronously
+  if lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
+    async = false
+  end
 
   # build list of targets
   target_list = expand_targets
@@ -45,23 +46,39 @@ action :update do
   # nim install
   nim = Nim.new
   if async
-    converge_by('perform software customization') do
+    # get targetted oslevel
+    os_level = check_lpp_source_name(lpp_source)
+    Chef::Log.debug("os_level: #{os_level}")
+
+    converge_by("nim: perform asynchronous software customization for client(s) \'#{target_list.join(' ')}\' with resource \'#{lpp_source}\'") do
       nim.perform_customization(lpp_source, target_list.join(' '), async)
     end
   else # synchronous update
     target_list.each do |m|
+      if lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
+        lpp_source_array = lpp_source.split('_')
+        time = lpp_source_array[0]
+        type = lpp_source_array[1]
+        new_lpp_source = find_resource_by_client(type, time, m)
+        Chef::Log.debug("new_lpp_source: #{new_lpp_source}")
+      else
+        check_lpp_source_name(lpp_source)
+        new_lpp_source = lpp_source
+      end
+
+      # extract oslevel from lpp source
+      os_level = new_lpp_source.to_s.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})-lpp_source$/)[1]
+      Chef::Log.debug("os_level: #{os_level}")
+
+      # get current oslevel
       current_os_level = node['nim']['clients'][m]['oslevel']
+      Chef::Log.debug("current_os_level: #{current_os_level}")
+
       if OsLevel.new(current_os_level) >= OsLevel.new(os_level)
         Chef::Log.warn("Machine #{m} is already at same or higher level than #{os_level}")
       else
-        if lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
-          lpp_source_array = lpp_source.split('_')
-          time = lpp_source_array[0]
-          type = lpp_source_array[1]
-          lpp_source = find_resource(type, time, m)
-        end
-        converge_by('perform software customization') do
-          nim.perform_customization(lpp_source, m, async)
+        converge_by("nim: perform synchronous software customization for client \'#{m}\' with resource \'#{new_lpp_source}\'") do
+          nim.perform_customization(new_lpp_source, m, async)
         end
       end
     end
