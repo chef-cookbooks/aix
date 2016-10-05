@@ -522,8 +522,7 @@ module AIX
       else
         Chef::Log.debug("nim: we found the #{time} lpp_source, #{lppsource} will be utilized")
       end
-      # chomp the return, we need to remove newline here
-      return lppsource
+      lppsource
     end
   end
 end

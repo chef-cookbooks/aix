@@ -61,7 +61,9 @@ end
 
 task :run_toto do
   build_config_file('test_nim_sync_mono_latest_sp')
-  puts 'Running recipe: ' + 'test_nim_sync_mono_latest_sp'
+  puts '----------------------' + '-' * 'test_nim_sync_mono_latest_sp'.length + '------'
+  puts '----- Running recipe: ' + 'test_nim_sync_mono_latest_sp' + ' -----'
+  puts '----------------------' + '-' * 'test_nim_sync_mono_latest_sp'.length + '------'
   sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + 'test_nim_sync_mono_latest_sp' + ']" || true'
 end
 

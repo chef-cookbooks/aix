@@ -35,9 +35,7 @@ action :update do
   check_ohai
 
   # force latest_sp/tl synchronously
-  if lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
-    async = false
-  end
+  async = false if lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
 
   # build list of targets
   target_list = expand_targets
