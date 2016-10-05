@@ -94,7 +94,7 @@ function run_action
 			echo "" >&2
 			exit 1
 		else
-			echo ""
+			echo "### NIM FAKE DONE CUSTOM OPERATION on client $object_name with resource ${fields['lpp_source']} ###"
 		fi
     fi
 }

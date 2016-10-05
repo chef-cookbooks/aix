@@ -98,6 +98,12 @@ module AIX
 
         Chef::Log.debug("SUMA preview operation: #{suma_s}")
         so = shell_out(suma_s, environment: { 'LANG' => 'C' }, timeout: 3000)
+        so.stdout.each_line do |line|
+          Chef::Log.info("[STDOUT] #{line.chomp}")
+        end
+        so.stderr.each_line do |line|
+          Chef::Log.info("[STDERR] #{line.chomp}")
+        end
         if so.stderr =~ /^0500-035 No fixes match your query.$/
           Chef::Log.warn("Done suma preview operation \"#{suma_s}\"")
         elsif so.stdout =~ /Total bytes of updates downloaded: ([0-9]+).*?([0-9]+) downloaded.*?([0-9]+) failed.*?([0-9]+) skipped/m
@@ -152,11 +158,13 @@ module AIX
             end
             # time_s = duration(Time.now - start)
             print "\rSUCCEEDED: #{succeeded}/#{@downloaded}\tFAILED: #{failed}/#{@failed}\tSKIPPED: #{skipped}/#{@skipped}" # . (Total time: #{time_s})."
+            Chef::Log.info("[STDOUT] #{line.chomp}")
             stdout.flush
           end
           stdout.close
           stderr.each_line do |line|
             puts line
+            Chef::Log.info("[STDERR] #{line.chomp}")
           end
           stderr.close
           wait_thr.value # Process::Status object returned.
@@ -173,6 +181,12 @@ module AIX
       def metadata
         suma_s = "/usr/sbin/suma -x -a Action=Metadata -a DisplayName=\"#{@display_name}\"  -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
         so = shell_out(suma_s, timeout: 3000)
+        so.stdout.each_line do |line|
+          Chef::Log.info("[STDOUT] #{line.chomp}")
+        end
+        so.stderr.each_line do |line|
+          Chef::Log.info("[STDERR] #{line.chomp}")
+        end
         if so.error?
           raise SumaMetadataError, "Error: Command \"#{suma_s}\" returns \'#{so.stderr.chomp!}\'!\n#{so.stdout}"
         else
@@ -190,6 +204,12 @@ module AIX
       def define_lpp_source(lpp_source, dl_target)
         nim_s = "/usr/sbin/nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
         so = shell_out(nim_s)
+        so.stdout.each_line do |line|
+          Chef::Log.info("[STDOUT] #{line.chomp}")
+        end
+        so.stderr.each_line do |line|
+          Chef::Log.info("[STDERR] #{line.chomp}")
+        end
         if so.error?
           raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         else
@@ -203,6 +223,12 @@ module AIX
         Chef::Log.warn("Start updating machine(s) \'#{clients}\' to #{lpp_source}.")
         if async # asynchronous
           so = shell_out(nim_s, timeout: 3000)
+          so.stdout.each_line do |line|
+            Chef::Log.info("[STDOUT] #{line.chomp}")
+          end
+          so.stderr.each_line do |line|
+            Chef::Log.info("[STDERR] #{line.chomp}")
+          end
           if so.error? && so.stdout !~ /Either the software is already at the same level as on the media, or/m
             raise NimCustError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
           else
@@ -218,6 +244,7 @@ module AIX
               elsif line =~ /^Finished processing all filesets./
                 print "\r#{line.chomp}"
               end
+              Chef::Log.info("[STDOUT] #{line.chomp}")
             end
             stdout.close
             stderr.each_line do |line|
@@ -225,6 +252,7 @@ module AIX
                 do_not_error = true
               end
               puts line
+              Chef::Log.info("[STDERR] #{line.chomp}")
             end
             stderr.close
             wait_thr.value # Process::Status object returned.
