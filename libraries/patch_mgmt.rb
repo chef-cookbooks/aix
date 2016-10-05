@@ -435,7 +435,7 @@ module AIX
           rq_name = oslevel
         elsif oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/
           # suma metadata
-		  metadata_filter_ml = oslevel.match(/^([0-9]{4}-[0-9]{2})-[0-9]{2}$/)[1]
+          metadata_filter_ml = oslevel.match(/^([0-9]{4}-[0-9]{2})-[0-9]{2}$/)[1]
           suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
           suma.metadata
 
