@@ -10,6 +10,9 @@ end
 
 # %n returns the file name without the extension and directory portions !
 test_nim_list = FileList.new('../test_nim/recipes/*.rb').pathmap("%n")
+success = 0
+failure = 0
+total = 0
 
 ##########################################################
 ## Variable definition
@@ -36,6 +39,62 @@ def build_config_file(config)
   return 'client.rb'
 end
 
+desc 'Parse recipe file to extract expected values'
+def parse_expected_values(file)
+  puts 'Expected values:'
+  expected_values = Hash.new
+  File.open(Dir.pwd + '/recipes/' + file + '.rb', "r") do |f|
+    f.each_line do |line|
+      line.chomp!
+      if line =~ /^# (.*?) : (.*?)$/
+        key, value = $1, $2.delete('"')
+        expected_values[key] = value
+		puts "#{key} = #{value}"
+      end
+    end
+  end
+  expected_values
+end
+
+desc 'Parse log file to check expected values'
+def check_expected_values(rc, file, expected)
+  success = true
+  log_file = Dir.pwd + '/LOGS/log_' + LOG_DIR + '/' + file + '.log'
+
+  if rc.to_i != expected['return code'].to_s.to_i
+    success = false
+    puts "Expected return code #{expected['return code'].to_s} but has #{rc}"
+  end
+
+  unless expected['exception'].to_s == 'nil'
+    found = false
+    File.open(log_file, "r") do |f|
+      f.each_line do |line|
+        found = true if line =~ /#{expected['exception'].to_s}/
+      end
+    end
+    unless found
+      success = false
+      puts "Expected exception #{expected['exception'].to_s} but did not found in #{log_file}"
+    end
+  end
+  
+  unless expected['nim cust'].to_s == ''
+    found = false
+    File.open(log_file, "r") do |f|
+      f.each_line do |line|
+        found = true if line =~ /#{expected['nim cust'].to_s}/
+      end
+    end
+    unless found
+      success = false
+      puts "Expected trace #{expected['nim cust'].to_s} but did not found in #{log_file}"
+    end
+  end
+
+  success
+end
+
 ##########################################################
 ## Task definition
 ##########################################################
@@ -60,11 +119,15 @@ task :deinstall_fake do
 end
 
 task :run_toto do
-  build_config_file('test_nim_sync_mono_latest_sp')
-  puts '----------------------' + '-' * 'test_nim_sync_mono_latest_sp'.length + '------'
-  puts '----- Running recipe: ' + 'test_nim_sync_mono_latest_sp' + ' -----'
-  puts '----------------------' + '-' * 'test_nim_sync_mono_latest_sp'.length + '------'
-  sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + 'test_nim_sync_mono_latest_sp' + ']" || true'
+  fl = 'test_nim_sync_multi'
+  build_config_file(fl)
+  expected_values = parse_expected_values(fl)
+  puts '----------------------' + '-' * fl.length + '------'
+  puts '----- Running recipe: ' + fl + ' -----'
+  puts '----------------------' + '-' * fl.length + '------'
+  sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |ok, res|
+    puts check_expected_values(res.exitstatus, fl, expected_values) ? "SUCCESS" : "FAILURE"
+  end
 end
 
 desc 'Run all NIM tests'
@@ -74,9 +137,25 @@ task :run_nim do
   puts '/////////////////////////////////////////////////////////////////////'
   test_nim_list.each do |fl|
     build_config_file(fl)
+	expected_values = parse_expected_values(fl)
     puts '----------------------' + '-' * fl.length + '------'
     puts '----- Running recipe: ' + fl + ' -----'
     puts '----------------------' + '-' * fl.length + '------'
-    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']" || true'
+    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |ok, res|
+      if check_expected_values(res.exitstatus, fl, expected_values)
+        success += 1
+        total += 1
+        puts "SUCCESS"
+      else
+        failure += 1
+        total += 1
+        puts "FAILURE"
+      end
+    end
   end
+  puts '------------------'
+  puts '----- Report -----'
+  puts '------------------'
+  percent = 100 * success.to_f / total
+  puts "success = #{success}/#{total} (#{percent.round(2)}%)"
 end

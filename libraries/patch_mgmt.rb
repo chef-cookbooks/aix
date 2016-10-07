@@ -218,7 +218,7 @@ module AIX
       end
 
       def perform_customization(lpp_source, clients, async = true)
-        async_s = async ? 'no' : 'yes'
+        async_s = async ? 'yes' : 'no'
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a accept_licenses=yes -a fixes=update_all -a async=#{async_s} #{clients}"
         Chef::Log.warn("Start updating machine(s) \'#{clients}\' to #{lpp_source}.")
         if async # asynchronous
