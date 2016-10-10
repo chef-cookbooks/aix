@@ -1,3 +1,13 @@
+# Expected values
+# return code : 0
+# exception : nil
+# suma directory : […]
+# suma metadata : […]
+# suma preview : […]
+# suma download : […]
+# nim define : […]
+
+
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 
 aix_suma '17. Default property oslevel (latest)' do
