@@ -14,11 +14,7 @@
 # limitations under the License.
 #
 
-begin
-  require 'wpars'
-rescue LoadError # rubocop:disable Lint/HandleExceptions
-  # This space left intentionally blank.
-end
+include WPARHelper
 
 use_inline_resources
 
@@ -29,11 +25,8 @@ end
 
 # loading current resource
 def load_current_resource
+  require_wpar_gem
   @current_resource = Chef::Resource::AixWpar.new(@new_resource.name)
-
-  unless defined?(::WPAR)
-    raise RuntimeError.new('The aix-wpar gem is not installed. Please `/opt/chef/embedded/bin/gem install aix-wpar` to use the aix_wpar resource')
-  end
 
   # get all WPAR on the system
   wpars = ::WPAR::WPARS.new
@@ -74,6 +67,7 @@ action :create do
   if @current_resource.exists
     Chef::Log.info("wpar #{@new_resource.name} already exist")
   else
+    require_wpar_gem
     wpar = WPAR::WPAR.new(name: @new_resource.name)
     wpar.general.auto = @new_resource.autostart || 'no'
     wpar.live_stream = STDOUT if @new_resource.live_stream
