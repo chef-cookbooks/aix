@@ -1,18 +1,18 @@
 # Expected values
 # return code : 0
 # exception : nil
-# suma directory : /tmp/img.source
+# suma directory : /sumatest/oslevel/tl1/7100-03-00-0000
 # suma metadata : 
 # suma preview : FAKE SUMA Preview
 # suma download : FAKE SUMA Download
-# nim define : FAKE NIM
+# nim define : FAKE NIM Define
 
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 
 aix_suma 'Downloading TL 7100-03' do
   oslevel   '7100-03'
-  location  '/tmp/img.source'
+  location  '/sumatest/oslevel/tl1'
   targets   'client1'
   action    :download
 end
