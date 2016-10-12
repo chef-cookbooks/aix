@@ -1,13 +1,13 @@
 # Expected values
 # return code : 1
 # exception : OhaiNimPluginNotFound
-# suma directory : 
-# suma metadata : 
-# suma preview : 
-# suma download : 
-# nim define : 
+# suma directory :
+# suma metadata :
+# suma preview :
+# suma download :
+# nim define :
 
-node.default['nim'] = { }
+node.default['nim'] = {}
 
 aix_suma 'OHAI not found (Error)' do
   oslevel   '7100-02-02'

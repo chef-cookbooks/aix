@@ -2,11 +2,10 @@
 # return code : 0
 # exception : nil
 # suma directory : /sumatest/oslevel/tl1/7100-03-00-0000
-# suma metadata : 
+# suma metadata :
 # suma preview : FAKE SUMA Preview
 # suma download : FAKE SUMA Download
 # nim define : FAKE NIM Define
-
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 

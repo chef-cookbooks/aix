@@ -2,11 +2,10 @@
 # return code : 1
 # exception : SumaPreviewError
 # suma directory : /sumatest/suma/error2
-# suma metadata : 
+# suma metadata :
 # suma preview : FAKE SUMA Preview Error 2
-# suma download : 
-# nim define : 
-
+# suma download :
+# nim define :
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 

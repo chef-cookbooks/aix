@@ -1,12 +1,11 @@
 # Expected values
 # return code : 1
 # exception : SumaMetaDataError
-# suma directory : 
+# suma directory :
 # suma metadata : FAKE SUMA Metadata Error 1
-# suma preview : 
-# suma download : 
-# nim define : 
-
+# suma preview :
+# suma download :
+# nim define :
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 

@@ -7,7 +7,6 @@
 # suma download : FAKE SUMA Download
 # nim define : FAKE NIM Define
 
-
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 
 aix_suma 'Downloading SP 7100-02-02' do

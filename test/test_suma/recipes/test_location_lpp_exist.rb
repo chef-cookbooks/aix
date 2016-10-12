@@ -2,7 +2,7 @@
 # return code : 0
 # exception : nil
 # suma directory : /usr/sys/inst.images/beautiful
-# suma metadata : 
+# suma metadata :
 # suma preview : FAKE SUMA Preview
 # suma download : FAKE SUMA Download
 # nim define : FAKE NIM Define

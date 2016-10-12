@@ -7,7 +7,6 @@
 # suma download : FAKE SUMA Download
 # nim define : FAKE NIM
 
-
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 
 aix_suma 'Downloading latest SP for highest TL' do

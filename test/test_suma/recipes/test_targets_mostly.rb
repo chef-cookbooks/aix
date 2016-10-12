@@ -1,11 +1,11 @@
 # Expected values
 # return code : 0
 # exception : nil
-# suma directory : […]
-# suma metadata : […]
-# suma preview : […]
-# suma download : […]
-# nim define : […]
+# suma directory : todo
+# suma metadata : todo
+# suma preview : todo
+# suma download : todo
+# nim define : todo
 
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' },

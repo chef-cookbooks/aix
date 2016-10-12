@@ -2,11 +2,10 @@
 # return code : 1
 # exception : SumaDownloadError
 # suma directory : /sumatest/suma/error3/7100-02-02-1316
-# suma metadata : 
+# suma metadata :
 # suma preview : FAKE SUMA Preview
 # suma download : FAKE SUMA Download Error 1
-# nim define : 
-
+# nim define :
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 

@@ -2,11 +2,10 @@
 # return code : 1
 # exception : InvalidOsLevelProperty
 # suma directory : /sumatest/oslevel/error
-# suma metadata : 
-# suma preview : 
-# suma download : 
-# nim define : 
-
+# suma metadata :
+# suma preview :
+# suma download :
+# nim define :
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 

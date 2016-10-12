@@ -2,7 +2,7 @@
 # return code : 0
 # exception : nil
 # suma directory : /sumatest/location/dir1/7100-02-02-1316
-# suma metadata : 
+# suma metadata :
 # suma preview : FAKE SUMA Preview
 # suma download : FAKE SUMA Download
 # nim define : FAKE NIM Define
