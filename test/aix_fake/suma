@@ -72,17 +72,10 @@ function error_managment
     then
          error_message="0500-035 No fixes match your query."
     fi
-    if [ "${fields['RqType']}" != "TL" -a "${fields['RqType']}" != "SP" -a "${fields['RqType']}" != "Latest" ]
-    then
-        error_message="0500-019 The -a flag entry RqType=${fields['RqType']} is not valid."
-    fi
+
     if [ ! -z "$error_message" ]
     then
         echo "$error_message"  >&2
-        log_file="${fields['DLTarget']}/suma.error"
-        echo "---- $(date) ----" >> $log_file
-        echo $error_message >> $log_file
-        echo "" >> $log_file
         exit 1
     fi
 }
@@ -92,8 +85,6 @@ function error_managment
 #===============================================
 function generate_bff
 {
-    error_managment
-    #bff_list=[]
     if [ "${fields['RqType']}" == "SP" ]
     then
         nb=100
@@ -146,15 +137,15 @@ function run_action
     then
         sleep 10
     fi    
-    echo "****************************************"
     if [ $action_type -eq 0 ]
     then
+        echo "****************************************"
         echo "Performing preview download."
+        echo "****************************************"
     else
-        echo "Performing download."
         mkdir -p "${fields['DLTarget']}/installp/ppc/"
     fi
-    echo "****************************************"
+    error_managment
     generate_bff
     with_failure=$(echo "${fields['DisplayName']}" | grep "failure")
     nb_download=0
@@ -188,17 +179,6 @@ function run_action
     echo "        $nb_download downloaded"
     echo "        $nb_failure failed"
     echo "        $nb_skip skipped" 
-    log_file="${fields['DLTarget']}/suma.log"
-    echo "---- $(date) ----" >> $log_file
-    for key in "${!fields[@]}"
-    do
-        echo "\t$key : ${fields[$key]}" >> $log_file
-    done
-    echo "\t\tTotal bytes of updates downloaded: $size" >> $log_file
-    echo "\t\t$nb_download downloaded" >> $log_file
-    echo "\t\t$nb_failure failed" >> $log_file
-    echo "\t\t$nb_skip skipped"  >> $log_file
-    echo "" >> $log_file
 }
 
 
@@ -208,7 +188,6 @@ function run_action
 function create_metadata
 {
     error_managment
-    echo "Performing metadata."
     mkdir -p "${fields['DLTarget']}/installp/ppc"
     for sp_id in 0 1 2 3 4 5 6 7 8
     do
@@ -220,7 +199,7 @@ function create_metadata
         echo '<!DOCTYPE packages SYSTEM "package.dtd">' >> $xml_file 
         echo '<packages>' >> $xml_file
         echo '<FileModDate value="20081115 10:51"/>' >> $xml_file
-        echo '<SP name="'${sp_name}'-1614">' >> $xml_file
+        echo '<SP name="'${sp_name}'-1316">' >> $xml_file
         echo '    <Name>'${fields['FilterML']}' Service Pack '${sp_id}'</Name>' >> $xml_file
         echo '</SP>' >> $xml_file
         echo '</packages>' >> $xml_file     
@@ -258,7 +237,7 @@ done
 
 if [ $do_exec -ne 0 ] 
 then
-    echo "### SUMA FAKE ###"
+    echo "### SUMA FAKE ${fields['Action']} ###"
     if [ ! -d "${fields['DLTarget']}" ]
     then
         echo "${fields['DLTarget']} must be an existing absolute path."

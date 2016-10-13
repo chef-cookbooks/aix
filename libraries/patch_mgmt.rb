@@ -151,7 +151,7 @@ module AIX
               download_failed = line.match(/([0-9]+) failed/)[1]
             elsif line =~ /([0-9]+) skipped/
               download_skipped = line.match(/([0-9]+) skipped/)[1]
-            elsif line =~ /(Total bytes of updates downloaded|Summary|Partition id|Filesystem size changed to)/
+            elsif line =~ /(Total bytes of updates downloaded|Summary|Partition id|Filesystem size changed to|### SUMA FAKE)/
               # do nothing
             else
               puts "\n#{line}"
@@ -344,7 +344,7 @@ module AIX
         selected_machines = node['nim']['clients'].keys.sort
         Chef::Log.warn('No targets specified, consider all nim standalone machines as targets!')
       end
-      Chef::Log.debug("List of targets expanded to #{selected_machines}")
+      Chef::Log.info("List of targets expanded to #{selected_machines}")
 
       if selected_machines.empty?
         raise InvalidTargetsProperty, 'Error: cannot contact any machines'
@@ -381,14 +381,15 @@ module AIX
       # build machine-oslevel hash
       hash = Hash.new { |h, k| h[k] = node['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
       targets.each { |k| hash[k] }
-      hash.delete_if { |_k, v| v.nil? }
+      hash.delete_if { |_k, v| v.nil? || v.empty? }
       Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
 
-      # discover FilterML level
-      ary = hash.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
-
-      # find lowest ML
-      filter_ml = ary.min
+      unless hash.empty?
+        # discover FilterML level
+        ary = hash.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
+        # find lowest ML
+        filter_ml = ary.min
+      end
 
       if filter_ml.nil?
         raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets'
@@ -412,22 +413,25 @@ module AIX
       when 'Latest'
         # build machine-oslevel hash
         hash = Hash.new { |h, k| h[k] = node['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
-        targets.each { |key| hash[key] }
-        hash.delete_if { |_k, v| v.nil? }
+        targets.each { |k| hash[k] }
+        hash.delete_if { |_k, v| v.nil? || v.empty? }
         Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
-        # discover FilterML level
-        ary = hash.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
-        # check ml level of machines
-        if ary.min[0..3].to_i < ary.max[0..3].to_i
-          Chef::Log.warn('Release level mismatch')
+        unless hash.empty?
+          # discover FilterML level
+          ary = hash.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
+          # find highest ML
+          metadata_filter_ml = ary.max
+          # check ml level of machines
+          if ary.min[0..3].to_i < ary.max[0..3].to_i
+            Chef::Log.warn('Release level mismatch')
+          end
         end
-        # find highest ML
-        metadata_filter_ml = ary.max
         if metadata_filter_ml.nil?
           raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets'
         else
           metadata_filter_ml.insert(4, '-')
         end
+        Chef::Log.info("Found highest ML #{metadata_filter_ml} from client list")
 
         # suma metadata
         suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
@@ -435,7 +439,6 @@ module AIX
 
         # find latest SP for highest TL
         sps = shell_out("ls #{tmp_dir}/installp/ppc/*.install.tips.html").stdout.split
-        Chef::Log.debug("sps=#{sps}")
         sps.collect! do |file|
           file.gsub!('install.tips.html', 'xml')
           text = ::File.open(file).read
@@ -447,6 +450,7 @@ module AIX
           rq_name.insert(7, '-')
           rq_name.insert(10, '-')
         end
+        Chef::Log.info("Discover RqName #{rq_name} with metadata suma command")
 
       when 'TL'
         # pad with 0
@@ -464,6 +468,7 @@ module AIX
           # find SP build number
           text = ::File.open("#{tmp_dir}/installp/ppc/#{oslevel}.xml").read
           rq_name = text.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1]
+          Chef::Log.info("Discover RqName #{rq_name} with metadata suma command")
         end
       end
       rq_name

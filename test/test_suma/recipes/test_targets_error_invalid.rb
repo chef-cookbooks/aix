@@ -1,20 +1,15 @@
 # Expected values
-# return code : 0
-# exception : nil
-# suma directory : todo
-# suma metadata : todo
-# suma preview : todo
-# suma download : todo
-# nim define : todo
+# return code : 1
+# exception : AIX::PatchMgmt::InvalidTargetsProperty
 
-node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' },
-                                   'client2' => { 'oslevel' => '7100-03-01' },
-                                   'client3' => { 'oslevel' => '7100-04-01' } }
-node.default['nim']['lpp_sources'] = {}
+node.default['nim'] = { 'clients' => { 'client1' => { 'oslevel' => '7100-02-01-1316' },
+                                       'client2' => { 'oslevel' => '7100-03-01-1316' },
+                                       'client3' => { 'oslevel' => '7100-04-01-1316' } },
+                        'lpp_sources' => {} }
 
 aix_suma 'Invalid client list (ERROR)' do
-  oslevel   '7100-02-02'
-  location  '/tmp/img.source/33/'
-  targets   'invalid*'
-  action    :download
+  oslevel '7100-01-01-1316'
+  location '/sumatest/targets/error3'
+  targets 'invalid'
+  action :download
 end

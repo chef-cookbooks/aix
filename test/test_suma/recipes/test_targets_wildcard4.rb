@@ -1,20 +1,16 @@
 # Expected values
 # return code : 0
-# exception : nil
-# suma directory : todo
-# suma metadata : todo
-# suma preview : todo
-# suma download : todo
-# nim define : todo
+# suma log info : INFO: List of targets expanded to ["client1", "client2", "client3"]
+# suma directory : /sumatest/targets/wildcard4/7100-01-01-1316-lpp_source
 
-node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' },
-                                   'client2' => { 'oslevel' => '7100-03-01' },
-                                   'client3' => { 'oslevel' => '7100-04-01' } }
-node.default['nim']['lpp_sources'] = {}
+node.default['nim'] = { 'clients' => { 'client1' => { 'oslevel' => '7100-02-01-1316' },
+                                       'client2' => { 'oslevel' => '7100-03-01-1316' },
+                                       'client3' => { 'oslevel' => '7100-04-01-1316' } },
+                        'lpp_sources' => {} }
 
-aix_suma 'Valid client list with wildcard' do
-  oslevel   '7100-02-02'
-  location  '/tmp/img.source/targets_wd4/'
+aix_suma 'Valid client list with wildcard (0500-035)' do
+  oslevel   '7100-01-01-1316'
+  location  '/sumatest/targets/wildcard4'
   targets   '*'
   action    :download
 end
