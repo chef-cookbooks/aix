@@ -7,7 +7,7 @@
 # suma download : FAKE SUMA Download
 # nim define : FAKE NIM Define
 
-node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } },
+node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 node.default['nim']['lpp_sources'] = {}
 
 aix_suma 'No existing directory (absolute path)' do
