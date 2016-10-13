@@ -323,6 +323,17 @@ module AIX
       raise OhaiNimPluginNotFound, 'Error: cannot find nim info from Ohai output'
     end
 
+    # -----------------------------------------------------------------
+    # Expand the target machine list parameter
+    #
+    #    The target machine parameter is mandatory
+    #    "*" should be specified as target to apply an operation on all
+    #        the machines
+    #
+    #    raise InvalidTargetsProperty in case of error
+    #    - target parameter is empty or not present
+    #    - connot contact the target machines
+    # -----------------------------------------------------------------
     def expand_targets
       selected_machines = []
       # compute list of machines based on targets property
@@ -336,13 +347,11 @@ module AIX
             end
           end
           selected_machines = selected_machines.sort.uniq
-        else # empty
-          selected_machines = node['nim']['clients'].keys.sort
-          Chef::Log.warn('No targets specified, consider all nim standalone machines as targets')
+        else # empty... target is mandatory
+	  raise InvalidTargetsProperty, 'Error: no target machine specified'
         end
-      else # default
-        selected_machines = node['nim']['clients'].keys.sort
-        Chef::Log.warn('No targets specified, consider all nim standalone machines as targets!')
+      else # not set... target is mandatory
+        raise InvalidTargetsProperty, 'Error: no target machine specified'
       end
       Chef::Log.info("List of targets expanded to #{selected_machines}")
 
