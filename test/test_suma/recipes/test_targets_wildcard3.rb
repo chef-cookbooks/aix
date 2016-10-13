@@ -10,6 +10,7 @@
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' },
                                    'client2' => { 'oslevel' => '7100-03-01' },
                                    'client3' => { 'oslevel' => '7100-04-01' } }
+node.default['nim']['lpp_sources'] = {}
 
 aix_suma '31. Valid client list with wildcard' do
   oslevel   '7100-02-02'

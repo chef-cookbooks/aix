@@ -8,6 +8,7 @@
 # nim define :
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
+node.default['nim']['lpp_sources'] = {}
 
 aix_suma 'Specific SP unknown (ERROR metadata 0500-035)' do
   oslevel   '7100-02-02'

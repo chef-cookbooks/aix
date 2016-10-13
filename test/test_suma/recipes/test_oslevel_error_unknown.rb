@@ -8,6 +8,7 @@
 # nim define :
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
+node.default['nim']['lpp_sources'] = {}
 
 aix_suma 'Unknown property oslevel (ERROR)' do
   oslevel   'xxx'

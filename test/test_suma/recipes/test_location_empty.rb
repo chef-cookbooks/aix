@@ -7,7 +7,8 @@
 # suma download : FAKE SUMA Download
 # nim define : FAKE NIM Define
 
-node.default['nim'] = { 'clients' => { 'client1' => { 'oslevel' => '7100-02-01' } } }
+node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
+node.default['nim']['lpp_sources'] = {}
 
 aix_suma 'Empty property location (/usr/sys/inst.images)' do
   oslevel   '7100-02-03'

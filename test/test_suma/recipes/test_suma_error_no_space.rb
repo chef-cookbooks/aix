@@ -8,6 +8,7 @@
 # nim define :
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
+node.default['nim']['lpp_sources'] = {}
 
 aix_suma 'Error no more space 0500-004 (Download ERROR)' do
   oslevel   '7100-02-02-1316'

@@ -8,6 +8,7 @@
 # nim define : FAKE NIM Define Error 1
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
+node.default['nim']['lpp_sources'] = {}
 
 aix_suma 'Error nim define (Preview + Download + Define ERROR)' do
   oslevel   '7100-02-02-1316'

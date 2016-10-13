@@ -8,6 +8,7 @@
 # nim define : FAKE NIM Define
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
+node.default['nim']['lpp_sources'] = {}
 
 aix_suma 'LPP source absent (Preview + Download + Define)' do
   oslevel   '7100-02-02-1316'

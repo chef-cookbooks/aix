@@ -8,6 +8,7 @@
 # nim define :
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
+node.default['nim']['lpp_sources'] = {}
 
 aix_suma 'Error network 0500-013 (Preview ERROR)' do
   oslevel   '7100-02-02-1316'
