@@ -69,8 +69,10 @@ function run_action
     # NIM Define lpp_source
     if [ $action_type -eq 0 ]
     then
-	    if [ "${fields['location']}" == "" ]
+		# lpp_source test value of 7100-02-02-1316-lpp_source should return an error although it exists in Ohai
+	    if [ "${fields['location']}" == "/sumatest/suma/error4/7100-02-02-1316-lpp_source" ]
 		then
+			echo "### NIM FAKE ERROR when DEFINE OPERATION on lpp source $object_name with location ${fields['location']} ###"
 			echo "0042-001 nim: processing error encountered on \"${fields['server']}\":" >&2
 			echo "   0042-001 m_mk_lpp_source: processing error encountered on \"${fields['server']}\":" >&2
 			echo "   0042-154 c_stat: the file or directory \"${fields['location']}\" does not exist" >&2
