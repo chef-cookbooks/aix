@@ -366,7 +366,7 @@ module AIX
           rq_type = 'TL'
         elsif oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
           rq_type = 'SP'
-        elsif oslevel.empty? || oslevel.casecmp?('latest')
+        elsif oslevel.empty? || oslevel.casecmp('latest') == 0
           rq_type = 'Latest'
         else
           raise InvalidOsLevelProperty, 'Error: oslevel is not recognized'
