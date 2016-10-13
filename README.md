@@ -455,7 +455,7 @@ Parameters:
 
 * `oslevel` - service pack, technology level or 'latest' (with or without build number) (default: Latest)
 * `location` - directory to store downloaded fixes (default: /usr/sys/inst.images)
-* `targets` - space or comma separated list of clients to consider for update process (star wildcard accepted) (default to all NIM standalone machines)
+* `targets` - space or comma separated list of clients to consider for update process (star wildcard accepted)
 * `tmp_dir` - directory to store suma metadata files (default: /usr/sys/inst.images)
 
 Actions:
@@ -496,7 +496,7 @@ Parameters:
 
 * `device` - NFS mount directory containing bos.sysmgt.nim.master package
 * `lpp_source` - name of NIM lpp_source resource to install
-* `targets` - comma or space separated list of clients to update (star wildcard accepted) (default to all NIM standalone machines)
+* `targets` - comma or space separated list of clients to update (star wildcard accepted)
 * `async` - if true, customization is performed asynchronously (default: false)
 
 Actions:

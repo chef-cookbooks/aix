@@ -1,6 +1,7 @@
 # Expected values
-# return code : 1
-# exception : AIX::PatchMgmt::InvalidTargetsProperty
+# return code : 0
+# suma directory : /sumatest/targets/error5/7100-01-01-1316-lpp_source
+# suma preview : ### SUMA FAKE Preview ###
 
 node.default['nim'] = { 'clients' => { 'client1' => { 'oslevel' => '7100-02-01-1316' },
                                        'client2' => { 'oslevel' => '7200-03-01-1316' }, # 7.2 AIX Release

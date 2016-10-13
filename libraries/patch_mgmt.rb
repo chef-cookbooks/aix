@@ -348,7 +348,7 @@ module AIX
           end
           selected_machines = selected_machines.sort.uniq
         else # empty... target is mandatory
-	  raise InvalidTargetsProperty, 'Error: no target machine specified'
+          raise InvalidTargetsProperty, 'Error: no target machine specified'
         end
       else # not set... target is mandatory
         raise InvalidTargetsProperty, 'Error: no target machine specified'
@@ -432,7 +432,7 @@ module AIX
           metadata_filter_ml = ary.max
           # check ml level of machines
           if ary.min[0..3].to_i < ary.max[0..3].to_i
-            Chef::Log.warn('Release level mismatch')
+            Chef::Log.warn("Release level mismatch, only AIX #{ary.max[0]}.#{ary.max[1]} SP/TL will be downloaded")
           end
         end
         if metadata_filter_ml.nil?

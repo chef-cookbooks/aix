@@ -14,7 +14,7 @@ end
 test_location_list = FileList.new('../test_suma/recipes/*location*.rb').pathmap("%n")
 test_oslevel_list  = FileList.new('../test_suma/recipes/*oslevel*.rb').pathmap("%n")
 test_suma_list     = FileList.new('../test_suma/recipes/*suma*.rb').pathmap("%n")
-test_targets_list  = ['test_targets_error_no_oslevel2'] # FileList.new('../test_suma/recipes/*targets*.rb').pathmap("%n")
+test_targets_list  = FileList.new('../test_suma/recipes/*targets*.rb').pathmap("%n")
 test_error_list    = FileList.new('../test_suma/recipes/*error*.rb').pathmap("%n")
 success = 0
 failure = 0
@@ -217,10 +217,3 @@ task :run_error do
         sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']" || true'
     end
 end
-
-
-# task :test_11  do
-#     puts 'Launching OSLEVEL Test 11'
-#     sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::test_oslevel_11]" || true'
-# end
-

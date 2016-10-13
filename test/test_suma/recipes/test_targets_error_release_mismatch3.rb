@@ -1,6 +1,9 @@
 # Expected values
-# return code : 1
-# exception : AIX::PatchMgmt::InvalidTargetsProperty
+# return code : 0
+# suma log warn : WARN: Release level mismatch, only AIX 7.2 SP/TL will be downloaded
+# suma directory : /sumatest/targets/error7/7200-03-08-1316-lpp_source
+# suma metadata : ### SUMA FAKE Metadata ###
+# suma preview : ### SUMA FAKE Preview ###
 
 node.default['nim'] = { 'clients' => { 'client1' => { 'oslevel' => '7100-02-01-1316' },
                                        'client2' => { 'oslevel' => '7200-03-01-1316' }, # 7.2 AIX Release
