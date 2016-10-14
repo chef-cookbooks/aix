@@ -1,24 +1,20 @@
 require 'fileutils'
 
-#task :default => [:hello, :copy_recipes, :run_location, :run_oslevel, :run_suma, :run_targets ]
 task :default => [ :copy_recipes, :install_fake, :run_location, :run_oslevel, :run_suma, :run_targets, :deinstall_fake ]
-
 task :my => [ :copy_recipes, :install_fake, :run_targets, :deinstall_fake ]
+task :debug => [ :clean_all, :copy_recipes, :run_location ]
 
 task :hello  do
     puts 'Running RAKE for AIX CHEF'
 end
 
 # %n returns the file name without the extension and directory portions !
-#test_ohai_list     = FileList.new('aix/recipes/*ohai*.rb').pathmap("%n")
+test_ohai_list     = FileList.new('../test_suma/recipes/*ohai*.rb').pathmap("%n")
 test_location_list = FileList.new('../test_suma/recipes/*location*.rb').pathmap("%n")
 test_oslevel_list  = FileList.new('../test_suma/recipes/*oslevel*.rb').pathmap("%n")
 test_suma_list     = FileList.new('../test_suma/recipes/*suma*.rb').pathmap("%n")
 test_targets_list  = FileList.new('../test_suma/recipes/*targets*.rb').pathmap("%n")
 test_error_list    = FileList.new('../test_suma/recipes/*error*.rb').pathmap("%n")
-success = 0
-failure = 0
-total = 0
 
 ##########################################################
 ## Variable definition
@@ -26,6 +22,10 @@ total = 0
 
 LOG_DIR      = Time.new.strftime("%F_%H%M%S")
 COOKBOOK_DIR = Dir.pwd + '/../../..'
+
+success = 0
+failure = 0
+total = 0
 
 ##########################################################
 ## Function definition
@@ -122,8 +122,27 @@ end
 
 desc 'Copy Test recipes to Cookbook recipes'
 task :copy_recipes do
+  puts '/////////////////////////////////////////////////////////////////////'
+  puts 'Copy Test recipes to Cookbook recipes'
   FileUtils.cp_r Dir.pwd + '/recipes/.', COOKBOOK_DIR + '/aix/recipes', :verbose => true
 end
+
+
+desc 'Clean SUMA tests directory'
+task :clean_all do
+  puts '/////////////////////////////////////////////////////////////////////'
+  puts 'Clean SUMA tests directory'
+  if File.exists? '/sumatest'
+    puts 'Deleting /sumatest'
+    FileUtils.rm_rf '/sumatest', :force => true
+  end
+
+  if File.exists? '/usr/sys/inst.images/'
+    puts 'Deleting /usr/sys/inst.images/'
+    FileUtils.rm_rf '/usr/sys/inst.images/', :force => true
+  end
+end
+
 
 desc 'Set up fake nim & suma'
 task :install_fake do
