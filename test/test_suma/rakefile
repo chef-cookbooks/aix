@@ -134,12 +134,12 @@ task :clean_all do
   puts 'Clean SUMA tests directory'
   if File.exists? '/sumatest'
     puts 'Deleting /sumatest'
-    FileUtils.rm_rf '/sumatest', :force => true
+    FileUtils.rm_rf('/sumatest', :secure => true)
   end
 
   if File.exists? '/usr/sys/inst.images/'
     puts 'Deleting /usr/sys/inst.images/'
-    FileUtils.rm_rf '/usr/sys/inst.images/', :force => true
+    FileUtils.rm_rf('/usr/sys/inst.images/', :secure => true)
   end
 end
 
