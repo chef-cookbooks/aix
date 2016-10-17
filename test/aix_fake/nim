@@ -72,7 +72,7 @@ function run_action
 		# lpp_source test value of 7100-02-02-1316-lpp_source should return an error although it exists in Ohai
 	    if [ "${fields['location']}" == "/sumatest/suma/error4/7100-02-02-1316-lpp_source" ]
 		then
-			echo "### NIM FAKE ERROR when DEFINE OPERATION on lpp source $object_name with location ${fields['location']} ###"
+			echo "### NIM FAKE Define ERROR ###"
 			echo "0042-001 nim: processing error encountered on \"${fields['server']}\":" >&2
 			echo "   0042-001 m_mk_lpp_source: processing error encountered on \"${fields['server']}\":" >&2
 			echo "   0042-154 c_stat: the file or directory \"${fields['location']}\" does not exist" >&2
@@ -80,6 +80,7 @@ function run_action
 			echo "" >&2
 			exit 1
 		else
+            echo "### NIM FAKE Define ###"
 			echo "Preparing to copy install images (this will take several minutes)..."
 			echo ""
 			echo "Now checking for missing install images..."
@@ -92,12 +93,12 @@ function run_action
 		# lpp_source test value of 7100-08-00-0000-lpp_source should return an error although it exists in Ohai
 	    if [ "${fields['lpp_source']}" == "7100-08-00-0000-lpp_source" ]
 		then
-			echo "### NIM FAKE ERROR when CUSTOM OPERATION on client $object_name with resource ${fields['lpp_source']} ###"
+			echo "### NIM FAKE Cust ERROR ###"
 			echo "0042-001 nim: processing error encountered on \"master\":" >&2
 			echo "" >&2
 			exit 1
 		else
-			echo "### NIM FAKE DONE CUSTOM OPERATION on client $object_name with resource ${fields['lpp_source']} ###"
+			echo "### NIM FAKE Cust ###"
 		fi
     fi
 }
