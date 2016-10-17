@@ -2,7 +2,7 @@
 # return code : 1
 # exception : SumaMetaDataError
 # suma directory :
-# suma metadata : FAKE SUMA Metadata Error 1
+# suma metadata : ### SUMA FAKE Metadata ### 1
 # suma preview :
 # suma download :
 # nim define :

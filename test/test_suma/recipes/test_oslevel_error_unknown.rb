@@ -1,7 +1,7 @@
 # Expected values
 # return code : 1
 # exception : InvalidOsLevelProperty
-# suma directory : /sumatest/oslevel/error
+# suma directory :
 # suma metadata :
 # suma preview :
 # suma download :
