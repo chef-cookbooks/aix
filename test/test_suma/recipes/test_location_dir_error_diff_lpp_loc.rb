@@ -1,7 +1,7 @@
 # Expected values
 # return code : 1
 # exception : InvalidLocationProperty
-# suma directory : /sumatest/location/dir2
+# suma directory : 
 # suma metadata :
 # suma preview :
 # suma download :

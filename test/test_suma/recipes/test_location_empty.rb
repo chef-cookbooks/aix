@@ -1,17 +1,17 @@
 # Expected values
 # return code : 0
 # exception : nil
-# suma directory : /usr/sys/inst.images/7100-02-02-1316
+# suma directory : /usr/sys/inst.images/7100-02-02-1316-lpp_source
 # suma metadata :
-# suma preview : FAKE SUMA Preview
-# suma download : FAKE SUMA Download
-# nim define : FAKE NIM Define
+# suma preview : ### SUMA FAKE Preview ###
+# suma download : ### SUMA FAKE Download ###
+# nim define : ### NIM FAKE Define ###
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
 node.default['nim']['lpp_sources'] = {}
 
 aix_suma 'Empty property location (/usr/sys/inst.images)' do
-  oslevel   '7100-02-03'
+  oslevel   '7100-02-02'
   location  ''
   targets   'client1'
   action    :download
