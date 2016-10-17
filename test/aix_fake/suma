@@ -65,12 +65,22 @@ function error_managment
 
     if [ ! -z $(echo $display_name | grep "0500-059") ]
     then
-         error_message="0500-059 Entitlement is required to download. The system's serial number is not entitled. Please go to the Fix Central website to download fixes."
+        error_message="0500-059 Entitlement is required to download. The system's serial number is not entitled. Please go to the Fix Central website to download fixes."
     fi
 
     if [ ! -z $(echo $display_name | grep "0500-035") ]
     then
-         error_message="0500-035 No fixes match your query."
+        error_message="0500-035 No fixes match your query."
+    fi
+
+    if [ ! -z $(echo $display_name | grep "ERROR metadata 1") ]
+    then
+        error_message="### SUMA FAKE ERROR Metadata 1 ###"
+    fi
+
+    if [ ! -z $(echo $display_name | grep "ERROR metadata 2") ]
+    then
+        error_message="### SUMA FAKE ERROR Metadata 2 ###"
     fi
 
     if [ ! -z "$error_message" ]
