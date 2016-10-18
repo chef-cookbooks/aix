@@ -55,6 +55,7 @@ function error_managment
         if [ "${fields['Action']}" == 'Download' ]
         then
             error_message="0500-004 no more space."
+            error_message="### SUMA FAKE Download ERROR ###"
         fi
     fi
 
@@ -81,6 +82,11 @@ function error_managment
     if [ ! -z $(echo $display_name | grep "ERROR metadata 2") ]
     then
         error_message="### SUMA FAKE ERROR Metadata 2 ###"
+    fi
+
+    if [ ! -z $(echo $display_name | grep "Preview ERROR") ]
+    then
+        error_message="### SUMA FAKE Preview ERROR ###"
     fi
 
     if [ ! -z "$error_message" ]

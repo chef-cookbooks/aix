@@ -2,19 +2,15 @@ require 'fileutils'
 
 task :default => [ :copy_recipes, :install_fake, :run_location, :run_oslevel, :run_suma, :run_targets, :deinstall_fake ]
 task :my => [ :copy_recipes, :install_fake, :run_targets, :deinstall_fake ]
-task :debug => [ :clean_all, :copy_recipes, :install_fake, :run_location, :deinstall_fake ]
+task :debug => [ :clean_all, :copy_recipes, :install_fake, :run_suma, :deinstall_fake ]
 task :error => [ :clean_all, :copy_recipes, :install_fake, :run_error, :deinstall_fake ]
-
-#task :hello  do
-#    puts 'Running RAKE for AIX CHEF'
-#end
 
 # %n returns the file name without the extension and directory portions !
 test_ohai_list     = FileList.new('../test_suma/recipes/test_ohai*.rb').pathmap("%n")
 test_location_list = FileList.new('../test_suma/recipes/test_location*.rb').pathmap("%n")
-test_oslevel_list  = FileList.new('../test_suma/recipes/test_oslevel*.rb').pathmap("%n")
-test_suma_list     = FileList.new('../test_suma/recipes/test_suma*.rb').pathmap("%n")
-test_targets_list  = FileList.new('../test_suma/recipes/*targets*.rb').pathmap("%n")
+test_oslevel_list  = FileList.new('../test_suma/recipes/test_oslevel_sp*.rb').pathmap("%n")
+test_suma_list     = FileList.new('../test_suma/recipes/test_suma*erro*.rb').pathmap("%n")
+test_targets_list  = FileList.new('../test_suma/recipes/test_targets*.rb').pathmap("%n")
 test_error_list    = FileList.new('../test_suma/recipes/test*error*.rb').pathmap("%n")
 
 ##########################################################
