@@ -7,7 +7,7 @@
 # suma download : ### SUMA FAKE Download ###
 # nim define :
 
-node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01' } }
+node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01-1316' } }
 node.default['nim']['lpp_sources'] = { 'my_beautiful_lpp-source' => { 'location' => '/usr/sys/inst.images/beautiful' } }
 
 aix_suma 'Provide existing lpp source as location' do
