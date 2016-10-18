@@ -87,7 +87,35 @@ module AIX
         @dl_target = dl_target
       end
 
-      def preview
+      def metadata(save_it = false)
+        suma_s = "/usr/sbin/suma -x -a Action=Metadata -a DisplayName=\"#{@display_name}\"  -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
+        case @rq_type
+        when 'SP'
+          suma_s << " -a RqName=#{@rq_name}"
+        when 'TL'
+          suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}"
+        end
+        suma_s << ( save_it ? ' -w' : '' )
+
+        Chef::Log.debug("SUMA metadata operation: #{suma_s}")
+        so = shell_out(suma_s, environment: { 'LANG' => 'C' }, timeout: 3000)
+        so.stdout.each_line do |line|
+          Chef::Log.info("[STDOUT] #{line.chomp}")
+        end
+        so.stderr.each_line do |line|
+          if line =~ /Task ID ([0-9]+) created./
+            Chef::Log.warn("Created task #{Regexp.last_match(1)}")
+          end
+          Chef::Log.info("[STDERR] #{line.chomp}")
+        end
+        if so.error?
+          raise SumaMetadataError, "Error: Command \"#{suma_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
+        else
+          Chef::Log.warn("Done suma metadata operation \"#{suma_s}\"")
+        end
+      end
+
+      def preview(save_it = false)
         suma_s = "/usr/sbin/suma -x -a Action=Preview -a DisplayName=\"#{@display_name}\" -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
         case @rq_type
         when 'SP'
@@ -95,6 +123,7 @@ module AIX
         when 'TL'
           suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}"
         end
+        suma_s << ( save_it ? ' -w' : '' )
 
         Chef::Log.debug("SUMA preview operation: #{suma_s}")
         so = shell_out(suma_s, environment: { 'LANG' => 'C' }, timeout: 3000)
@@ -102,6 +131,9 @@ module AIX
           Chef::Log.info("[STDOUT] #{line.chomp}")
         end
         so.stderr.each_line do |line|
+          if line =~ /Task ID ([0-9]+) created./
+            Chef::Log.warn("Created task #{Regexp.last_match(1)}")
+          end
           Chef::Log.info("[STDERR] #{line.chomp}")
         end
         if so.stderr =~ /^0500-035 No fixes match your query.$/
@@ -115,11 +147,11 @@ module AIX
           Chef::Log.info("#{@downloaded} downloaded (#{@dl} GB), #{@failed} failed, #{@skipped} skipped fixes")
           Chef::Log.warn("Done suma preview operation \"#{suma_s}\"")
         else
-          raise SumaPreviewError, "Error: Command \"#{suma_s}\" returns \'#{so.stderr.chomp!}\'!\n#{so.stdout}"
+          raise SumaPreviewError, "Error: Command \"#{suma_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         end
       end
 
-      def download
+      def download(save_it = false)
         suma_s = "/usr/sbin/suma -x -a Action=Download -a DisplayName=\"#{@display_name}\" -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
         case @rq_type
         when 'SP'
@@ -127,6 +159,7 @@ module AIX
         when 'TL'
           suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}"
         end
+        suma_s << ( save_it ? ' -w' : '' )
 
         succeeded = 0
         failed = 0
@@ -146,11 +179,11 @@ module AIX
             elsif line =~ /^Download SKIPPED:/
               skipped += 1
             elsif line =~ /([0-9]+) downloaded/
-              download_downloaded = line.match(/([0-9]+) downloaded/)[1]
+              download_downloaded = Regexp.last_match(1)
             elsif line =~ /([0-9]+) failed/
-              download_failed = line.match(/([0-9]+) failed/)[1]
+              download_failed = Regexp.last_match(1)
             elsif line =~ /([0-9]+) skipped/
-              download_skipped = line.match(/([0-9]+) skipped/)[1]
+              download_skipped = Regexp.last_match(1)
             elsif line =~ /(Total bytes of updates downloaded|Summary|Partition id|Filesystem size changed to|### SUMA FAKE)/
               # do nothing
             else
@@ -163,35 +196,23 @@ module AIX
           end
           stdout.close
           stderr.each_line do |line|
-            puts line
+            if line =~ /Task ID ([0-9]+) created./
+              Chef::Log.warn("Created task #{Regexp.last_match(1)}")
+            else
+              puts line
+            end
             Chef::Log.info("[STDERR] #{line.chomp}")
           end
           stderr.close
           wait_thr.value # Process::Status object returned.
         end
         unless exit_status.success?
-          raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns \'#{so.stderr.chomp!}\'!\n#{so.stdout}"
+          raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns above error!"
         end
         Chef::Log.warn("Finish downloading #{succeeded} fixes.")
         @download = download_downloaded
         @failed = download_failed
         @skipped = download_skipped
-      end
-
-      def metadata
-        suma_s = "/usr/sbin/suma -x -a Action=Metadata -a DisplayName=\"#{@display_name}\"  -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
-        so = shell_out(suma_s, timeout: 3000)
-        so.stdout.each_line do |line|
-          Chef::Log.info("[STDOUT] #{line.chomp}")
-        end
-        so.stderr.each_line do |line|
-          Chef::Log.info("[STDERR] #{line.chomp}")
-        end
-        if so.error?
-          raise SumaMetadataError, "Error: Command \"#{suma_s}\" returns \'#{so.stderr.chomp!}\'!\n#{so.stdout}"
-        else
-          Chef::Log.warn("Done suma metadata operation \"#{suma_s}\"")
-        end
       end
     end
 

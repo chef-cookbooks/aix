@@ -17,8 +17,8 @@
 include AIX::PatchMgmt
 
 property :desc, String, name_property: true
-property :lpp_source, String
-property :targets, String
+property :lpp_source, String, required: true
+property :targets, String, required: true
 property :async, [true, false], default: false
 
 default_action :update
