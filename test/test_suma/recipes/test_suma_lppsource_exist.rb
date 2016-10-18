@@ -1,10 +1,10 @@
 # Expected values
 # return code : 0
 # exception : nil
-# suma directory : /sumatest/suma/download2/7100-02-02-1316'
+# suma directory : /sumatest/suma/download2/7100-02-02-1316-lpp_source
 # suma metadata :
-# suma preview : FAKE SUMA Preview
-# suma download : FAKE SUMA Download
+# suma preview : ### SUMA FAKE Preview ###
+# suma download : ### SUMA FAKE Download ###
 # nim define :
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01-1316' } }

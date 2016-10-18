@@ -1,9 +1,9 @@
 # Expected values
 # return code : 1
 # exception : SumaPreviewError
-# suma directory : /sumatest/suma/error1/7100-02-02-1316
+# suma directory : /sumatest/suma/error1/7100-02-02-1316-lpp_source
 # suma metadata :
-# suma preview : FAKE SUMA Preview Error 1
+# suma preview : ### SUMA FAKE Preview ERROR ###
 # suma download :
 # nim define :
 

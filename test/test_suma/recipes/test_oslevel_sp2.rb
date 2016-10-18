@@ -2,7 +2,7 @@
 # return code : 0
 # exception : nil
 # suma directory : /sumatest/oslevel/sp2/7100-02-02-1316-lpp_source
-# suma metadata :
+# suma metadata : ### SUMA FAKE Metadata ###
 # suma preview : ### SUMA FAKE Preview ###
 # suma download : ### SUMA FAKE Download ###
 # nim define : ### NIM FAKE Define ###

@@ -1,10 +1,10 @@
 # Expected values
 # return code : 1
 # exception : SumaDownloadError
-# suma directory : /sumatest/suma/error3/7100-02-02-1316
+# suma directory : /sumatest/suma/error3/7100-02-02-1316-lpp_source
 # suma metadata :
-# suma preview : FAKE SUMA Preview
-# suma download : FAKE SUMA Download Error 1
+# suma preview : ### SUMA FAKE Preview ###
+# suma download : ### SUMA FAKE Download ERROR ###
 # nim define :
 
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01-1316' } }
