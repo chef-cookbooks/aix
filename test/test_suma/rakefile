@@ -1,6 +1,6 @@
 require 'fileutils'
 
-task :default => [ :copy_recipes, :install_fake, :run_location, :run_oslevel, :run_suma, :run_targets, :deinstall_fake ]
+task :default => [ :clean_all, :copy_recipes, :install_fake, :run_ohai, :run_location, :run_oslevel, :run_suma, :run_targets, :report, :deinstall_fake ]
 task :my => [ :copy_recipes, :install_fake, :run_targets, :deinstall_fake ]
 task :debug => [ :clean_all, :copy_recipes, :install_fake, :run_suma, :deinstall_fake ]
 task :error => [ :clean_all, :copy_recipes, :install_fake, :run_error, :deinstall_fake ]
@@ -8,8 +8,8 @@ task :error => [ :clean_all, :copy_recipes, :install_fake, :run_error, :deinstal
 # %n returns the file name without the extension and directory portions !
 test_ohai_list     = FileList.new('../test_suma/recipes/test_ohai*.rb').pathmap("%n")
 test_location_list = FileList.new('../test_suma/recipes/test_location*.rb').pathmap("%n")
-test_oslevel_list  = FileList.new('../test_suma/recipes/test_oslevel_sp*.rb').pathmap("%n")
-test_suma_list     = FileList.new('../test_suma/recipes/test_suma*erro*.rb').pathmap("%n")
+test_oslevel_list  = FileList.new('../test_suma/recipes/test_oslevel*.rb').pathmap("%n")
+test_suma_list     = FileList.new('../test_suma/recipes/test_suma*.rb').pathmap("%n")
 test_targets_list  = FileList.new('../test_suma/recipes/test_targets*.rb').pathmap("%n")
 test_error_list    = FileList.new('../test_suma/recipes/test*error*.rb').pathmap("%n")
 
@@ -142,6 +142,15 @@ task :clean_all do
   end
 end
 
+desc 'Result Reporting'
+task :report do
+  puts "\033[44m" + '--------------------------' + "\033[0m"
+  puts "\033[44m" + '--------  Report  --------' + "\033[0m"
+  puts "\033[44m" + '--------------------------' + "\033[0m"
+  percent = 100 * success.to_f / total
+  puts "\033[44mSuccess = #{success}/#{total} (#{percent.round(2)}%)\033[0m"
+end
+
 
 desc 'Set up fake nim & suma'
 task :install_fake do
@@ -156,6 +165,31 @@ desc 'Remove fake from machine'
 task :deinstall_fake do
   FileUtils.cp '/usr/sbin/nim.old', '/usr/sbin/nim', :verbose => true
   FileUtils.cp '/usr/sbin/suma.old', '/usr/sbin/suma', :verbose => true
+end
+
+desc 'Run all OHAI tests'
+task :run_ohai do
+    puts '/////////////////////////////////////////////////////////////////////'
+    puts '                    Running OHAI tests'
+    puts '/////////////////////////////////////////////////////////////////////'
+    test_ohai_list.each do |fl|
+        build_config_file(fl)
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    puts "\033[45m" + '----- Running recipe: ' + fl + ' -----' + "\033[0m"
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    expected_values = parse_expected_values(fl)
+    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |ok, res|
+      if check_expected_values(res.exitstatus, fl, expected_values)
+        success += 1
+        total += 1
+        puts "\033[32;1mSUCCESS\033[0m"
+      else
+        failure += 1
+        total += 1
+        puts "\033[31;1mFAILURE\033[0m"
+      end
+    end
+  end
 end
 
 
@@ -182,11 +216,11 @@ task :run_location do
       end
     end
   end
-  puts "\033[44m" + '--------------------------' + "\033[0m"
-  puts "\033[44m" + '--------  Report  --------' + "\033[0m"
-  puts "\033[44m" + '--------------------------' + "\033[0m"
-  percent = 100 * success.to_f / total
-  puts "\033[44mSuccess = #{success}/#{total} (#{percent.round(2)}%)\033[0m"
+#  puts "\033[44m" + '--------------------------' + "\033[0m"
+#  puts "\033[44m" + '--------  Report  --------' + "\033[0m"
+#  puts "\033[44m" + '--------------------------' + "\033[0m"
+#  percent = 100 * success.to_f / total
+#  puts "\033[44mSuccess = #{success}/#{total} (#{percent.round(2)}%)\033[0m"
 end
 
 
@@ -213,12 +247,11 @@ task :run_oslevel do
       end
     end
   end
-  puts "\033[44m" + '--------------------------' + "\033[0m"
-  puts "\033[44m" + '--------  Report  --------' + "\033[0m"
-  puts "\033[44m" + '--------------------------' + "\033[0m"
-
-  percent = 100 * success.to_f / total
-  puts "\033[44mSuccess = #{success}/#{total} (#{percent.round(2)}%)\033[0m"
+  # puts "\033[44m" + '--------------------------' + "\033[0m"
+  # puts "\033[44m" + '--------  Report  --------' + "\033[0m"
+  # puts "\033[44m" + '--------------------------' + "\033[0m"
+  # percent = 100 * success.to_f / total
+  # puts "\033[44mSuccess = #{success}/#{total} (#{percent.round(2)}%)\033[0m"
 end
 
 desc 'Run all SUMA tests'
@@ -244,11 +277,11 @@ task :run_suma do
       end
     end
   end
-  puts "\033[44m" + '--------------------------' + "\033[0m"
-  puts "\033[44m" + '--------  Report  --------' + "\033[0m"
-  puts "\033[44m" + '--------------------------' + "\033[0m"
-  percent = 100 * success.to_f / total
-  puts "\033[44mSuccess = #{success}/#{total} (#{percent.round(2)}%)\033[0m"
+  # puts "\033[44m" + '--------------------------' + "\033[0m"
+  # puts "\033[44m" + '--------  Report  --------' + "\033[0m"
+  # puts "\033[44m" + '--------------------------' + "\033[0m"
+  # percent = 100 * success.to_f / total
+  # puts "\033[44mSuccess = #{success}/#{total} (#{percent.round(2)}%)\033[0m"
 end
 
 desc 'Run all TARGETS tests'
@@ -274,11 +307,11 @@ task :run_targets do
       end
     end
   end
-  puts "\033[44m" + '--------------------------' + "\033[0m"
-  puts "\033[44m" + '--------  Report  --------' + "\033[0m"
-  puts "\033[44m" + '--------------------------' + "\033[0m"
-  percent = 100 * success.to_f / total
-  puts "\033[44mSuccess = #{success}/#{total} (#{percent.round(2)}%)\033[0m"
+  # puts "\033[44m" + '--------------------------' + "\033[0m"
+  # puts "\033[44m" + '--------  Report  --------' + "\033[0m"
+  # puts "\033[44m" + '--------------------------' + "\033[0m"
+  # percent = 100 * success.to_f / total
+  # puts "\033[44mSuccess = #{success}/#{total} (#{percent.round(2)}%)\033[0m"
 end
 
 desc 'Run all ERROR tests'
