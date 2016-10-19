@@ -17,7 +17,7 @@ client = STDIN.readline.chomp
 =end
 
 client = 'quimby03 quimby02'
-live_stream = true
+live_stream = false
 
 ##################
 # PRE-REQUISITES #
@@ -37,12 +37,12 @@ end
 # download flrtvc
 remote_file '/tmp/FLRTVC-0.7.zip' do
   source 'https://www-304.ibm.com/webapp/set2/sas/f/flrt3/FLRTVC-0.7.zip'
-  not_if do ::File.exist?('/usr/bin/flrtvc.ksh') end
+  not_if { ::File.exist?('/usr/bin/flrtvc.ksh') }
 end
 
 # unzip flrtvc
 execute 'unzip /tmp/FLRTVC-0.7.zip -d /usr/bin' do
-  not_if do ::File.exist?('/usr/bin/flrtvc.ksh') end
+  not_if { ::File.exist?('/usr/bin/flrtvc.ksh') }
 end
 
 # set execution mode

@@ -30,8 +30,8 @@ default_action :download
 load_current_value do
 end
 
-def get_suma_params
-  params = Hash.new
+def suma_params
+  params = {}
 
   # build list of targets
   target_list = expand_targets
@@ -80,23 +80,25 @@ action :preview do
   Chef::Log.debug("location=\"#{location}\"")
   Chef::Log.debug("targets=\"#{targets}\"")
   Chef::Log.debug("tmp_dir=\"#{tmp_dir}\"")
+  Chef::Log.debug("save_it=\"#{save_it}\"")
+  Chef::Log.debug("sched_time=\"#{sched_time}\"")
 
   # check ohai nim info
   check_ohai
 
   # obtain suma parameters
-  suma_params = get_suma_params
+  params = suma_params
 
   # create directory
-  unless ::File.directory?(suma_params['dl_target'])
-    mkdir_s = "mkdir -p #{suma_params['dl_target']}"
-    converge_by("create directory \'#{suma_params['dl_target']}\'") do
+  unless ::File.directory?(params['dl_target'])
+    mkdir_s = "mkdir -p #{params['dl_target']}"
+    converge_by("create directory \'#{params['dl_target']}\'") do
       shell_out!(mkdir_s)
     end
   end
 
   # suma preview
-  suma = Suma.new(desc, suma_params['rq_type'], suma_params['rq_name'], suma_params['filter_ml'], suma_params['dl_target'])
+  suma = Suma.new(desc, params['rq_type'], params['rq_name'], params['filter_ml'], params['dl_target'])
   converge_by('preview download') do
     suma.preview(save_it)
   end
@@ -109,23 +111,25 @@ action :download do
   Chef::Log.debug("location=\"#{location}\"")
   Chef::Log.debug("targets=\"#{targets}\"")
   Chef::Log.debug("tmp_dir=\"#{tmp_dir}\"")
+  Chef::Log.debug("save_it=\"#{save_it}\"")
+  Chef::Log.debug("sched_time=\"#{sched_time}\"")
 
   # check ohai nim info
   check_ohai
 
   # obtain suma parameters
-  suma_params = get_suma_params
+  params = suma_params
 
   # create directory
-  unless ::File.directory?(suma_params['dl_target'])
-    mkdir_s = "mkdir -p #{suma_params['dl_target']}"
-    converge_by("create directory \'#{suma_params['dl_target']}\'") do
+  unless ::File.directory?(params['dl_target'])
+    mkdir_s = "mkdir -p #{params['dl_target']}"
+    converge_by("create directory \'#{params['dl_target']}\'") do
       shell_out!(mkdir_s)
     end
   end
 
   # suma preview
-  suma = Suma.new(desc, suma_params['rq_type'], suma_params['rq_name'], suma_params['filter_ml'], suma_params['dl_target'])
+  suma = Suma.new(desc, params['rq_type'], params['rq_name'], params['filter_ml'], params['dl_target'])
   suma.preview
 
   if suma.dl.to_f > 0
@@ -135,10 +139,10 @@ action :download do
     end
 
     # create nim lpp source
-    if suma.failed.to_i == 0 && node['nim']['lpp_sources'].fetch(suma_params['lpp_source'], nil).nil?
+    if suma.failed.to_i == 0 && node['nim']['lpp_sources'].fetch(params['lpp_source'], nil).nil?
       nim = Nim.new
-      converge_by("define nim lpp source \'#{suma_params['lpp_source']}\'") do
-        nim.define_lpp_source(suma_params['lpp_source'], suma_params['dl_target'])
+      converge_by("define nim lpp source \'#{params['lpp_source']}\'") do
+        nim.define_lpp_source(params['lpp_source'], params['dl_target'])
       end
     end
   end

@@ -3,7 +3,7 @@
 # exception : SumaPreviewError
 # suma directory : /sumatest/suma/error2/7100-02-02-1316-lpp_source
 # suma metadata :
-# suma preview :### SUMA FAKE Preview ### 
+# suma preview : ### SUMA FAKE Preview ###
 # suma download :
 # nim define :
 

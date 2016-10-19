@@ -37,7 +37,7 @@ action :update do
   check_ohai
 
   # force latest_sp/tl synchronously
-  _async = (lpp_source == 'latest_tl' || lpp_source == 'latest_sp') ? false : async
+  local_async = (lpp_source == 'latest_tl' || lpp_source == 'latest_sp') ? false : async
 
   # build list of targets
   target_list = expand_targets
@@ -45,13 +45,13 @@ action :update do
 
   # nim install
   nim = Nim.new
-  if _async
+  if local_async
     # get targetted oslevel
     os_level = check_lpp_source_name(lpp_source)
     Chef::Log.debug("os_level: #{os_level}")
 
     converge_by("nim: perform asynchronous software customization for client(s) \'#{target_list.join(' ')}\' with resource \'#{lpp_source}\'") do
-      nim.perform_customization(lpp_source, target_list.join(' '), _async)
+      nim.perform_customization(lpp_source, target_list.join(' '), local_async)
     end
   else # synchronous update
     target_list.each do |m|
@@ -78,7 +78,7 @@ action :update do
         Chef::Log.warn("Machine #{m} is already at same or higher level than #{os_level}")
       else
         converge_by("nim: perform synchronous software customization for client \'#{m}\' with resource \'#{new_lpp_source}\'") do
-          nim.perform_customization(new_lpp_source, m, _async)
+          nim.perform_customization(new_lpp_source, m, local_async)
         end
       end
     end
@@ -88,7 +88,7 @@ end
 action :master_setup do
   # Example of nim_master_setup
   # nim_master_setup -a mk_resource=no -B -a device=/mnt
-  unless device.nil? or device.empty?
+  unless device.nil? || device.empty?
     nim_master_setup_s = 'nim_master_setup -B -a mk_resource=no -a device=' + device
 
     # converge here

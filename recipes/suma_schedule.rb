@@ -59,11 +59,11 @@ end
 
 # NO SUPPORT FOR CREATION WITHOUT EXECUTION
 # aix_suma 'Create a preview task and save it' do
-  # oslevel level
-  # location directory
-  # targets client
-  # save_it true
-  # action :preview
+#   oslevel level
+#   location directory
+#   targets client
+#   save_it true
+#   action :preview
 # end
 
 aix_suma 'Create a preview task and schedule it' do
