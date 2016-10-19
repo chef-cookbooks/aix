@@ -95,7 +95,7 @@ module AIX
         when 'TL'
           suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}"
         end
-        suma_s << ( save_it ? ' -w' : '' )
+        suma_s << (save_it ? ' -w' : '')
 
         Chef::Log.debug("SUMA metadata operation: #{suma_s}")
         so = shell_out(suma_s, environment: { 'LANG' => 'C' }, timeout: 3000)
@@ -123,7 +123,7 @@ module AIX
         when 'TL'
           suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}"
         end
-        suma_s << ( save_it ? ' -w' : '' )
+        suma_s << (save_it ? ' -w' : '')
 
         Chef::Log.debug("SUMA preview operation: #{suma_s}")
         so = shell_out(suma_s, environment: { 'LANG' => 'C' }, timeout: 3000)
@@ -159,7 +159,7 @@ module AIX
         when 'TL'
           suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}"
         end
-        suma_s << ( save_it ? ' -w' : '' )
+        suma_s << (save_it ? ' -w' : '')
 
         succeeded = 0
         failed = 0
@@ -169,6 +169,7 @@ module AIX
         download_skipped = 0
         Chef::Log.warn("Start downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to \'#{@dl_target}\' directory.")
         # start = Time.now
+        puts ' '
         exit_status = Open3.popen3(suma_s) do |stdin, stdout, stderr, wait_thr|
           stdin.close
           stdout.each_line do |line|

@@ -38,37 +38,35 @@ level = STDIN.readline.chomp
 
 directory = '/export/extra/lpp_source'
 
-aix_suma "List suma info" do
+aix_suma 'List suma info' do
   action [:default, :list, :config]
 end
 
-aix_suma "Execute a preview task and do not save it" do
+aix_suma 'Execute a preview task and do not save it' do
   oslevel level
   location directory
   targets client
   action :preview
 end
 
-aix_suma "Execute a preview task and save it" do
-  oslevel level
-  location directory
-  targets client
-  save_it true
-  action :preview
-end
-
-=begin
-NO SUPPORT FOR CREATION WITHOUT EXECUTION
-aix_suma "Create a preview task and save it" do
+aix_suma 'Execute a preview task and save it' do
   oslevel level
   location directory
   targets client
   save_it true
   action :preview
 end
-=end
 
-aix_suma "Create a preview task and schedule it" do
+# NO SUPPORT FOR CREATION WITHOUT EXECUTION
+# aix_suma 'Create a preview task and save it' do
+  # oslevel level
+  # location directory
+  # targets client
+  # save_it true
+  # action :preview
+# end
+
+aix_suma 'Create a preview task and schedule it' do
   oslevel level
   location directory
   targets client
@@ -76,34 +74,34 @@ aix_suma "Create a preview task and schedule it" do
   action :preview
 end
 
-aix_suma "Edit an existing task" do
+aix_suma 'Edit an existing task' do
   task_id 2
   action :edit
-  only_if "/usr/sbin/suma -l 2"
+  only_if '/usr/sbin/suma -l 2'
 end
 
-aix_suma "Edit and schedule an existing task" do
+aix_suma 'Edit and schedule an existing task' do
   sched_time '30 2 15 * *'
   task_id 2
   action :edit
-  only_if "/usr/sbin/suma -l 2"
+  only_if '/usr/sbin/suma -l 2'
 end
 
-aix_suma "Unschedule an existing task" do
+aix_suma 'Unschedule an existing task' do
   sched_time ''
   task_id 2
   action :edit
-  only_if "/usr/sbin/suma -l 2"
+  only_if '/usr/sbin/suma -l 2'
 end
 
-aix_suma "Unschedule an existing task" do
+aix_suma 'Unschedule an existing task' do
   task_id 2
   action :unschedule
-  only_if "/usr/sbin/suma -l 2"
+  only_if '/usr/sbin/suma -l 2'
 end
 
-aix_suma "Delete an existing task" do
+aix_suma 'Delete an existing task' do
   task_id 2
   action :delete
-  only_if "/usr/sbin/suma -l 2"
+  only_if '/usr/sbin/suma -l 2'
 end

@@ -1,5 +1,6 @@
 # recipe example setup nim master
 =begin
+Assume that the 'nim_server' is the hostname of the nim server
 Assume that lpp_source has already been allocated by nim server and fs exported.
 # nim -o allocate -a lpp_source=7143lpp_res quimby01
 # exportfs
@@ -7,7 +8,7 @@ Assume that lpp_source has already been allocated by nim server and fs exported.
 
 # mounting /mnt
 mount '/mnt' do
-  device '#{node[:nim_server]}:/export/nim/lpp_source/7143lpp_res'
+  device "#{nim_server}:/export/nim/lpp_source/7143lpp_res"
   fstype 'nfs'
   action :mount
 end
@@ -24,6 +25,6 @@ mount '/mnt' do
 end
 
 =begin
-Do not forget to deallocate the resource
+Do not forget to deallocate the resource on the old nim server
 # nim -o deallocate -a lpp_source=7143lpp_res quimby01
 =end

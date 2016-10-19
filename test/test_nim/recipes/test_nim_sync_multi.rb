@@ -1,8 +1,7 @@
 # Expected values
 # return code : 0
-# exception : nil
-# nim cust : "### NIM FAKE DONE CUSTOM OPERATION on client client1 with resource 7100-09-04-0000-lpp_source ###"
-#            "### NIM FAKE DONE CUSTOM OPERATION on client client2 with resource 7100-09-04-0000-lpp_source ###"
+# nim cust : ### NIM FAKE DONE CUSTOM OPERATION on client client1 with resource 7100-09-04-0000-lpp_source ###
+# nim cust : ### NIM FAKE DONE CUSTOM OPERATION on client client2 with resource 7100-09-04-0000-lpp_source ###
 #
 node.default['nim'] = { 'clients' => { 'client1' => { 'oslevel' => '7100-07-02-0000' },
                                        'client2' => { 'oslevel' => '7100-09-02-0000' },

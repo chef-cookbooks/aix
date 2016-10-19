@@ -20,6 +20,7 @@ property :desc, String, name_property: true
 property :lpp_source, String, required: true
 property :targets, String, required: true
 property :async, [true, false], default: false
+property :device, String, required: true
 
 default_action :update
 
@@ -31,11 +32,12 @@ action :update do
   Chef::Log.debug("desc=\"#{desc}\"")
   Chef::Log.debug("lpp_source=#{lpp_source}")
   Chef::Log.debug("targets=#{targets}")
+  Chef::Log.debug("async=#{async}")
 
   check_ohai
 
   # force latest_sp/tl synchronously
-  async = false if lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
+  _async = (lpp_source == 'latest_tl' || lpp_source == 'latest_sp') ? false : async
 
   # build list of targets
   target_list = expand_targets
@@ -43,13 +45,13 @@ action :update do
 
   # nim install
   nim = Nim.new
-  if async
+  if _async
     # get targetted oslevel
     os_level = check_lpp_source_name(lpp_source)
     Chef::Log.debug("os_level: #{os_level}")
 
     converge_by("nim: perform asynchronous software customization for client(s) \'#{target_list.join(' ')}\' with resource \'#{lpp_source}\'") do
-      nim.perform_customization(lpp_source, target_list.join(' '), async)
+      nim.perform_customization(lpp_source, target_list.join(' '), _async)
     end
   else # synchronous update
     target_list.each do |m|
@@ -76,7 +78,7 @@ action :update do
         Chef::Log.warn("Machine #{m} is already at same or higher level than #{os_level}")
       else
         converge_by("nim: perform synchronous software customization for client \'#{m}\' with resource \'#{new_lpp_source}\'") do
-          nim.perform_customization(new_lpp_source, m, async)
+          nim.perform_customization(new_lpp_source, m, _async)
         end
       end
     end
@@ -86,19 +88,17 @@ end
 action :master_setup do
   # Example of nim_master_setup
   # nim_master_setup -a mk_resource=no -B -a device=/mnt
-  nim_master_setup_s = 'nim_master_setup -B -a mk_resource=no'
+  unless device.nil? or device.empty?
+    nim_master_setup_s = 'nim_master_setup -B -a mk_resource=no -a device=' + device
 
-  unless mount_point.nil?
-    nim_master_setup_s = nim_master_setup_s << ' -a device=' << mount_point
-  end
-
-  # converge here
-  converge_by("nim: setup master \"#{nim_master_setup_s}\"") do
-    nim = Mixlib::ShellOut.new(nim_master_setup_s)
-    nim.valid_exit_codes = 0
-    nim.run_command
-    nim.error!
-    nim.error?
+    # converge here
+    converge_by("nim: setup master \"#{nim_master_setup_s}\"") do
+      nim = Mixlib::ShellOut.new(nim_master_setup_s)
+      nim.valid_exit_codes = 0
+      nim.run_command
+      nim.error!
+      nim.error?
+    end
   end
 end
 

@@ -93,12 +93,12 @@ function run_action
 		# lpp_source test value of 7100-08-00-0000-lpp_source should return an error although it exists in Ohai
 	    if [ "${fields['lpp_source']}" == "7100-08-00-0000-lpp_source" ]
 		then
-			echo "### NIM FAKE Cust ERROR ###"
+			echo "### NIM FAKE ERROR when CUSTOM OPERATION on client $object_name with resource ${fields['lpp_source']} ###"
 			echo "0042-001 nim: processing error encountered on \"master\":" >&2
 			echo "" >&2
 			exit 1
 		else
-			echo "### NIM FAKE Cust ###"
+			echo "### NIM FAKE DONE CUSTOM OPERATION on client $object_name with resource ${fields['lpp_source']} ###"
 		fi
     fi
 }

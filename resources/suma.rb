@@ -86,7 +86,7 @@ action :preview do
 
   # obtain suma parameters
   suma_params = get_suma_params
-  
+
   # create directory
   unless ::File.directory?(suma_params['dl_target'])
     mkdir_s = "mkdir -p #{suma_params['dl_target']}"
@@ -97,7 +97,7 @@ action :preview do
 
   # suma preview
   suma = Suma.new(desc, suma_params['rq_type'], suma_params['rq_name'], suma_params['filter_ml'], suma_params['dl_target'])
-  converge_by("preview download") do
+  converge_by('preview download') do
     suma.preview(save_it)
   end
 end
@@ -153,7 +153,7 @@ end
 action :edit do
   suma_s = '/usr/sbin/suma'
 
-  # TODO treat fields
+  # TODO: treat fields
 
   if property_is_set?(:sched_time)
     if sched_time.empty?
@@ -162,13 +162,13 @@ action :edit do
     else
       # schedule
       minute, hour, day, month, weekday = sched_time.split(' ')
-      raise SumaError unless minute.eql?('*') || ( 0 <= minute.to_i && minute.to_i <= 59 )
-      raise SumaError unless hour.eql?('*') || ( 0 <= hour.to_i && hour.to_i <= 23 )
-      raise SumaError unless day.eql?('*') || ( 1 <= day.to_i && day.to_i <= 31 )
-      raise SumaError unless month.eql?('*') || ( 1 <= month.to_i && month.to_i <= 12 )
-      raise SumaError unless weekday.eql?('*') || ( 0 <= weekday.to_i && weekday.to_i <= 6 )
-	  Chef::Log.debug("minute=#{minute}, hour=#{hour}, day=#{day}, month=#{month}, weekday=#{weekday}")
-	  suma_s << ' -s "' << sched_time << '"'
+      raise SumaError unless minute.eql?('*') || (0 <= minute.to_i && minute.to_i <= 59)
+      raise SumaError unless hour.eql?('*') || (0 <= hour.to_i && hour.to_i <= 23)
+      raise SumaError unless day.eql?('*') || (1 <= day.to_i && day.to_i <= 31)
+      raise SumaError unless month.eql?('*') || (1 <= month.to_i && month.to_i <= 12)
+      raise SumaError unless weekday.eql?('*') || (0 <= weekday.to_i && weekday.to_i <= 6)
+      Chef::Log.debug("minute=#{minute}, hour=#{hour}, day=#{day}, month=#{month}, weekday=#{weekday}")
+      suma_s << ' -s "' << sched_time << '"'
     end
   else
     # save
@@ -183,7 +183,7 @@ action :edit do
 
   Chef::Log.warn(suma_s)
   converge_by("Edit suma task #{task_id}") do
-	shell_out!(suma_s)
+    shell_out!(suma_s)
   end
 end
 
