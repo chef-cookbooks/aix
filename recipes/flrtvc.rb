@@ -17,6 +17,7 @@ client = STDIN.readline.chomp
 =end
 
 client = 'quimby03 quimby02'
+live_stream = true
 
 ##################
 # PRE-REQUISITES #
@@ -73,6 +74,12 @@ client.split.each do |c|
   end
 
   # execute flrtvc script
-  execute "/usr/bin/flrtvc.ksh -l lspp.txt -e emgr.txt > #{c}_flrtvc.txt" do
+  if live_stream
+    execute "/usr/bin/flrtvc.ksh -l #{c}_lslpp.txt -e #{c}_emgr.txt" do
+      live_stream live_stream
+    end
+  else
+    execute "/usr/bin/flrtvc.ksh -l #{c}_lslpp.txt -e #{c}_emgr.txt > #{c}_flrtvc.txt" do
+    end
   end
 end
