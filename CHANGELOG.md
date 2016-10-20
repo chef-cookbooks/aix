@@ -2,6 +2,18 @@
 
 This file is used to list changes made in each version of the aix cookbook.
 
+## 1.2.0 (2016-10-20)
+
+- Fix failures if the wpars gem is missing and dynamically install it instead
+- add suma resource
+- add nim resource
+- add lvm resource
+- Moved testing / example cookbooks out of the recipes directory and into an examples directory
+- Use the shell_out! helper to provide proper logging of output
+- Testing improvements for foodcritic and Cookstyle
+- Add ChefSpec matchers
+- Clarify that we need Chef 12.1+
+
 ## 1.1.0 (2016-08-30)
 
 - Added test Kitchen support with kitchen-wpar
