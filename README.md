@@ -806,6 +806,17 @@ Actions:
 
 Manage wpar
 
+#### install aix-wpar gem
+
+The cookbook itself will install the **aix-wpar** gem if the system as internet access.
+
+Else you need to download the gem file [here](https://github.com/adejoux/aix-wpar/releases/tag/v0.1.0).
+And install the package on the AIX system:
+```bash
+/opt/chef/embedded/bin/gem install /tmp/aix-wpar-0.1.0.gem
+```
+
+#### recipe example
 ```ruby
 aix_wpar 'create wpar' do
   action :create
@@ -818,13 +829,13 @@ end
 
 aix_wpar 'stop wpar' do
  action :stop
- name 'testwpar2'
+ name 'testwpar'
  live_stream true
 end
 
 aix_wpar 'sync wpar' do
  action :sync
- name 'testwpar2'
+ name 'testwpar'
 end
 
 aix_wpar 'delete wpar' do
