@@ -1,9 +1,11 @@
----
 driver:
   name: wpar
   aix_host: aixlpar2
   aix_user: root
   wpar_address: 10.10.10.10 
+
+verifier:
+  name: inspec
 
 provisioner:
   name: chef_solo
