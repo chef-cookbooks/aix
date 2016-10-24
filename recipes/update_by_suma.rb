@@ -54,7 +54,7 @@ end
 aix_nim "Updating machine(s) #{client}" do
   lpp_source "#{level}-lpp_source"
   targets client
-  async true
+  async false
   action :update
   only_if "lsnim -t lpp_source #{level}-lpp_source"
   notifies :reload, 'ohai[reload_nim]', :immediately

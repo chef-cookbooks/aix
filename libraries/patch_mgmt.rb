@@ -87,6 +87,22 @@ module AIX
         @dl_target = dl_target
       end
 
+	  def duration(d)
+        secs  = d.to_int
+        mins  = secs / 60
+        hours = mins / 60
+        days  = hours / 24
+        if days > 0
+          "#{days} days and #{hours % 24} hours"
+        elsif hours > 0
+          "#{hours} hours and #{mins % 60} mins"
+        elsif mins > 0
+          "#{mins} mins #{secs % 60} secs"
+        elsif secs >= 0
+          "#{secs} secs"
+        end
+      end
+
       def metadata(save_it = false)
         suma_s = "/usr/sbin/suma -x -a Action=Metadata -a DisplayName=\"#{@display_name}\"  -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
         case @rq_type
@@ -139,10 +155,10 @@ module AIX
         if so.stderr =~ /^0500-035 No fixes match your query.$/
           Chef::Log.warn("Done suma preview operation \"#{suma_s}\"")
         elsif so.stdout =~ /Total bytes of updates downloaded: ([0-9]+).*?([0-9]+) downloaded.*?([0-9]+) failed.*?([0-9]+) skipped/m
-          @dl = so.stdout.match(/Total bytes of updates downloaded: ([0-9]+)/)[1].to_f / 1024 / 1024 / 1024
-          @downloaded = so.stdout.match(/([0-9]+) downloaded/)[1]
-          @failed = so.stdout.match(/([0-9]+) failed/)[1]
-          @skipped = so.stdout.match(/([0-9]+) skipped/)[1]
+          @dl = Regexp.last_match(1).to_f / 1024 / 1024 / 1024
+          @downloaded = Regexp.last_match(2)
+          @failed = Regexp.last_match(3)
+          @skipped = Regexp.last_match(4)
           Chef::Log.debug(so.stdout)
           Chef::Log.info("#{@downloaded} downloaded (#{@dl} GB), #{@failed} failed, #{@skipped} skipped fixes")
           Chef::Log.warn("Done suma preview operation \"#{suma_s}\"")
@@ -167,10 +183,16 @@ module AIX
         download_downloaded = 0
         download_failed = 0
         download_skipped = 0
-        Chef::Log.warn("Start downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to \'#{@dl_target}\' directory.")
-        # start = Time.now
-        puts ' '
+        Chef::Log.warn("Start downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to '#{@dl_target}' directory.")
         exit_status = Open3.popen3(suma_s) do |stdin, stdout, stderr, wait_thr|
+          thr = Thread.new do
+            print "\n"
+            start = Time.now
+            while true do
+              print "\rSUCCEEDED: #{succeeded}/#{@downloaded}\tFAILED: #{failed}/#{@failed}\tSKIPPED: #{skipped}/#{@skipped}. (Total time: #{duration(Time.now - start).to_s})."
+              sleep 1
+            end
+          end
           stdin.close
           stdout.each_line do |line|
             if line =~ /^Download SUCCEEDED:/
@@ -190,8 +212,6 @@ module AIX
             else
               puts "\n#{line}"
             end
-            # time_s = duration(Time.now - start)
-            print "\rSUCCEEDED: #{succeeded}/#{@downloaded}\tFAILED: #{failed}/#{@failed}\tSKIPPED: #{skipped}/#{@skipped}" # . (Total time: #{time_s})."
             Chef::Log.info("[STDOUT] #{line.chomp}")
             stdout.flush
           end
@@ -205,6 +225,7 @@ module AIX
             Chef::Log.info("[STDERR] #{line.chomp}")
           end
           stderr.close
+          thr.exit
           wait_thr.value # Process::Status object returned.
         end
         unless exit_status.success?
@@ -242,7 +263,7 @@ module AIX
       def perform_customization(lpp_source, clients, async = true)
         async_s = async ? 'yes' : 'no'
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a accept_licenses=yes -a fixes=update_all -a async=#{async_s} #{clients}"
-        Chef::Log.warn("Start updating machine(s) \'#{clients}\' to #{lpp_source}.")
+        Chef::Log.warn("Start updating machine(s) '#{clients}' to #{lpp_source}.")
         if async # asynchronous
           so = shell_out(nim_s, timeout: 3000)
           so.stdout.each_line do |line|
@@ -284,22 +305,6 @@ module AIX
             raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!"
           end
         end
-      end
-    end
-
-    def duration(d)
-      secs  = d.to_int
-      mins  = secs / 60
-      hours = mins / 60
-      days  = hours / 24
-      if days > 0
-        "#{days} days and #{hours % 24} hours"
-      elsif hours > 0
-        "#{hours} hours and #{mins % 60} mins"
-      elsif mins > 0
-        "#{mins} mins #{secs % 60} secs"
-      elsif secs >= 0
-        "#{secs} secs"
       end
     end
 
@@ -378,7 +383,7 @@ module AIX
       Chef::Log.info("List of targets expanded to #{selected_machines}")
 
       if selected_machines.empty?
-        raise InvalidTargetsProperty, 'Error: cannot contact any machines'
+        raise InvalidTargetsProperty, "Error: cannot contact any machines in '#{targets}'"
       end
       selected_machines
     end
@@ -388,7 +393,7 @@ module AIX
         Chef::Log.debug("Found lpp source #{lpp_source}")
       end
     rescue KeyError
-      raise InvalidLppSourceProperty, "Error: cannot find lpp_source \'#{lpp_source}\' from Ohai output"
+      raise InvalidLppSourceProperty, "Error: cannot find lpp_source '#{lpp_source}' from Ohai output"
     end
 
     def compute_rq_type
@@ -521,7 +526,7 @@ module AIX
         if location.start_with?('/')
           dl_target = "#{location}/#{lpp_source}"
           unless node['nim']['lpp_sources'].fetch(lpp_source, {}).fetch('location', nil).nil?
-            Chef::Log.debug("Found lpp source \'#{lpp_source}\' location")
+            Chef::Log.debug("Found lpp source '#{lpp_source}' location")
             unless node['nim']['lpp_sources'][lpp_source]['location'] =~ /^#{dl_target}/
               raise InvalidLocationProperty, 'Error: lpp source location mismatch'
             end
@@ -531,9 +536,9 @@ module AIX
         else # directory
           begin
             dl_target = node['nim']['lpp_sources'].fetch(location).fetch('location')
-            Chef::Log.debug("Discover \'#{location}\' lpp source's location: \'#{dl_target}\'")
+            Chef::Log.debug("Discover '#{location}' lpp source's location: '#{dl_target}'")
           rescue KeyError
-            raise InvalidLocationProperty, "Error: cannot find lpp_source \'#{location}\' from Ohai output"
+            raise InvalidLocationProperty, "Error: cannot find lpp_source '#{location}' from Ohai output"
           end
         end
       else # default
