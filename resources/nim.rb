@@ -21,6 +21,7 @@ property :lpp_source, String, required: true
 property :targets, String, required: true
 property :async, [true, false], default: false
 property :device, String, required: true
+property :script, String
 
 default_action :update
 
@@ -128,42 +129,89 @@ action :compare do
   end
 end
 
+action :script do
+  Chef::Log.debug("targets: #{targets}")
+  Chef::Log.debug("script: #{script}")
+
+  # build list of targets
+  target_list = expand_targets
+  Chef::Log.debug("target_list: #{target_list}")
+
+  nim_s = "nim -o cust -a script=#{script} #{target_list.join(' ')}"
+  # converge here
+  converge_by("nim: script customization operation \"#{nim_s}\"") do
+    nim = Mixlib::ShellOut.new(nim_s)
+    nim.valid_exit_codes = 0
+    nim.run_command
+    nim.stdout.each_line { |line| Chef::Log.info("[STDOUT] #{line.chomp}") }
+    nim.stderr.each_line { |line| Chef::Log.info("[STDERR] #{line.chomp}") }
+    nim.error!
+    nim.error?
+  end
+end
+
 action :allocate do
-  Chef::Log.debug("target: #{target}")
+  Chef::Log.debug("targets: #{targets}")
   Chef::Log.debug("lpp_source: #{lpp_source}")
-  nim_s = "nim -o allocate -a lpp_source=#{lpp_source} #{target}"
+
+  # build list of targets
+  target_list = expand_targets
+  Chef::Log.debug("target_list: #{target_list}")
+
+  nim_s = "nim -o allocate -a lpp_source=#{lpp_source} #{target_list.join(' ')}"
   # converge here
   converge_by("nim: allocate operation \"#{nim_s}\"") do
     nim = Mixlib::ShellOut.new(nim_s)
     nim.valid_exit_codes = 0
     nim.run_command
+    nim.stdout.each_line { |line| Chef::Log.info("[STDOUT] #{line.chomp}") }
+    nim.stderr.each_line { |line| Chef::Log.info("[STDERR] #{line.chomp}") }
     nim.error!
     nim.error?
   end
 end
 
 action :deallocate do
-  Chef::Log.debug("target: #{target}")
+  Chef::Log.debug("targets: #{targets}")
   Chef::Log.debug("lpp_source: #{lpp_source}")
-  nim_s = "nim -o deallocate -a lpp_source=#{lpp_source} #{target}"
+
+  # build list of targets
+  target_list = expand_targets
+  Chef::Log.debug("target_list: #{target_list}")
+
+  nim_s = "nim -o deallocate -a lpp_source=#{lpp_source} #{target_list.join(' ')}"
   # converge here
   converge_by("nim: deallocate operation \"#{nim_s}\"") do
     nim = Mixlib::ShellOut.new(nim_s)
     nim.valid_exit_codes = 0
     nim.run_command
+    nim.stdout.each_line { |line| Chef::Log.info("[STDOUT] #{line.chomp}") }
+    nim.stderr.each_line { |line| Chef::Log.info("[STDERR] #{line.chomp}") }
     nim.error!
     nim.error?
   end
 end
 
 action :bos_inst do
+  Chef::Log.debug("targets: #{targets}")
+  Chef::Log.debug("lpp_source: #{lpp_source}")
+
+  # build list of targets
+  target_list = expand_targets
+  Chef::Log.debug("target_list: #{target_list}")
+
+  # build group resource
   group = "#{lpp_source.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2})-[0-9]{4}-lpp_source$/)[1]}_resources"
-  nim_s = "nim -o bos_inst -a source=mksysb -a group=#{group} -a target=#{targets.split(/[,\s]/)}"
+  Chef::Log.debug("group: #{group}")
+
+  nim_s = "nim -o bos_inst -a source=mksysb -a group=#{group} -a target=#{target_list.join(',')}"
   # converge here
   converge_by("nim: bos_inst operation \"#{nim_s}\"") do
     nim = Mixlib::ShellOut.new(nim_s)
     nim.valid_exit_codes = 0
     nim.run_command
+    nim.stdout.each_line { |line| Chef::Log.info("[STDOUT] #{line.chomp}") }
+    nim.stderr.each_line { |line| Chef::Log.info("[STDERR] #{line.chomp}") }
     nim.error!
     nim.error?
   end

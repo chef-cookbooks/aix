@@ -460,6 +460,7 @@ Parameters:
 
 Actions:
 * `download` - preview and download fixes
+* `preview` - preview only
 
 ### nim
 
@@ -475,8 +476,27 @@ aix_nim "setup nim server" do
   action :master_setup
 end
 
-aix_nim "updating clients" do
+aix_nim "asynchronously updating clients" do
   lpp_source "7100-03-01-1341-lpp_source"
+  targets "client1,client2,client3"
+  async	true
+  action :update
+end
+
+aix_nim "updating clients to latest SP (forced synchronous)" do
+  lpp_source "latest_sp"
+  targets "client1,client2,client3"
+  action :update
+end
+
+aix_nim "updating clients to latest TL (forced synchronous)" do
+  lpp_source "latest_tl"
+  targets "client1,client2,client3"
+  action :update
+end
+
+aix_nim "run script on targets" do
+  script "7100-03-01-1341-lpp_source"
   targets "client1,client2,client3"
   async	true
   action :update
@@ -495,9 +515,9 @@ end
 Parameters:
 
 * `device` - NFS mount directory containing bos.sysmgt.nim.master package
-* `lpp_source` - name of NIM lpp_source resource to install
+* `lpp_source` - name of NIM lpp_source resource to install or latest_sp or latest_tl
 * `targets` - comma or space separated list of clients to update (star wildcard accepted)
-* `async` - if true, customization is performed asynchronously (default: false)
+* `async` - if true, customization is performed asynchronously (default: false) (cannot be used for latest_sp or latest_tl customization)
 
 Actions:
 * `master_setup` - setup the NIM server

@@ -87,7 +87,7 @@ module AIX
         @dl_target = dl_target
       end
 
-	  def duration(d)
+      def duration(d)
         secs  = d.to_int
         mins  = secs / 60
         hours = mins / 60
@@ -188,8 +188,8 @@ module AIX
           thr = Thread.new do
             print "\n"
             start = Time.now
-            while true do
-              print "\rSUCCEEDED: #{succeeded}/#{@downloaded}\tFAILED: #{failed}/#{@failed}\tSKIPPED: #{skipped}/#{@skipped}. (Total time: #{duration(Time.now - start).to_s})."
+            loop do
+              print "\rSUCCEEDED: #{succeeded}/#{@downloaded}\tFAILED: #{failed}/#{@failed}\tSKIPPED: #{skipped}/#{@skipped}. (Total time: #{duration(Time.now - start)})."
               sleep 1
             end
           end

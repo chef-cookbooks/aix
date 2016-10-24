@@ -77,7 +77,7 @@ def check_expected_values(rc, file, expected)
     end
   end
 
-  ['nim log info', 'nim log warn', 'nim cust'].each do |key|
+  ['nim log info', 'nim log warn', 'nim cust', 'nim alloc', 'nim dealloc', 'nim script'].each do |key|
     unless expected[key].to_s == ''
       found = false
       File.open(log_file, "r") do |f|
