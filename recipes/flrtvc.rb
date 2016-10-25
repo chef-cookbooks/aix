@@ -1,23 +1,24 @@
 # recipe example flrtvc script on nim clients
 # This recipe is interactive
 
-=begin
-Chef::Recipe.send(:include, AIX::PatchMgmt)
-
-nodes = Hash.new { |h, k| h[k] = {} }
-nodes['machine'] = node['nim']['clients'].keys
-nodes['oslevel'] = node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
-nodes['Cstate'] = node['nim']['clients'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }
+# Default
+client = Mixlib::ShellOut.new("lsnim -t standalone | cut -d' ' -f1 | sort").run_command.stdout.split
+live_stream = true
 
 puts '#########################################################'
-puts 'Available machines and their corresponding oslevel are:'
-puts print_hash_by_columns(nodes)
+puts 'Available machines are:'
+puts "#{client.join("\n")}"
 puts 'Choose one or more (comma-separated) to update ?'
-client = STDIN.readline.chomp
-=end
+client = STDIN.readline.chomp.split
 
-client = 'quimby03 quimby02'
-live_stream = true
+puts '#########################################################'
+puts 'Execute flrtvc.ksh with live stream (or else save to file) ? (yes/no)'
+live_stream = (STDIN.readline.chomp == 'no') ? false : true
+
+puts '#########################################################'
+puts 'Select type of APAR ? (sec/hiper/both)'
+apar = STDIN.readline.chomp
+apar_s = (apar == 'both') ? '' : "-t #{apar}"
 
 ##################
 # PRE-REQUISITES #
@@ -54,7 +55,7 @@ end
 # LOOP THROUGH CLIENT  LIST #
 #############################
 
-client.split.each do |c|
+client.each do |c|
   file "#{c}_lslpp.txt" do
     action :nothing
   end
@@ -66,20 +67,24 @@ client.split.each do |c|
   # execute lslpp -Lcq
   execute "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{c} \"/usr/bin/lslpp -Lcq\" > #{c}_lslpp.txt" do
     notifies :delete, "file[#{c}_lslpp.txt]", :delayed
+    ignore_failure true
   end
 
   # execute emgr -lv3
   execute "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{c} \"/usr/sbin/emgr -lv3\" > #{c}_emgr.txt" do
     notifies :delete, "file[#{c}_emgr.txt]", :delayed
+    ignore_failure true
   end
 
   # execute flrtvc script
   if live_stream
-    execute "/usr/bin/flrtvc.ksh -l #{c}_lslpp.txt -e #{c}_emgr.txt" do
+    execute "/usr/bin/flrtvc.ksh -l #{c}_lslpp.txt -e #{c}_emgr.txt #{apar_s}" do
       live_stream live_stream
+      ignore_failure true
     end
   else
-    execute "/usr/bin/flrtvc.ksh -l #{c}_lslpp.txt -e #{c}_emgr.txt > #{c}_flrtvc.txt" do
+    execute "/usr/bin/flrtvc.ksh -l #{c}_lslpp.txt -e #{c}_emgr.txt #{apar_s} > #{c}_flrtvc.txt" do
+      ignore_failure true
     end
   end
 end
