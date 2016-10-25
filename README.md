@@ -524,6 +524,47 @@ Actions:
 * `update` - install downloaded fixes
 * `check` - display all NIM standalone clients status
 * `compare` - display installation inventory comparison
+* `allocate` - allocate a nim resource
+* `deallocate` - deallocate a nim resource
+* `script` - execute a script resource
+
+### flrtvc
+
+Use flrtvc tool to download recommended efix, and install them to patch security and/or hiper vulnerabilities.
+
+```ruby
+aix_flrtvc "install flrtvc tool (download unzip if needed)" do
+  action :install
+end
+
+aix_flrtvc "download and install security vulnerabilities" do
+  apar "security"
+  targets "client1,client2,client3"
+  action :patch
+end
+
+aix_flrtvc "download and install hiper issues" do
+  apar "hiper"
+  targets "client1,client2,client3"
+  action :patch
+end
+
+aix_flrtvc "download and install efix for printers fileset(s)" do
+  filesets "printers"
+  targets "client1,client2,client3"
+  action :patch
+end
+
+```
+Parameters:
+
+* `targets` - comma or space separated list of clients to check (star wildcard accepted)
+* `apar` - security or hiper data (default: both)
+* `filesets` - filter on fileset name
+
+Actions:
+* `install` - install flrtvc tool
+* `patch` - download recommended fixes and patch the machine
 
 ### niminit
 
