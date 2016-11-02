@@ -32,7 +32,10 @@ load_current_value do
 end
 
 action :install do
-  unless `which unzip`
+  cmd = Mixlib::ShellOut.new('which unzip')
+  cmd.valid_exit_codes = 0
+  cmd.run_command
+  unless !cmd.error?
     # download unzip
     remote_file "#{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm" do
       source 'https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/RPMS/ppc/unzip/unzip-6.0-3.aix6.1.ppc.rpm'
@@ -51,7 +54,7 @@ action :install do
     end
 
     # unzip flrtvc
-    execute "unzip #{Chef::Config[:file_cache_path]}/#{name} -d /usr/bin" do
+    execute "unzip -f #{Chef::Config[:file_cache_path]}/#{name} -d /usr/bin" do
     end
   end
 
@@ -95,7 +98,7 @@ def validate_targets(targets)
 end
 
 def validate_apar(apar)
-  if apar == nil
+  if apar.nil?
     ''
   elsif apar =~ /(sec|hiper)/
     "-t #{apar}"
@@ -105,17 +108,15 @@ def validate_apar(apar)
 end
 
 def validate_filesets(filesets)
-  if filesets == nil
+  if filesets.nil?
     ''
   else
     "-g #{filesets}"
-#  else
-#    raise InvalidFilesetsProperty
   end
 end
 
 def validate_csv(csv)
-  if csv == nil
+  if csv.nil?
     ''
   elsif Pathname(csv).absolute? && ::File.exist?(csv)
     "-f #{csv}"
@@ -135,7 +136,7 @@ def parse_report(s)
 end
 
 def download(url, path)
-  ::File.open(path, "w") do |f|
+  ::File.open(path, 'w') do |f|
     ::IO.copy_stream(open(url), f)
   end
 end
@@ -188,9 +189,7 @@ action :patch do
     # execute flrtvc script
     flrtvc_out = shell_out!("/usr/bin/flrtvc.ksh -v -l #{lslpp_file} -e #{emgr_file} #{apar_s} #{filesets_s} #{csv_s}").stdout
     Chef::Log.debug(flrtvc_out)
-    if verbose
-      puts "\n" + flrtvc_out
-    end
+    puts "\n" + flrtvc_out if verbose
 
     # clean temporary files
     ::File.delete(lslpp_file)
@@ -223,18 +222,18 @@ action :patch do
           # filter oslevel
           ::Dir.glob(dir_name + '/*.epkg.Z').each do |f|
             so = shell_out("/usr/sbin/emgr -v3 -d -e #{f} 2>&1 | grep -p \\\"PREREQ | egrep \"0*#{aix_level}.0*#{rel_level}.0*#{tl_level}\"")
-			if so.stdout =~ /^(.*?) (.*?) (.*?)$/
-			  level = OsLevel.new(aix_level, rel_level, tl_level)
-			  min_a = Regexp.last_match(2).split('.')
-			  min = OsLevel.new(min_a[0], min_a[1], min_a[2])
-			  max_a = Regexp.last_match(3).split('.')
-			  max = OsLevel.new(max_a[0], max_a[1], max_a[2])
-			  if min <= level && level <= max
+            if so.stdout =~ /^(.*?) (.*?) (.*?)$/
+              level = OsLevel.new(aix_level, rel_level, tl_level)
+              min_a = Regexp.last_match(2).split('.')
+              min = OsLevel.new(min_a[0], min_a[1], min_a[2])
+              max_a = Regexp.last_match(3).split('.')
+              max = OsLevel.new(max_a[0], max_a[1], max_a[2])
+              if min <= level && level <= max
                 # copy efix
                 ::FileUtils.cp_r(f, lpp_source_dir)
               end
             end
-		  end
+          end
           # clean temporary files
           ::FileUtils.remove_dir(dir_name)
           ::File.delete(filename)

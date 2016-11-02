@@ -64,26 +64,26 @@ module AIX
         elsif @aix > other.aix
           1
         else
-		  if @rel < other.rel
-		    -1
-	      elsif @rel > other.rel
-			1
-		  else
-		    if @tl < other.tl
+          if @rel < other.rel
+            -1
+          elsif @rel > other.rel
+            1
+          else
+            if @tl < other.tl
               -1
-	        elsif @tl > other.tl
-			  1
-  		    else
+            elsif @tl > other.tl
+              1
+            else
               0
-			end
-		  end
+            end
+          end
         end
       end
 
       def initialize(aix, rel, tl)
         @aix = aix.to_i
-		@rel = rel.to_i
-		@tl = tl.to_i
+        @rel = rel.to_i
+        @tl = tl.to_i
       end
     end
 
@@ -261,7 +261,7 @@ module AIX
       end
 
       def exist?(resource)
-        return ! shell_out("lsnim | grep #{resource}").error?
+        !shell_out("lsnim | grep #{resource}").error?
       end
 
       def define_lpp_source(lpp_source, dl_target)

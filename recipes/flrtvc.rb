@@ -7,7 +7,7 @@ live_stream = true
 
 puts '#########################################################'
 puts 'Available machines are:'
-puts "#{client.join("\n")}"
+puts client.join("\n").to_s
 puts 'Choose one or more (comma-separated) to update ?'
 client = STDIN.readline.chomp.split
 
@@ -24,26 +24,29 @@ apar_s = (apar =~ /(both|)/) ? '' : "-t #{apar}"
 # PRE-REQUISITES #
 ##################
 
-unless `which unzip`
-# download unzip
-remote_file "#{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm" do
-  source 'https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/RPMS/ppc/unzip/unzip-6.0-3.aix6.1.ppc.rpm'
-end
+cmd = Mixlib::ShellOut.new('which unzip')
+cmd.run_command
+cmd.valid_exit_codes = 0
+unless cmd.error?
+  # download unzip
+  remote_file "#{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm" do
+    source 'https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/RPMS/ppc/unzip/unzip-6.0-3.aix6.1.ppc.rpm'
+  end
 
-# install unzip
-execute "rpm -i #{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm" do
-end
+  # install unzip
+  execute "rpm -i #{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm" do
+  end
 end
 
 unless ::File.exist?('/usr/bin/flrtvc.ksh')
-# download flrtvc
-remote_file "#{Chef::Config[:file_cache_path]}/FLRTVC-0.7.zip" do
-  source 'https://www-304.ibm.com/webapp/set2/sas/f/flrt3/FLRTVC-0.7.zip'
-end
+  # download flrtvc
+  remote_file "#{Chef::Config[:file_cache_path]}/FLRTVC-0.7.zip" do
+    source 'https://www-304.ibm.com/webapp/set2/sas/f/flrt3/FLRTVC-0.7.zip'
+  end
 
-# unzip flrtvc
-execute "unzip #{Chef::Config[:file_cache_path]}/FLRTVC-0.7.zip -d /usr/bin" do
-end
+  # unzip flrtvc
+  execute "unzip #{Chef::Config[:file_cache_path]}/FLRTVC-0.7.zip -d /usr/bin" do
+  end
 end
 
 # set execution mode

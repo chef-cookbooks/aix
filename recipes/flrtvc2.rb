@@ -2,8 +2,9 @@
 
 aix_flrtvc 'patch quimby12' do
   targets 'quimby12'
-  #csv '/apar.csv'
-  #filesets 'tcp'
-  #apar 'sec'
+#  csv '/apar.csv'
+#  filesets 'tcp'
+#  apar 'sec'
+#  verbose true
   action [:install, :patch]
 end
