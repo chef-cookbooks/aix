@@ -54,20 +54,36 @@ module AIX
 
     class OsLevel
       include Comparable
-      attr_reader :str
+      attr_reader :aix
+      attr_reader :rel
+      attr_reader :tl
 
       def <=>(other)
-        if @str.delete('-').to_i < other.str.delete('-').to_i
+        if @aix < other.aix
           -1
-        elsif @str.delete('-').to_i > other.str.delete('-').to_i
+        elsif @aix > other.aix
           1
         else
-          0
+		  if @rel < other.rel
+		    -1
+	      elsif @rel > other.rel
+			1
+		  else
+		    if @tl < other.tl
+              -1
+	        elsif @tl > other.tl
+			  1
+  		    else
+              0
+			end
+		  end
         end
       end
 
-      def initialize(str)
-        @str = str
+      def initialize(aix, rel, tl)
+        @aix = aix.to_i
+		@rel = rel.to_i
+		@tl = tl.to_i
       end
     end
 
@@ -244,6 +260,10 @@ module AIX
       def initialize
       end
 
+      def exist?(resource)
+        return ! shell_out("lsnim | grep #{resource}").error?
+      end
+
       def define_lpp_source(lpp_source, dl_target)
         nim_s = "/usr/sbin/nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
         so = shell_out(nim_s)
@@ -260,9 +280,25 @@ module AIX
         end
       end
 
+      def remove_resource(resource)
+        nim_s = "/usr/sbin/nim -o remove #{resource}"
+        so = shell_out(nim_s)
+        so.stdout.each_line do |line|
+          Chef::Log.info("[STDOUT] #{line.chomp}")
+        end
+        so.stderr.each_line do |line|
+          Chef::Log.info("[STDERR] #{line.chomp}")
+        end
+        if so.error?
+          raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
+        else
+          Chef::Log.warn("Done nim remove operation \"#{nim_s}\"")
+        end
+      end
+
       def perform_customization(lpp_source, clients, async = true)
         async_s = async ? 'yes' : 'no'
-        nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a accept_licenses=yes -a fixes=update_all -a async=#{async_s} #{clients}"
+        nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all -a accept_licenses=yes -a async=#{async_s} #{clients}"
         Chef::Log.warn("Start updating machine(s) '#{clients}' to #{lpp_source}.")
         if async # asynchronous
           so = shell_out(nim_s, timeout: 3000)
@@ -304,6 +340,22 @@ module AIX
           unless exit_status.success? || do_not_error
             raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!"
           end
+        end
+      end
+
+      def perform_efix_customization(lpp_source, client)
+        nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a filesets=all #{client}"
+        so = shell_out(nim_s)
+        so.stdout.each_line do |line|
+          Chef::Log.info("[STDOUT] #{line.chomp}")
+        end
+        so.stderr.each_line do |line|
+          Chef::Log.info("[STDERR] #{line.chomp}")
+        end
+        if so.error?
+          raise NimCustError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
+        else
+          Chef::Log.warn("Done nim remove operation \"#{nim_s}\"")
         end
       end
     end

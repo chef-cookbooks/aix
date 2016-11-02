@@ -18,32 +18,32 @@ live_stream = (STDIN.readline.chomp == 'no') ? false : true
 puts '#########################################################'
 puts 'Select type of APAR ? (sec/hiper/both)'
 apar = STDIN.readline.chomp
-apar_s = (apar == 'both') ? '' : "-t #{apar}"
+apar_s = (apar =~ /(both|)/) ? '' : "-t #{apar}"
 
 ##################
 # PRE-REQUISITES #
 ##################
 
+unless `which unzip`
 # download unzip
 remote_file "#{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm" do
   source 'https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/RPMS/ppc/unzip/unzip-6.0-3.aix6.1.ppc.rpm'
-  not_if 'which unzip'
 end
 
 # install unzip
 execute "rpm -i #{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm" do
-  not_if 'which unzip'
+end
 end
 
+unless ::File.exist?('/usr/bin/flrtvc.ksh')
 # download flrtvc
 remote_file "#{Chef::Config[:file_cache_path]}/FLRTVC-0.7.zip" do
   source 'https://www-304.ibm.com/webapp/set2/sas/f/flrt3/FLRTVC-0.7.zip'
-  not_if { ::File.exist?('/usr/bin/flrtvc.ksh') }
 end
 
 # unzip flrtvc
 execute "unzip #{Chef::Config[:file_cache_path]}/FLRTVC-0.7.zip -d /usr/bin" do
-  not_if { ::File.exist?('/usr/bin/flrtvc.ksh') }
+end
 end
 
 # set execution mode
@@ -78,12 +78,12 @@ client.each do |c|
 
   # execute flrtvc script
   if live_stream
-    execute "/usr/bin/flrtvc.ksh -l #{c}_lslpp.txt -e #{c}_emgr.txt #{apar_s}" do
+    execute "/usr/bin/flrtvc.ksh -v -l #{c}_lslpp.txt -e #{c}_emgr.txt #{apar_s}" do
       live_stream live_stream
       ignore_failure true
     end
   else
-    execute "/usr/bin/flrtvc.ksh -l #{c}_lslpp.txt -e #{c}_emgr.txt #{apar_s} > #{c}_flrtvc.txt" do
+    execute "/usr/bin/flrtvc.ksh -v -l #{c}_lslpp.txt -e #{c}_emgr.txt #{apar_s} > #{c}_flrtvc.txt" do
       ignore_failure true
     end
   end

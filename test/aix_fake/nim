@@ -116,6 +116,12 @@ function run_action
     then
         echo "### NIM FAKE DONE DEALLOCATE OPERATION ###"
     fi
+
+    # NIM Remove operation
+    if [ $action_type -eq 4 ]
+    then
+        echo "### NIM FAKE DONE REMOVE OPERATION ###"
+    fi
 }
 
 #=====================================
@@ -171,6 +177,11 @@ then
     if [ "$operation" == "deallocate" ]
     then
         run_action 3
+        exit 0
+    fi
+    if [ "$operation" == "remove" ]
+    then
+        run_action 4
         exit 0
     fi
     echo "#### BAD OPERATION ($operation) ####"

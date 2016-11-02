@@ -537,6 +537,10 @@ aix_flrtvc "install flrtvc tool (download unzip if needed)" do
   action :install
 end
 
+aix_flrtvc "download and install recommended efix (local)" do
+  action :patch
+end
+
 aix_flrtvc "download and install security vulnerabilities" do
   apar "security"
   targets "client1,client2,client3"
@@ -555,12 +559,19 @@ aix_flrtvc "download and install efix for printers fileset(s)" do
   action :patch
 end
 
+aix_flrtvc "use custom csv file" do
+  csv "/tmp/apar.csv"
+  targets "client1,client2,client3"
+  action :patch
+end
+
 ```
 Parameters:
 
-* `targets` - comma or space separated list of clients to check (star wildcard accepted)
+* `targets` - comma or space separated list of clients to check (star wildcard accepted) (default: master)
 * `apar` - security or hiper data (default: both)
 * `filesets` - filter on fileset name
+* `csv` - custom apar csv file
 
 Actions:
 * `install` - install flrtvc tool

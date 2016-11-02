@@ -68,15 +68,17 @@ action :update do
       end
 
       # extract oslevel from lpp source
-      os_level = new_lpp_source.to_s.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})-lpp_source$/)[1]
-      Chef::Log.debug("os_level: #{os_level}")
+      oslevel = new_lpp_source.to_s.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})-lpp_source$/)[1].split('-')
+      Chef::Log.debug("oslevel: #{oslevel}")
+      os_level = OsLevel.new(oslevel[0][0], oslevel[0][1], oslevel[1])
 
       # get current oslevel
-      current_os_level = node['nim']['clients'][m]['oslevel']
-      Chef::Log.debug("current_os_level: #{current_os_level}")
+      current_oslevel = node['nim']['clients'][m]['oslevel'].split('-')
+      Chef::Log.debug("current_oslevel: #{current_oslevel}")
+      current_os_level = OsLevel.new(current_oslevel[0][0], current_oslevel[0][1], current_oslevel[1])
 
-      if OsLevel.new(current_os_level) >= OsLevel.new(os_level)
-        Chef::Log.warn("Machine #{m} is already at same or higher level than #{os_level}")
+      if current_os_level >= os_level
+        Chef::Log.warn("Machine #{m} is already at same or higher level than #{oslevel}")
       else
         converge_by("nim: perform synchronous software customization for client \'#{m}\' with resource \'#{new_lpp_source}\'") do
           nim.perform_customization(new_lpp_source, m, local_async)
