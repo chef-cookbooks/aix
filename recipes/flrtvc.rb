@@ -27,7 +27,7 @@ apar_s = (apar =~ /(both|)/) ? '' : "-t #{apar}"
 cmd = Mixlib::ShellOut.new('which unzip')
 cmd.run_command
 cmd.valid_exit_codes = 0
-unless cmd.error?
+if cmd.error?
   # download unzip
   remote_file "#{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm" do
     source 'https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/RPMS/ppc/unzip/unzip-6.0-3.aix6.1.ppc.rpm'

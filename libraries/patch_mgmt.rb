@@ -63,20 +63,16 @@ module AIX
           -1
         elsif @aix > other.aix
           1
+        elsif @rel < other.rel
+          -1
+        elsif @rel > other.rel
+          1
+        elsif @tl < other.tl
+          -1
+        elsif @tl > other.tl
+          1
         else
-          if @rel < other.rel
-            -1
-          elsif @rel > other.rel
-            1
-          else
-            if @tl < other.tl
-              -1
-            elsif @tl > other.tl
-              1
-            else
-              0
-            end
-          end
+          0
         end
       end
 

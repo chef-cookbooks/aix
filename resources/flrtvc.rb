@@ -25,6 +25,7 @@ property :apar, ['sec', 'hiper', nil], default: nil
 property :filesets, String
 property :csv, String
 property :verbose, [true, false], default: false
+property :clean, [true, false], default: false
 
 default_action :patch
 
@@ -35,27 +36,35 @@ action :install do
   cmd = Mixlib::ShellOut.new('which unzip')
   cmd.valid_exit_codes = 0
   cmd.run_command
-  unless !cmd.error?
+  if cmd.error?
+    unzip_file = "#{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm"
     # download unzip
-    remote_file "#{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm" do
+    remote_file unzip_file.to_s do
       source 'https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/RPMS/ppc/unzip/unzip-6.0-3.aix6.1.ppc.rpm'
     end
 
     # install unzip
-    execute "rpm -i #{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm" do
+    execute "rpm -i #{unzip_file}" do
     end
+
+    # delete
+    ::File.delete(unzip_file) if clean == true
   end
 
   unless ::File.exist?('/usr/bin/flrtvc.ksh')
     name = 'FLRTVC-0.7.zip'
+    flrtvc_file = "#{Chef::Config[:file_cache_path]}/#{name}"
     # download flrtvc
-    remote_file "#{Chef::Config[:file_cache_path]}/#{name}" do
+    remote_file flrtvc_file.to_s do
       source "https://www-304.ibm.com/webapp/set2/sas/f/flrt3/#{name}"
     end
 
     # unzip flrtvc
-    execute "unzip -f #{Chef::Config[:file_cache_path]}/#{name} -d /usr/bin" do
+    execute "unzip -o #{flrtvc_file} -d /usr/bin" do
     end
+
+    # delete
+    ::File.delete(flrtvc_file) if clean == true
   end
 
   # set execution mode
@@ -128,7 +137,7 @@ end
 def parse_report(s)
   urls = []
   s.each_line do |line|
-    if line =~ /Download:\s+(https:\/\/aix.software.ibm.com\/aix\/efixes\/(security|hiper)\/.*?.tar)/
+    if line =~ %r{Download:\s+(https://aix.software.ibm.com/aix/efixes/(security|hiper)/.*?.tar)}
       urls.push(Regexp.last_match(1))
     end
   end
@@ -175,7 +184,7 @@ action :patch do
       aix_level = oslevel[0][0]
       rel_level = oslevel[0][1]
       tl_level  = oslevel[1].to_i.to_s
-      Chef::Log.debug(aix_level + '.' + rel_level + '.' + tl_level)
+      Chef::Log.info(m + ': ' + aix_level + '.' + rel_level + '.' + tl_level)
 
       # execute lslpp -Lcq
       lslpp_file = "#{Chef::Config[:file_cache_path]}/lslpp_#{m}.txt"
@@ -189,72 +198,74 @@ action :patch do
     # execute flrtvc script
     flrtvc_out = shell_out!("/usr/bin/flrtvc.ksh -v -l #{lslpp_file} -e #{emgr_file} #{apar_s} #{filesets_s} #{csv_s}").stdout
     Chef::Log.debug(flrtvc_out)
-    puts "\n" + flrtvc_out if verbose
+    puts "\n#{flrtvc_out}" if verbose == true
 
     # clean temporary files
-    ::File.delete(lslpp_file)
-    ::File.delete(emgr_file)
+    ::File.delete(lslpp_file) if clean == true
+    ::File.delete(emgr_file) if clean == true
 
     # parse report
     urls = parse_report(flrtvc_out)
-    Chef::Log.debug("urls: #{urls}")
+    Chef::Log.info("urls: #{urls}")
 
-    unless urls.empty?
-      # create directory
-      lpp_source = "#{m}-lpp_source"
-      lpp_source_base_dir = "#{Chef::Config[:file_cache_path]}/#{lpp_source}"
-      lpp_source_dir = lpp_source_base_dir + '/emgr/ppc'
-      unless ::File.directory?(lpp_source_dir)
-        converge_by("create directory '#{lpp_source_dir}'") do
-          ::FileUtils.mkdir_p(lpp_source_dir)
-        end
+    next if urls.empty?
+
+    # create directory
+    lpp_source = "#{m}-lpp_source"
+    lpp_source_base_dir = "#{Chef::Config[:file_cache_path]}/#{lpp_source}"
+    lpp_source_dir = lpp_source_base_dir + '/emgr/ppc'
+    unless ::File.directory?(lpp_source_dir)
+      converge_by("create directory '#{lpp_source_dir}'") do
+        ::FileUtils.mkdir_p(lpp_source_dir)
       end
-
-      # download fixes, untar it, and copy files to lpp source location
-      urls.each do |url|
-        converge_by("download '#{url}', untar, and copy content to '#{lpp_source_dir}'") do
-          filename = Chef::Config[:file_cache_path] + '/' + url.split('/')[-1]
-          dir_name = Chef::Config[:file_cache_path] + '/' + url.split('/')[-1].split('.')[0]
-          # download
-          download(url, filename)
-          # untar
-          shell_out!("/bin/tar -xf #{filename} -C #{Chef::Config[:file_cache_path]} `tar -tf #{filename} | grep epkg.Z$`")
-          # filter oslevel
-          ::Dir.glob(dir_name + '/*.epkg.Z').each do |f|
-            so = shell_out("/usr/sbin/emgr -v3 -d -e #{f} 2>&1 | grep -p \\\"PREREQ | egrep \"0*#{aix_level}.0*#{rel_level}.0*#{tl_level}\"")
-            if so.stdout =~ /^(.*?) (.*?) (.*?)$/
-              level = OsLevel.new(aix_level, rel_level, tl_level)
-              min_a = Regexp.last_match(2).split('.')
-              min = OsLevel.new(min_a[0], min_a[1], min_a[2])
-              max_a = Regexp.last_match(3).split('.')
-              max = OsLevel.new(max_a[0], max_a[1], max_a[2])
-              if min <= level && level <= max
-                # copy efix
-                ::FileUtils.cp_r(f, lpp_source_dir)
-              end
-            end
-          end
-          # clean temporary files
-          ::FileUtils.remove_dir(dir_name)
-          ::File.delete(filename)
-        end
-      end
-
-      if m == 'master'
-        # local target
-        # TODO : replace nim with geninstall command
-      else
-        # create lpp source, patch and remove it
-        converge_by("nim: perform synchronous software customization for client \'#{m}\' with resource \'#{lpp_source}\'") do
-          nim = Nim.new
-          nim.define_lpp_source(lpp_source, lpp_source_dir) unless nim.exist?(lpp_source)
-          nim.perform_efix_customization(lpp_source, m)
-          nim.remove_resource(lpp_source)
-        end
-      end
-
-      # delete lpp source location
-      ::FileUtils.remove_dir(lpp_source_base_dir)
     end
+
+    # download fixes, untar it, and copy files to lpp source location
+    urls.each do |url|
+      converge_by("download '#{url}', untar, and copy content to '#{lpp_source_dir}'") do
+        filename = Chef::Config[:file_cache_path] + '/' + url.split('/')[-1]
+        dir_name = Chef::Config[:file_cache_path] + '/' + url.split('/')[-1].split('.')[0]
+        # download
+        download(url, filename)
+        # untar
+        shell_out!("/bin/tar -xf #{filename} -C #{Chef::Config[:file_cache_path]} `tar -tf #{filename} | grep epkg.Z$`")
+        # filter oslevel
+        ::Dir.glob(dir_name + '/*.epkg.Z').each do |f|
+          # get level
+          so = shell_out("/usr/sbin/emgr -v3 -d -e #{f} 2>&1 | grep -p \\\"PREREQ | egrep \"0*#{aix_level}.0*#{rel_level}.0*#{tl_level}\"")
+          next unless so.stdout =~ /^(.*?) (.*?) (.*?)$/
+
+          # compare levels
+          level = OsLevel.new(aix_level, rel_level, tl_level)
+          min_a = Regexp.last_match(2).split('.')
+          min = OsLevel.new(min_a[0], min_a[1], min_a[2])
+          max_a = Regexp.last_match(3).split('.')
+          max = OsLevel.new(max_a[0], max_a[1], max_a[2])
+          next unless level < min || level > max
+
+          # copy efix
+          ::FileUtils.cp_r(f, lpp_source_dir)
+        end
+        # clean temporary files
+        ::FileUtils.remove_dir(dir_name) if clean == true
+        ::File.delete(filename) if clean == true
+      end
+    end
+
+    if m == 'master'
+      # local target
+      # TODO : replace nim with geninstall command
+    else
+      # create lpp source, patch and remove it
+      converge_by("nim: perform synchronous software customization for client \'#{m}\' with resource \'#{lpp_source}\'") do
+        nim = Nim.new
+        nim.define_lpp_source(lpp_source, lpp_source_dir) unless nim.exist?(lpp_source)
+        nim.perform_efix_customization(lpp_source, m)
+        nim.remove_resource(lpp_source)
+      end
+    end
+
+    # delete lpp source location
+    ::FileUtils.remove_dir(lpp_source_base_dir) if clean == true
   end
 end
