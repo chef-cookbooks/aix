@@ -22,6 +22,7 @@ property :targets, String, required: true
 property :async, [true, false], default: false
 property :device, String, required: true
 property :script, String
+property :resource, String
 
 default_action :update
 
@@ -107,11 +108,13 @@ end
 
 action :check do
   check_ohai
+
   # build hash table
   nodes = Hash.new { |h, k| h[k] = {} }
   nodes['machine'] = node['nim']['clients'].keys
   nodes['oslevel'] = node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
   nodes['Cstate'] = node['nim']['clients'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }
+
   # converge here
   so = print_hash_by_columns(nodes)
   converge_by("check update status:\n#{so}") do
@@ -120,12 +123,15 @@ end
 
 action :compare do
   check_ohai
+
   # build list of targets
   target_list = expand_targets
   Chef::Log.debug("target_list: #{target_list}")
+
   # run niminv command
   niminv_s = "niminv -o invcmp -a targets=#{target_list.join(',')} -a base=any"
   so = shell_out!(niminv_s).stdout
+
   # converge here
   converge_by("compare installation inventory:\n#{so}") do
   end
@@ -134,6 +140,8 @@ end
 action :script do
   Chef::Log.debug("targets: #{targets}")
   Chef::Log.debug("script: #{script}")
+
+  check_ohai
 
   # build list of targets
   target_list = expand_targets
@@ -156,6 +164,8 @@ action :allocate do
   Chef::Log.debug("targets: #{targets}")
   Chef::Log.debug("lpp_source: #{lpp_source}")
 
+  check_ohai
+
   # build list of targets
   target_list = expand_targets
   Chef::Log.debug("target_list: #{target_list}")
@@ -176,6 +186,8 @@ end
 action :deallocate do
   Chef::Log.debug("targets: #{targets}")
   Chef::Log.debug("lpp_source: #{lpp_source}")
+
+  check_ohai
 
   # build list of targets
   target_list = expand_targets
@@ -198,6 +210,8 @@ action :bos_inst do
   Chef::Log.debug("targets: #{targets}")
   Chef::Log.debug("lpp_source: #{lpp_source}")
 
+  check_ohai
+
   # build list of targets
   target_list = expand_targets
   Chef::Log.debug("target_list: #{target_list}")
@@ -209,6 +223,26 @@ action :bos_inst do
   nim_s = "nim -o bos_inst -a source=mksysb -a group=#{group} -a target=#{target_list.join(',')}"
   # converge here
   converge_by("nim: bos_inst operation \"#{nim_s}\"") do
+    nim = Mixlib::ShellOut.new(nim_s)
+    nim.valid_exit_codes = 0
+    nim.run_command
+    nim.stdout.each_line { |line| Chef::Log.info("[STDOUT] #{line.chomp}") }
+    nim.stderr.each_line { |line| Chef::Log.info("[STDERR] #{line.chomp}") }
+    nim.error!
+    nim.error?
+  end
+end
+
+action :define do
+ puts "NOT YET IMPLEMENTED"
+end
+
+action :remove do
+  Chef::Log.debug("resource: #{resource}")
+
+  nim_s = "nim -o remove #{resource}"
+  # converge here
+  converge_by("nim: remove operation \"#{nim_s}\"") do
     nim = Mixlib::ShellOut.new(nim_s)
     nim.valid_exit_codes = 0
     nim.run_command
