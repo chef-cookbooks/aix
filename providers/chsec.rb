@@ -21,7 +21,7 @@ def whyrun_supported?
   true
 end
 
-# Run lssec, return fale if command fails, otherwise return the current value
+# Run lssec and return value of requested attribute or false if command fails
 def lssec(file, stanza, attribute)
   cmd = shell_out("lssec -c -f '#{file}' -s '#{stanza}' -a '#{attribute}'")
   if cmd.error?
