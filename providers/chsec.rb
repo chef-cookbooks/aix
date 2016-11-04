@@ -65,7 +65,6 @@ action :update do
   chsec_attrs = []
   chsec_prefix = \
     "chsec -f '#{@new_resource.file_name}' -s '#{new_resource.stanza}'"
-  changed_attribute_keys = changed_attributes
 
   changed_attributes.each do |key|
     chsec_attrs << "-a '#{key}'='#{nr.attributes[key]}'"
