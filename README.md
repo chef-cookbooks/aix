@@ -336,7 +336,7 @@ end
 Parameters:
 
 * `file_name` (name_attribute) - security file to change
-* `attribute` - array of attribut to change
+* `attributes` - array of attributes to change
 * `stanza` - stanza to change
 
 ### etchosts
