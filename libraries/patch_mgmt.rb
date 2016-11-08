@@ -139,7 +139,7 @@ module AIX
         if so.error?
           raise SumaMetadataError, "Error: Command \"#{suma_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         else
-          Chef::Log.warn("Done suma metadata operation \"#{suma_s}\"")
+          Chef::Log.info("Done suma metadata operation \"#{suma_s}\"")
         end
       end
 
@@ -165,7 +165,7 @@ module AIX
           Chef::Log.info("[STDERR] #{line.chomp}")
         end
         if so.stderr =~ /^0500-035 No fixes match your query.$/
-          Chef::Log.warn("Done suma preview operation \"#{suma_s}\"")
+          Chef::Log.info("Done suma preview operation \"#{suma_s}\"")
         elsif so.stdout =~ /Total bytes of updates downloaded: ([0-9]+).*?([0-9]+) downloaded.*?([0-9]+) failed.*?([0-9]+) skipped/m
           @dl = Regexp.last_match(1).to_f / 1024 / 1024 / 1024
           @downloaded = Regexp.last_match(2)
@@ -173,7 +173,7 @@ module AIX
           @skipped = Regexp.last_match(4)
           Chef::Log.debug(so.stdout)
           Chef::Log.info("#{@downloaded} downloaded (#{@dl} GB), #{@failed} failed, #{@skipped} skipped fixes")
-          Chef::Log.warn("Done suma preview operation \"#{suma_s}\"")
+          Chef::Log.info("Done suma preview operation \"#{suma_s}\"")
         else
           raise SumaPreviewError, "Error: Command \"#{suma_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         end
@@ -195,7 +195,7 @@ module AIX
         download_downloaded = 0
         download_failed = 0
         download_skipped = 0
-        Chef::Log.warn("Start downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to '#{@dl_target}' directory.")
+        puts "Start downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to '#{@dl_target}' directory."
         exit_status = Open3.popen3(suma_s) do |stdin, stdout, stderr, wait_thr|
           thr = Thread.new do
             print "\n"
@@ -243,7 +243,7 @@ module AIX
         unless exit_status.success?
           raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns above error!"
         end
-        Chef::Log.warn("Finish downloading #{succeeded} fixes.")
+        puts "Finish downloading #{succeeded} fixes."
         @download = download_downloaded
         @failed = download_failed
         @skipped = download_skipped
@@ -272,7 +272,7 @@ module AIX
         if so.error?
           raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         else
-          Chef::Log.warn("Done nim define operation \"#{nim_s}\"")
+          Chef::Log.info("Done nim define operation \"#{nim_s}\"")
         end
       end
 
@@ -288,14 +288,14 @@ module AIX
         if so.error?
           raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         else
-          Chef::Log.warn("Done nim remove operation \"#{nim_s}\"")
+          Chef::Log.info("Done nim remove operation \"#{nim_s}\"")
         end
       end
 
       def perform_customization(lpp_source, clients, async = true)
         async_s = async ? 'yes' : 'no'
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all -a accept_licenses=yes -a async=#{async_s} #{clients}"
-        Chef::Log.warn("Start updating machine(s) '#{clients}' to #{lpp_source}.")
+        puts "Start updating machine(s) '#{clients}' to #{lpp_source}."
         if async # asynchronous
           so = shell_out(nim_s, timeout: 3000)
           so.stdout.each_line do |line|
@@ -307,7 +307,7 @@ module AIX
           if so.error? && so.stdout !~ /Either the software is already at the same level as on the media, or/m
             raise NimCustError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
           else
-            Chef::Log.warn("Done nim customize operation \"#{nim_s}\"")
+            Chef::Log.info("Done nim customize operation \"#{nim_s}\"")
           end
         else # synchronous
           do_not_error = false
@@ -332,7 +332,7 @@ module AIX
             stderr.close
             wait_thr.value # Process::Status object returned.
           end
-          Chef::Log.warn("Finish updating #{clients}.")
+          puts "Finish updating #{clients}."
           unless exit_status.success? || do_not_error
             raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!"
           end
@@ -351,7 +351,7 @@ module AIX
         if so.error?
           raise NimCustError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         else
-          Chef::Log.warn("Done nim remove operation \"#{nim_s}\"")
+          Chef::Log.info("Done nim remove operation \"#{nim_s}\"")
         end
       end
     end
