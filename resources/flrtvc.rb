@@ -139,7 +139,7 @@ def check_prereq(oslevel, dir)
     min = OsLevel.new(min_a[0], min_a[1], min_a[2])
     max_a = Regexp.last_match(3).split('.')
     max = OsLevel.new(max_a[0], max_a[1], max_a[2])
-    next unless (min <= level && level <= max)
+    next unless min <= level && level <= max
 
     efixes.push(f)
   end
@@ -212,9 +212,7 @@ action :patch do
 
   # create efixes directory
   efixes_dir = "#{Chef::Config[:file_cache_path]}/efixes"
-  unless ::File.directory?(efixes_dir)
-    ::FileUtils.mkdir_p(efixes_dir)
-  end
+  ::FileUtils.mkdir_p(efixes_dir) unless ::File.directory?(efixes_dir)
 
   # loop on clients
   target_list.each do |m|
@@ -223,7 +221,7 @@ action :patch do
 
     if m == 'master'
       # oslevel
-      oslevel = shell_out!("/bin/oslevel -s").stdout.split('-')
+      oslevel = shell_out!('/bin/oslevel -s').stdout.split('-')
       # execute lslpp -Lcq
       shell_out!("/usr/bin/lslpp -Lcq > #{lslpp_file}")
       # execute emgr -lv3
@@ -238,7 +236,7 @@ action :patch do
         shell_out!("/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{m} \"/usr/sbin/emgr -lv3\" > #{emgr_file}")
       rescue
         Chef::Log.warn("#{m} cannot be contacted")
-		next # target unreachable
+        next # target unreachable
       end
     end
 
@@ -309,7 +307,7 @@ action :patch do
         begin
           shell_out!("/usr/sbin/geninstall -d #{lpp_source_base_dir} all")
         rescue
-          Chef::Log.warn("failed installing some efixes. See /var/adm/ras/emgr.log for details")
+          Chef::Log.warn('failed installing some efixes. See /var/adm/ras/emgr.log for details')
         end
       end
     else

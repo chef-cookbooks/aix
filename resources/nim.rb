@@ -234,7 +234,7 @@ action :bos_inst do
 end
 
 action :define do
- puts "NOT YET IMPLEMENTED"
+  puts 'NOT YET IMPLEMENTED'
 end
 
 action :remove do
