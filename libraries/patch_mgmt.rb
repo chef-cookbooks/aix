@@ -136,7 +136,9 @@ module AIX
           end
           Chef::Log.info("[STDERR] #{line.chomp}")
         end
-        if so.error?
+        if so.stderr =~ /^0500-035 No fixes match your query.$/
+          Chef::Log.info("Done suma metadata operation \"#{suma_s}\"")
+        elsif so.error?
           raise SumaMetadataError, "Error: Command \"#{suma_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         else
           Chef::Log.info("Done suma metadata operation \"#{suma_s}\"")
@@ -403,12 +405,12 @@ module AIX
     # -----------------------------------------------------------------
     # Expand the target machine list parameter
     #
-    #    The target machine parameter is mandatory
     #    "*" should be specified as target to apply an operation on all
     #        the machines
+    #    If target parameter is empty or not present operation is 
+    #        performed locally
     #
     #    raise InvalidTargetsProperty in case of error
-    #    - target parameter is empty or not present
     #    - connot contact the target machines
     # -----------------------------------------------------------------
     def expand_targets
@@ -417,6 +419,7 @@ module AIX
       if property_is_set?(:targets)
         if !targets.empty?
           targets.split(/[,\s]/).each do |machine|
+            selected_machines.push(machine) if machine == 'master'
             # expand wildcard
             machine.gsub!(/\*/, '.*?')
             node['nim']['clients'].keys.each do |m|
@@ -424,10 +427,10 @@ module AIX
             end
           end
           selected_machines = selected_machines.sort.uniq
-        else # empty... target is mandatory
+        else # empty
           selected_machines.push('master')
         end
-      else # not set... target is mandatory
+      else # not set
         selected_machines.push('master')
       end
       Chef::Log.info("List of targets expanded to #{selected_machines}")
@@ -602,18 +605,16 @@ module AIX
     # find_resource("sp","next")   --> search the next available service pack for your system
     # find_resource("tl","latest") --> search the latest available technology level for your system
     # find_resource("tl","next")   --> search the next available technology level for your system
-    def find_resource_by_client(type, time, client)
+    def find_resource_by_client(type, time, oslevel)
       Chef::Log.debug("nim: finding #{time} #{type}")
-      # not performing any test on this shell
-      current_oslevel = node['nim']['clients'][client]['oslevel'].split('-')
       # this command should show an outpout like this on
       # 7100-01-01-1210-lpp_source
       # 7100-01-02-1415-lpp_source
       # 7100-03-04-1415-lpp_source
       # 7100-03-05-1514-lpp_source
-      aixlevel = current_oslevel[0]
-      tllevel = current_oslevel[1]
-      splevel = current_oslevel[2]
+      aixlevel = oslevel[0]
+      tllevel = oslevel[1]
+      splevel = oslevel[2]
       lppsource = ''
       if type == 'tl'
         # reading output until I have found the good tl
@@ -636,7 +637,7 @@ module AIX
       end
       if lppsource.empty?
         # setting lpp_source to current oslevel
-        lppsource = current_oslevel[0] + '-' + current_oslevel[1] + '-' + current_oslevel[2] + '-' + current_oslevel[3] + '-lpp_source'
+        lppsource = oslevel[0] + '-' + oslevel[1] + '-' + oslevel[2] + '-' + oslevel[3] + '-lpp_source'
         Chef::Log.debug("nim: server already to the #{time} #{type}, or no lpp_source were found, #{lppsource} will be utilized")
       else
         Chef::Log.debug("nim: we found the #{time} lpp_source, #{lppsource} will be utilized")

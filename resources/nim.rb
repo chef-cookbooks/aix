@@ -18,7 +18,7 @@ include AIX::PatchMgmt
 
 property :desc, String, name_property: true
 property :lpp_source, String, required: true
-property :targets, String, required: true
+property :targets, String
 property :async, [true, false], default: false
 property :device, String, required: true
 property :script, String
@@ -57,11 +57,17 @@ action :update do
     end
   else # synchronous update
     target_list.each do |m|
+      # get current oslevel
+      current_oslevel = (m == 'master') ? node['nim']['master']['oslevel'].split('-') : node['nim']['clients'][m]['oslevel'].split('-')
+      Chef::Log.debug("current_oslevel: #{current_oslevel}")
+      current_os_level = OsLevel.new(current_oslevel[0][0], current_oslevel[0][1], current_oslevel[1])
+
+      # get lpp source
       if lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
         lpp_source_array = lpp_source.split('_')
         time = lpp_source_array[0]
         type = lpp_source_array[1]
-        new_lpp_source = find_resource_by_client(type, time, m)
+        new_lpp_source = find_resource_by_client(type, time, current_oslevel)
         Chef::Log.debug("new_lpp_source: #{new_lpp_source}")
       else
         check_lpp_source_name(lpp_source)
@@ -73,13 +79,8 @@ action :update do
       Chef::Log.debug("oslevel: #{oslevel}")
       os_level = OsLevel.new(oslevel[0][0], oslevel[0][1], oslevel[1])
 
-      # get current oslevel
-      current_oslevel = node['nim']['clients'][m]['oslevel'].split('-')
-      Chef::Log.debug("current_oslevel: #{current_oslevel}")
-      current_os_level = OsLevel.new(current_oslevel[0][0], current_oslevel[0][1], current_oslevel[1])
-
       if current_os_level >= os_level
-        Chef::Log.warn("Machine #{m} is already at same or higher level than #{oslevel}")
+        Chef::Log.warn("Machine #{m} is already at same or higher level than #{oslevel.join('-')}")
       else
         converge_by("nim: perform synchronous software customization for client \'#{m}\' with resource \'#{new_lpp_source}\'") do
           nim.perform_customization(new_lpp_source, m, local_async)

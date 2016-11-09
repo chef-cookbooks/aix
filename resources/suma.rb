@@ -60,6 +60,8 @@ def suma_params
   Chef::Log.debug("rq_name=#{rq_name}")
   params['rq_name'] = rq_name
 
+  return nil if params['rq_name'].nil? || params['rq_name'].empty?
+
   # compute lpp source name based on request name
   lpp_source = compute_lpp_source_name(rq_name)
   Chef::Log.debug("lpp_source=#{lpp_source}")
@@ -88,6 +90,7 @@ action :preview do
 
   # obtain suma parameters
   params = suma_params
+  return if params.nil?
 
   # create directory
   unless ::File.directory?(params['dl_target'])
@@ -119,6 +122,7 @@ action :download do
 
   # obtain suma parameters
   params = suma_params
+  return if params.nil?
 
   # create directory
   unless ::File.directory?(params['dl_target'])
