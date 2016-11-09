@@ -27,6 +27,7 @@ property :filesets, String
 property :csv, String
 property :verbose, [true, false], default: false
 property :clean, [true, false], default: true
+property :check_only, [true, false], default: false
 
 default_action :patch
 
@@ -95,9 +96,9 @@ end
 def parse_report(s)
   urls = []
   s.each_line do |line|
-    if line =~ %r{Download:\s+(https?://aix.software.ibm.com/aix/efixes/security/.*?.tar)}
+    if line =~ %r{(https?://aix.software.ibm.com/aix/efixes/security/.*?.tar)}
       urls.push(Regexp.last_match(1))
-    elsif line =~ %r{Download:\s+(https?://aix.software.ibm.com/aix/ifixes/.*?/)}
+    elsif line =~ %r{(https?://aix.software.ibm.com/aix/ifixes/.*?/)}
       url = Regexp.last_match(1)
       uri = URI(url)
       res = Net::HTTP.get_response(uri)
@@ -147,11 +148,9 @@ def check_prereq(oslevel, dir)
 end
 
 action :install do
-  cmd = Mixlib::ShellOut.new('which unzip')
-  cmd.valid_exit_codes = 0
-  cmd.run_command
-  if cmd.error?
+  if Mixlib::ShellOut.new('which unzip').run_command.error?
     unzip_file = "#{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm"
+
     # download unzip
     remote_file unzip_file.to_s do
       source 'https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/RPMS/ppc/unzip/unzip-6.0-3.aix6.1.ppc.rpm'
@@ -162,7 +161,10 @@ action :install do
     end
 
     # delete
-    ::File.delete(unzip_file) if clean == true
+    file unzip_file.to_s do
+      action :delete
+      only_if { clean == true }
+    end
   end
 
   unless ::File.exist?('/usr/bin/flrtvc.ksh')
@@ -178,7 +180,10 @@ action :install do
     end
 
     # delete
-    ::File.delete(flrtvc_file) if clean == true
+    file flrtvc_file.to_s do
+      action :delete
+      only_if { clean == true }
+    end
   end
 
   # set execution mode
@@ -210,14 +215,13 @@ action :patch do
   csv_s = validate_csv(csv)
   Chef::Log.debug("csv_s: #{csv_s}")
 
-  # create efixes directory
-  efixes_dir = "#{Chef::Config[:file_cache_path]}/efixes"
-  ::FileUtils.mkdir_p(efixes_dir) unless ::File.directory?(efixes_dir)
+  verbose_s = '-v' if verbose == true
 
   # loop on clients
   target_list.each do |m|
     lslpp_file = "#{Chef::Config[:file_cache_path]}/lslpp_#{m}.txt"
     emgr_file = "#{Chef::Config[:file_cache_path]}/emgr_#{m}.txt"
+    flrtvc_file = "#{Chef::Config[:file_cache_path]}/flrtvc_#{m}.txt"
 
     if m == 'master'
       # oslevel
@@ -241,13 +245,15 @@ action :patch do
     end
 
     # execute flrtvc script
-    flrtvc_out = shell_out!("/usr/bin/flrtvc.ksh -v -l #{lslpp_file} -e #{emgr_file} #{apar_s} #{filesets_s} #{csv_s}").stdout
+    shell_out!("/usr/bin/flrtvc.ksh -l #{lslpp_file} -e #{emgr_file} #{apar_s} #{filesets_s} #{csv_s} #{verbose_s} > #{flrtvc_file}")
+    flrtvc_out = ::IO.read(flrtvc_file)
     Chef::Log.debug(flrtvc_out)
     puts "\n#{flrtvc_out}" if verbose == true
 
     # clean temporary files
     ::File.delete(lslpp_file) if clean == true
     ::File.delete(emgr_file) if clean == true
+    ::File.delete(flrtvc_file) if clean == true
 
     # parse report
     urls = parse_report(flrtvc_out)
@@ -257,15 +263,11 @@ action :patch do
       next # target up-to-date
     end
 
-    # create lpp source directory
-    lpp_source = "#{m}-lpp_source"
-    lpp_source_base_dir = "#{Chef::Config[:file_cache_path]}/#{lpp_source}"
-    lpp_source_dir = lpp_source_base_dir + '/emgr/ppc'
-    unless ::File.directory?(lpp_source_dir)
-      converge_by("create directory '#{lpp_source_dir}'") do
-        ::FileUtils.mkdir_p(lpp_source_dir)
-      end
-    end
+    next if check_only == true
+
+    # create efixes directory
+    efixes_dir = "#{Chef::Config[:file_cache_path]}/efixes"
+    ::FileUtils.mkdir_p(efixes_dir) unless ::File.directory?(efixes_dir)
 
     # download urls
     urls.each do |url|
@@ -294,6 +296,19 @@ action :patch do
       next
     end
 
+    # delete efixes location
+    ::FileUtils.remove_dir(efixes_dir) if clean == true
+
+    # create lpp source directory
+    lpp_source = "#{m}-lpp_source"
+    lpp_source_base_dir = "#{Chef::Config[:file_cache_path]}/#{lpp_source}"
+    lpp_source_dir = lpp_source_base_dir + '/emgr/ppc'
+    unless ::File.directory?(lpp_source_dir)
+      converge_by("create directory '#{lpp_source_dir}'") do
+        ::FileUtils.mkdir_p(lpp_source_dir)
+      end
+    end
+
     # copy efix
     efixes.each do |efix|
       converge_by("[#{m}] efix #{efix.split('/')[-1].split('.')[0]} meets prerequisites") do
@@ -320,14 +335,11 @@ action :patch do
         rescue
           Chef::Log.warn("#{m} failed installing some efixes. See /var/adm/ras/emgr.log on #{m} for details")
         end
-        nim.remove_resource(lpp_source)
+        nim.remove_resource(lpp_source) if clean == true
       end
     end
 
     # delete lpp source location
     ::FileUtils.remove_dir(lpp_source_base_dir) if clean == true
   end # end targets
-
-  # delete efixes location
-  ::FileUtils.remove_dir(efixes_dir) if clean == true
 end

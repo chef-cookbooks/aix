@@ -1,8 +1,10 @@
 # recipe example flrtvc script on nim clients
 
-aix_flrtvc 'patch quimby12' do
-  targets 'quimby02,quimby03,quimby04,quimby05,quimby06,quimby07,quimby08,quimby09'
+aix_flrtvc 'patch aix machine(s)' do
   verbose true
-  clean true
+  clean false
+  targets '*'
+  apar 'hiper'
   action [:install, :patch]
+  check_only true
 end
