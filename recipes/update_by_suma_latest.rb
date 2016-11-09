@@ -3,6 +3,8 @@
 
 Chef::Recipe.send(:include, AIX::PatchMgmt)
 
+check_ohai
+
 nodes = Hash.new { |h, k| h[k] = {} }
 nodes['machine'] = node['nim']['clients'].keys
 nodes['oslevel'] = node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }

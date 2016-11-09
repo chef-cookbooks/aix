@@ -390,6 +390,8 @@ module AIX
 
     def check_ohai
       # get list of all NIM machines from Ohai
+      master = node.fetch('nim', {}).fetch('master').fetch('oslevel')
+      Chef::Log.debug("Ohai master oslevel is #{master}")
       all_machines = node.fetch('nim', {}).fetch('clients').keys
       Chef::Log.debug("Ohai client machine's list is #{all_machines}")
       all_lpp_sources = node.fetch('nim', {}).fetch('lpp_sources').keys
@@ -423,10 +425,10 @@ module AIX
           end
           selected_machines = selected_machines.sort.uniq
         else # empty... target is mandatory
-          raise InvalidTargetsProperty, 'Error: no target machine specified'
+          selected_machines.push('master')
         end
       else # not set... target is mandatory
-        raise InvalidTargetsProperty, 'Error: no target machine specified'
+        selected_machines.push('master')
       end
       Chef::Log.info("List of targets expanded to #{selected_machines}")
 
@@ -463,7 +465,7 @@ module AIX
 
     def compute_filter_ml(targets)
       # build machine-oslevel hash
-      hash = Hash.new { |h, k| h[k] = node['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
+      hash = Hash.new { |h, k| h[k] = (k == 'master') ? node['nim']['master'].fetch('oslevel', nil) : node['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
       targets.each { |k| hash[k] }
       hash.delete_if { |_k, v| v.nil? || v.empty? }
       Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
@@ -496,7 +498,7 @@ module AIX
       case rq_type
       when 'Latest'
         # build machine-oslevel hash
-        hash = Hash.new { |h, k| h[k] = node['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
+        hash = Hash.new { |h, k| h[k] = (k == 'master') ? node['nim']['master'].fetch('oslevel', nil) : node['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
         targets.each { |k| hash[k] }
         hash.delete_if { |_k, v| v.nil? || v.empty? }
         Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")

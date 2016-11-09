@@ -19,7 +19,7 @@ include AIX::PatchMgmt
 property :desc, String, name_property: true
 property :oslevel, String
 property :location, String
-property :targets, String, required: true
+property :targets, String
 property :tmp_dir, String
 property :save_it, [true, false], default: false
 property :sched_time, String
