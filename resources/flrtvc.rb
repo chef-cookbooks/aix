@@ -135,11 +135,11 @@ def check_prereq(oslevel, dir)
     next unless so.stdout =~ /^(.*?) (.*?) (.*?)$/
 
     # compare levels
-    level = OsLevel.new(aix_level, rel_level, tl_level)
+    level = TlLevel.new(aix_level, rel_level, tl_level)
     min_a = Regexp.last_match(2).split('.')
-    min = OsLevel.new(min_a[0], min_a[1], min_a[2])
+    min = TlLevel.new(min_a[0], min_a[1], min_a[2])
     max_a = Regexp.last_match(3).split('.')
-    max = OsLevel.new(max_a[0], max_a[1], max_a[2])
+    max = TlLevel.new(max_a[0], max_a[1], max_a[2])
     next unless min <= level && level <= max
 
     efixes.push(f)

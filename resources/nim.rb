@@ -39,7 +39,12 @@ action :update do
   check_ohai
 
   # force latest_sp/tl synchronously
-  local_async = (lpp_source == 'latest_tl' || lpp_source == 'latest_sp') ? false : async
+  if property_is_set?(:async) && (lpp_source == 'latest_tl' || lpp_source == 'latest_sp')
+    Chef::Log.warn("Force customization synchronously")
+    local_async = false
+  else
+    local_async = async
+  end
 
   # build list of targets
   target_list = expand_targets
@@ -58,9 +63,13 @@ action :update do
   else # synchronous update
     target_list.each do |m|
       # get current oslevel
-      current_oslevel = (m == 'master') ? node['nim']['master']['oslevel'].split('-') : node['nim']['clients'][m]['oslevel'].split('-')
+      current_oslevel = (m == 'master') ? node['nim']['master']['oslevel'] : node['nim']['clients'][m]['oslevel']
       Chef::Log.debug("current_oslevel: #{current_oslevel}")
-      current_os_level = OsLevel.new(current_oslevel[0][0], current_oslevel[0][1], current_oslevel[1])
+      if current_oslevel.nil? || current_oslevel.empty?
+        Chef::Log.warn("Cannot get oslevel for machine #{m}")
+        next
+      end
+      current_oslevel = current_oslevel.split('-')
 
       # get lpp source
       if lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
@@ -75,16 +84,34 @@ action :update do
       end
 
       # extract oslevel from lpp source
-      oslevel = new_lpp_source.to_s.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})-lpp_source$/)[1].split('-')
+      oslevel = new_lpp_source.to_s.match(/^([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})-lpp_source$/)[1]
       Chef::Log.debug("oslevel: #{oslevel}")
-      os_level = OsLevel.new(oslevel[0][0], oslevel[0][1], oslevel[1])
+      if oslevel.nil? || oslevel.empty?
+        Chef::Log.warn("Cannot get oslevel from lpp source name #{new_lpp_source}")
+        next
+      end
+      oslevel = oslevel.split('-')
 
-      if current_os_level >= os_level
-        Chef::Log.warn("Machine #{m} is already at same or higher level than #{oslevel.join('-')}")
+      if lpp_source == 'latest_tl' || lpp_source == 'next_tl'
+        os_level = TlLevel.new(oslevel[0][0], oslevel[0][1], oslevel[1])
+        current_os_level = TlLevel.new(current_oslevel[0][0], current_oslevel[0][1], current_oslevel[1])
       else
-        converge_by("nim: perform synchronous software customization for client \'#{m}\' with resource \'#{new_lpp_source}\'") do
-          nim.perform_customization(new_lpp_source, m, local_async)
-        end
+        os_level = SpLevel.new(oslevel[0][0], oslevel[0][1], oslevel[1], oslevel[2])
+        current_os_level = SpLevel.new(current_oslevel[0][0], current_oslevel[0][1], current_oslevel[1], current_oslevel[2])
+      end
+
+      if ! current_os_level.has_same_release?(os_level)
+        Chef::Log.warn("Machine #{m} has different release than #{oslevel.join('-')}")
+        next
+      elsif current_os_level >= os_level
+        Chef::Log.warn("Machine #{m} is already at same or higher level than #{oslevel.join('-')}")
+        next
+      else
+        Chef::Log.info("Machine #{m} needs upgrade from #{current_oslevel.join('-')} to #{oslevel.join('-')}")
+      end
+
+      converge_by("nim: perform synchronous software customization for client \'#{m}\' with resource \'#{new_lpp_source}\'") do
+        nim.perform_customization(new_lpp_source, m, local_async)
       end
     end
   end

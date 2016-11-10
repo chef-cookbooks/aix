@@ -52,11 +52,15 @@ module AIX
     class NimDefineError < NimError
     end
 
-    class OsLevel
+    class TlLevel
       include Comparable
       attr_reader :aix
       attr_reader :rel
       attr_reader :tl
+
+      def has_same_release?(other)
+        @aix == other.aix && @rel == other.rel
+      end
 
       def <=>(other)
         if @aix < other.aix
@@ -76,10 +80,59 @@ module AIX
         end
       end
 
+      def to_s
+        "#{@aix}.#{@rel}.#{'%02d' % @tl}"
+      end
+
       def initialize(aix, rel, tl)
         @aix = aix.to_i
         @rel = rel.to_i
         @tl = tl.to_i
+      end
+    end
+
+    class SpLevel
+      include Comparable
+      attr_reader :aix
+      attr_reader :rel
+      attr_reader :tl
+      attr_reader :sp
+
+      def has_same_release?(other)
+        @aix == other.aix && @rel == other.rel
+      end
+
+      def <=>(other)
+        if @aix < other.aix
+          -1
+        elsif @aix > other.aix
+          1
+        elsif @rel < other.rel
+          -1
+        elsif @rel > other.rel
+          1
+        elsif @tl < other.tl
+          -1
+        elsif @tl > other.tl
+          1
+        elsif @sp < other.sp
+          -1
+        elsif @sp > other.sp
+          1
+        else
+          0
+        end
+      end
+
+      def to_s
+        "#{@aix}.#{@rel}.#{'%02d' % @tl}.#{'%02d' % @sp}"
+      end
+
+      def initialize(aix, rel, tl, sp)
+        @aix = aix.to_i
+        @rel = rel.to_i
+        @tl = tl.to_i
+        @sp = sp.to_i
       end
     end
 
@@ -97,6 +150,10 @@ module AIX
         @rq_name = rq_name
         @filter_ml = filter_ml
         @dl_target = dl_target
+        ::FileUtils.mkdir_p(@dl_target) unless ::File.directory?(@dl_target)
+        #### BUG SUMA WORKAROUND ###
+        ::FileUtils.mkdir_p('/usr/sys/inst.images') unless ::File.directory?('/usr/sys/inst.images')
+        ########## END #############
       end
 
       def duration(d)
@@ -174,7 +231,7 @@ module AIX
           @failed = Regexp.last_match(3)
           @skipped = Regexp.last_match(4)
           Chef::Log.debug(so.stdout)
-          Chef::Log.info("#{@downloaded} downloaded (#{@dl} GB), #{@failed} failed, #{@skipped} skipped fixes")
+          Chef::Log.warn("Preview: #{@downloaded} downloaded (#{@dl.to_f.round(2)} GB), #{@failed} failed, #{@skipped} skipped fixes")
           Chef::Log.info("Done suma preview operation \"#{suma_s}\"")
         else
           raise SumaPreviewError, "Error: Command \"#{suma_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
@@ -197,10 +254,9 @@ module AIX
         download_downloaded = 0
         download_failed = 0
         download_skipped = 0
-        puts "Start downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to '#{@dl_target}' directory."
+        puts "\nStart downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to '#{@dl_target}' directory."
         exit_status = Open3.popen3(suma_s) do |stdin, stdout, stderr, wait_thr|
           thr = Thread.new do
-            print "\n"
             start = Time.now
             loop do
               print "\rSUCCEEDED: #{succeeded}/#{@downloaded}\tFAILED: #{failed}/#{@failed}\tSKIPPED: #{skipped}/#{@skipped}. (Total time: #{duration(Time.now - start)})."
@@ -245,7 +301,7 @@ module AIX
         unless exit_status.success?
           raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns above error!"
         end
-        puts "Finish downloading #{succeeded} fixes."
+        puts "\nFinish downloading #{succeeded} fixes."
         @download = download_downloaded
         @failed = download_failed
         @skipped = download_skipped
@@ -297,7 +353,7 @@ module AIX
       def perform_customization(lpp_source, clients, async = true)
         async_s = async ? 'yes' : 'no'
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all -a accept_licenses=yes -a async=#{async_s} #{clients}"
-        puts "Start updating machine(s) '#{clients}' to #{lpp_source}."
+        puts "\nStart updating machine(s) '#{clients}' to #{lpp_source}."
         if async # asynchronous
           so = shell_out(nim_s, timeout: 3000)
           so.stdout.each_line do |line|
@@ -334,7 +390,7 @@ module AIX
             stderr.close
             wait_thr.value # Process::Status object returned.
           end
-          puts "Finish updating #{clients}."
+          puts "\nFinish updating #{clients}."
           unless exit_status.success? || do_not_error
             raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!"
           end
@@ -466,11 +522,11 @@ module AIX
       rq_type
     end
 
-    def compute_filter_ml(targets)
+    def compute_filter_ml(targets, oslevel)
       # build machine-oslevel hash
       hash = Hash.new { |h, k| h[k] = (k == 'master') ? node['nim']['master'].fetch('oslevel', nil) : node['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
       targets.each { |k| hash[k] }
-      hash.delete_if { |_k, v| v.nil? || v.empty? }
+      hash.delete_if { |_k, v| v.nil? || v.empty? || v.to_i != oslevel.to_i }
       Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
 
       unless hash.empty?
@@ -489,15 +545,6 @@ module AIX
     end
 
     def compute_rq_name(rq_type, targets)
-      unless property_is_set?(:tmp_dir) && !tmp_dir.to_s.empty?
-        tmp_dir = '/usr/sys/inst.images'
-      end
-      if ::File.directory?(tmp_dir)
-        shell_out!("rm -rf #{tmp_dir}/*")
-      else
-        shell_out!("mkdir -p #{tmp_dir}")
-      end
-
       case rq_type
       when 'Latest'
         # build machine-oslevel hash
@@ -523,6 +570,7 @@ module AIX
         Chef::Log.info("Found highest ML #{metadata_filter_ml} from client list")
 
         # suma metadata
+        tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
         suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
         suma.metadata
 
@@ -551,6 +599,7 @@ module AIX
         elsif oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/
           # suma metadata
           metadata_filter_ml = oslevel.match(/^([0-9]{4}-[0-9]{2})-[0-9]{2}$/)[1]
+          tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
           suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
           suma.metadata
 

@@ -20,10 +20,10 @@ property :desc, String, name_property: true
 property :oslevel, String
 property :location, String
 property :targets, String
-property :tmp_dir, String
 property :save_it, [true, false], default: false
 property :sched_time, String
 property :task_id, Fixnum
+property :preview_only, [true, false], default: false
 
 default_action :download
 
@@ -43,23 +43,24 @@ def suma_params
   params['rq_type'] = rq_type
 
   # compute suma filter ml based on targets property
-  filter_ml = compute_filter_ml(target_list)
+  filter_ml = compute_filter_ml(target_list, oslevel)
   Chef::Log.debug("filter_ml=#{filter_ml}")
   params['filter_ml'] = filter_ml
 
   # check ml level of machines against expected oslevel
-  case rq_type
-  when 'SP', 'TL'
-    if filter_ml[0..3].to_i < oslevel.match(/^([0-9]{4})-[0-9]{2}(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].to_i
-      raise InvalidOsLevelProperty, 'Error: cannot upgrade machines to a new release using suma'
-    end
-  end
+  #case rq_type
+  #when 'SP', 'TL'
+  #  if filter_ml[0..3].to_i < oslevel.match(/^([0-9]{4})-[0-9]{2}(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].to_i
+  #    raise InvalidOsLevelProperty, 'Error: cannot upgrade machines to a new release using suma'
+  #  end
+  #end
 
   # compute suma request name based on metadata info
   rq_name = compute_rq_name(rq_type, target_list)
   Chef::Log.debug("rq_name=#{rq_name}")
   params['rq_name'] = rq_name
 
+  # metadata does not match any fixes
   return nil if params['rq_name'].nil? || params['rq_name'].empty?
 
   # compute lpp source name based on request name
@@ -75,70 +76,22 @@ def suma_params
   params
 end
 
-action :preview do
-  # inputs
-  Chef::Log.debug("desc=\"#{desc}\"")
-  Chef::Log.debug("oslevel=\"#{oslevel}\"")
-  Chef::Log.debug("location=\"#{location}\"")
-  Chef::Log.debug("targets=\"#{targets}\"")
-  Chef::Log.debug("tmp_dir=\"#{tmp_dir}\"")
-  Chef::Log.debug("save_it=\"#{save_it}\"")
-  Chef::Log.debug("sched_time=\"#{sched_time}\"")
-
-  # check ohai nim info
-  check_ohai
-
-  # obtain suma parameters
-  params = suma_params
-  return if params.nil?
-
-  # create directory
-  unless ::File.directory?(params['dl_target'])
-    mkdir_s = "mkdir -p #{params['dl_target']}"
-    converge_by("create directory \'#{params['dl_target']}\'") do
-      shell_out!(mkdir_s)
-    end
-  end
-
-  # suma preview
-  suma = Suma.new(desc, params['rq_type'], params['rq_name'], params['filter_ml'], params['dl_target'])
-  converge_by('preview download') do
-    suma.preview(save_it)
-  end
-end
-
 action :download do
-  # inputs
-  Chef::Log.debug("desc=\"#{desc}\"")
-  Chef::Log.debug("oslevel=\"#{oslevel}\"")
-  Chef::Log.debug("location=\"#{location}\"")
-  Chef::Log.debug("targets=\"#{targets}\"")
-  Chef::Log.debug("tmp_dir=\"#{tmp_dir}\"")
-  Chef::Log.debug("save_it=\"#{save_it}\"")
-  Chef::Log.debug("sched_time=\"#{sched_time}\"")
-
   # check ohai nim info
   check_ohai
 
   # obtain suma parameters
   params = suma_params
   return if params.nil?
-
-  # create directory
-  unless ::File.directory?(params['dl_target'])
-    mkdir_s = "mkdir -p #{params['dl_target']}"
-    converge_by("create directory \'#{params['dl_target']}\'") do
-      shell_out!(mkdir_s)
-    end
-  end
 
   # suma preview
   suma = Suma.new(desc, params['rq_type'], params['rq_name'], params['filter_ml'], params['dl_target'])
   suma.preview
+  return if preview_only == true
 
   if suma.dl.to_f > 0
     # suma download
-    converge_by("download #{suma.downloaded} fixes") do
+    converge_by("download #{suma.downloaded} fixes to '#{params['dl_target']}'") do
       suma.download(save_it)
     end
 
