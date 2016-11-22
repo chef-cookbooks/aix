@@ -32,6 +32,7 @@ property :csv, String
 property :verbose, [true, false], default: false
 property :clean, [true, false], default: true
 property :check_only, [true, false], default: false
+property :download_only, [true, false], default: false
 
 default_action :patch
 
@@ -381,6 +382,8 @@ action :patch do
       next
     end
 
+    next if download_only == true
+
     # create lpp source directory
     lpp_source = "#{m}-lpp_source"
     lpp_source_dir = base_dir + '/lpp_sources/' + lpp_source + '/emgr/ppc'
@@ -400,11 +403,20 @@ action :patch do
     if m == 'master'
       # install package
       converge_by("geninstall: install all efixes from '#{lpp_source_dir}'") do
-        begin
-          shell_out!("/usr/sbin/geninstall -d #{lpp_source_dir} all")
-        rescue
+        so = shell_out("/usr/sbin/geninstall -d #{lpp_source_dir} all")
+        puts ""
+        so.stdout.each_line do |line|
+          if line =~ /^EPKG NUMBER/ || line =~ /^===========/ || line =~ /\sINSTALL\s/
+            puts line
+          end
+          Chef::Log.info("[STDOUT] #{line.chomp}")
+        end
+        so.stderr.each_line do |line|
+          Chef::Log.info("[STDERR] #{line.chomp}")
+        end
+        if so.error?
+          puts so.stderr
           Chef::Log.warn('failed installing some efixes. See /var/adm/ras/emgr.log for details')
-          puts shell_out('cat /var/adm/ras/emgr.log | grep -p "EPKG NUMBER"').stdout
         end
       end
     else
