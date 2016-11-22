@@ -37,6 +37,6 @@ aix_nim "Updating machine(s) #{client}" do
   lpp_source lpp_source
   targets client
   async true
-  action :update
+  action [:update, :reboot]
   ignore_failure true
 end

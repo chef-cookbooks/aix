@@ -16,6 +16,9 @@
 
 include AIX::PatchMgmt
 
+##############################
+# PROPERTIES
+##############################
 property :desc, String, name_property: true
 property :oslevel, String
 property :location, String
@@ -27,14 +30,20 @@ property :preview_only, [true, false], default: false
 
 default_action :download
 
+##############################
+# load_current_value
+##############################
 load_current_value do
 end
 
+##############################
+# DEFINITIONS
+##############################
 def suma_params
   params = {}
 
   # build list of targets
-  target_list = expand_targets
+  target_list = expand_targets(node['nim']['clients'].keys)
   Chef::Log.debug("target_list=#{target_list}")
 
   # compute suma request type based on oslevel property
@@ -76,6 +85,9 @@ def suma_params
   params
 end
 
+##############################
+# ACTION: download
+##############################
 action :download do
   # check ohai nim info
   check_ohai
@@ -105,12 +117,18 @@ action :download do
   end
 end
 
+##############################
+# ACTION: list
+##############################
 action :list do
   so = shell_out!('/usr/sbin/suma -l ' + task_id.to_s)
   converge_by("Suma tasks:\n#{so.stdout}") do
   end
 end
 
+##############################
+# ACTION: edit
+##############################
 action :edit do
   suma_s = '/usr/sbin/suma'
 
@@ -148,6 +166,9 @@ action :edit do
   end
 end
 
+##############################
+# ACTION: unschedule
+##############################
 action :unschedule do
   if property_is_set?(:task_id)
     converge_by("Unschedule suma task #{task_id}") do
@@ -158,6 +179,9 @@ action :unschedule do
   end
 end
 
+##############################
+# ACTION: delete
+##############################
 action :delete do
   if property_is_set?(:task_id)
     converge_by("Delete suma task #{task_id}") do
@@ -168,12 +192,18 @@ action :delete do
   end
 end
 
+##############################
+# ACTION: config
+##############################
 action :config do
   so = shell_out!('/usr/sbin/suma -c')
   converge_by("Suma global configuration settings:\n#{so.stdout}") do
   end
 end
 
+##############################
+# ACTION: default
+##############################
 action :default do
   so = shell_out!('/usr/sbin/suma -D')
   converge_by("Suma default task:\n#{so.stdout}") do

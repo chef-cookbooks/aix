@@ -255,11 +255,11 @@ module AIX
         download_failed = 0
         download_skipped = 0
         puts "\nStart downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to '#{@dl_target}' directory."
-        exit_status = Open3.popen3(suma_s) do |stdin, stdout, stderr, wait_thr|
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, suma_s) do |stdin, stdout, stderr, wait_thr|
           thr = Thread.new do
             start = Time.now
             loop do
-              print "\rSUCCEEDED: #{succeeded}/#{@downloaded}\tFAILED: #{failed}/#{@failed}\tSKIPPED: #{skipped}/#{@skipped}. (Total time: #{duration(Time.now - start)})."
+              print "\033[2K\rSUCCEEDED: #{succeeded}/#{@downloaded}\tFAILED: #{failed}/#{@failed}\tSKIPPED: #{skipped}/#{@skipped}. (Total time: #{duration(Time.now - start)})."
               sleep 1
             end
           end
@@ -355,7 +355,7 @@ module AIX
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all -a accept_licenses=yes -a async=#{async_s} #{clients}"
         puts "\nStart updating machine(s) '#{clients}' to #{lpp_source}."
         if async # asynchronous
-          so = shell_out(nim_s, timeout: 3000)
+          so = shell_out(nim_s, environment: { 'LANG' => 'C' }, timeout: 3000)
           so.stdout.each_line do |line|
             Chef::Log.info("[STDOUT] #{line.chomp}")
           end
@@ -369,13 +369,13 @@ module AIX
           end
         else # synchronous
           do_not_error = false
-          exit_status = Open3.popen3(nim_s) do |stdin, stdout, stderr, wait_thr|
+          exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |stdin, stdout, stderr, wait_thr|
             stdin.close
             stdout.each_line do |line|
               if line =~ /^Filesets processed:.*?[0-9]+ of [0-9]+/
-                print "\r#{line.chomp}"
+                print "\033[2K\r#{line.chomp}"
               elsif line =~ /^Finished processing all filesets./
-                print "\r#{line.chomp}"
+                print "\033[2K\r#{line.chomp}"
               end
               Chef::Log.info("[STDOUT] #{line.chomp}")
             end
@@ -399,17 +399,28 @@ module AIX
 
       def perform_efix_customization(lpp_source, client)
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a filesets=all #{client}"
-        so = shell_out(nim_s)
-        so.stdout.each_line do |line|
-          Chef::Log.info("[STDOUT] #{line.chomp}")
+        puts "\nStart patching machine(s) '#{client}'."
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |stdin, stdout, stderr, wait_thr|
+          stdin.close
+          stdout.each_line do |line|
+            if line =~ /^Processing Efix Package .*?[0-9]+ of .*?[0-9]+.$/
+              print "\033[2K\r#{line.chomp}"
+			elsif line =~ /^EPKG NUMBER/ || line =~ /^===========/ || line =~ /INSTALL/
+              puts line
+            end
+            Chef::Log.info("[STDOUT] #{line.chomp}")
+          end
+          stdout.close
+          stderr.each_line do |line|
+            puts line
+            Chef::Log.info("[STDERR] #{line.chomp}")
+          end
+          stderr.close
+          wait_thr.value # Process::Status object returned.
         end
-        so.stderr.each_line do |line|
-          Chef::Log.info("[STDERR] #{line.chomp}")
-        end
-        if so.error?
-          raise NimCustError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
-        else
-          Chef::Log.info("Done nim remove operation \"#{nim_s}\"")
+        puts "\nFinish patching #{client}."
+        unless exit_status.success?
+          raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!"
         end
       end
     end
@@ -469,7 +480,7 @@ module AIX
     #    raise InvalidTargetsProperty in case of error
     #    - connot contact the target machines
     # -----------------------------------------------------------------
-    def expand_targets
+    def expand_targets(clients)
       selected_machines = []
       # compute list of machines based on targets property
       if property_is_set?(:targets)
@@ -478,7 +489,7 @@ module AIX
             selected_machines.push(machine) if machine == 'master'
             # expand wildcard
             machine.gsub!(/\*/, '.*?')
-            node['nim']['clients'].keys.each do |m|
+            clients.each do |m|
               selected_machines.concat(m.split) if m =~ /^#{machine}$/
             end
           end
