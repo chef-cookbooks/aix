@@ -40,7 +40,7 @@ action :update do
 
   # force latest_sp/tl synchronously
   if property_is_set?(:async) && (lpp_source == 'latest_tl' || lpp_source == 'latest_sp')
-    Chef::Log.warn("Force customization synchronously")
+    Chef::Log.warn('Force customization synchronously')
     local_async = false
   else
     local_async = async
@@ -100,7 +100,7 @@ action :update do
         current_os_level = SpLevel.new(current_oslevel[0][0], current_oslevel[0][1], current_oslevel[1], current_oslevel[2])
       end
 
-      if ! current_os_level.has_same_release?(os_level)
+      if !current_os_level.same_release?(os_level)
         Chef::Log.warn("Machine #{m} has different release than #{oslevel.join('-')}")
         next
       elsif current_os_level >= os_level

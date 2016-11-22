@@ -57,12 +57,12 @@ def suma_params
   params['filter_ml'] = filter_ml
 
   # check ml level of machines against expected oslevel
-  #case rq_type
-  #when 'SP', 'TL'
-  #  if filter_ml[0..3].to_i < oslevel.match(/^([0-9]{4})-[0-9]{2}(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].to_i
-  #    raise InvalidOsLevelProperty, 'Error: cannot upgrade machines to a new release using suma'
-  #  end
-  #end
+  # case rq_type
+  # when 'SP', 'TL'
+  #   if filter_ml[0..3].to_i < oslevel.match(/^([0-9]{4})-[0-9]{2}(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].to_i
+  #     raise InvalidOsLevelProperty, 'Error: cannot upgrade machines to a new release using suma'
+  #   end
+  # end
 
   # compute suma request name based on metadata info
   rq_name = compute_rq_name(rq_type, target_list)

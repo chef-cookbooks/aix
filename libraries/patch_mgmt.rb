@@ -16,6 +16,9 @@
 
 module AIX
   module PatchMgmt
+    #############################
+    #     E X C E P T I O N     #
+    #############################
     class OhaiNimPluginNotFound < StandardError
     end
 
@@ -52,45 +55,6 @@ module AIX
     class NimDefineError < NimError
     end
 
-    class TlLevel
-      include Comparable
-      attr_reader :aix
-      attr_reader :rel
-      attr_reader :tl
-
-      def has_same_release?(other)
-        @aix == other.aix && @rel == other.rel
-      end
-
-      def <=>(other)
-        if @aix < other.aix
-          -1
-        elsif @aix > other.aix
-          1
-        elsif @rel < other.rel
-          -1
-        elsif @rel > other.rel
-          1
-        elsif @tl < other.tl
-          -1
-        elsif @tl > other.tl
-          1
-        else
-          0
-        end
-      end
-
-      def to_s
-        "#{@aix}.#{@rel}.#{'%02d' % @tl}"
-      end
-
-      def initialize(aix, rel, tl)
-        @aix = aix.to_i
-        @rel = rel.to_i
-        @tl = tl.to_i
-      end
-    end
-
     class SpLevel
       include Comparable
       attr_reader :aix
@@ -98,7 +62,7 @@ module AIX
       attr_reader :tl
       attr_reader :sp
 
-      def has_same_release?(other)
+      def same_release?(other)
         @aix == other.aix && @rel == other.rel
       end
 
@@ -125,7 +89,7 @@ module AIX
       end
 
       def to_s
-        "#{@aix}.#{@rel}.#{'%02d' % @tl}.#{'%02d' % @sp}"
+        "#{@aix}.#{@rel}.#{format('%02d', @tl)}.#{format('%02d', @sp)}"
       end
 
       def initialize(aix, rel, tl, sp)
@@ -136,6 +100,9 @@ module AIX
       end
     end
 
+    ###################
+    #     S U M A     #
+    ###################
     class Suma
       include Chef::Mixin::ShellOut
 
@@ -308,6 +275,9 @@ module AIX
       end
     end
 
+    #################
+    #     N I M     #
+    #################
     class Nim
       include Chef::Mixin::ShellOut
 
@@ -405,7 +375,7 @@ module AIX
           stdout.each_line do |line|
             if line =~ /^Processing Efix Package .*?[0-9]+ of .*?[0-9]+.$/
               print "\033[2K\r#{line.chomp}"
-			elsif line =~ /^EPKG NUMBER/ || line =~ /^===========/ || line =~ /INSTALL/
+            elsif line =~ /^EPKG NUMBER/ || line =~ /^===========/ || line =~ /INSTALL/
               puts line
             end
             Chef::Log.info("[STDOUT] #{line.chomp}")
@@ -474,7 +444,7 @@ module AIX
     #
     #    "*" should be specified as target to apply an operation on all
     #        the machines
-    #    If target parameter is empty or not present operation is 
+    #    If target parameter is empty or not present operation is
     #        performed locally
     #
     #    raise InvalidTargetsProperty in case of error

@@ -85,12 +85,12 @@ def validate_csv(csv)
   end
 end
 
-  class ::Hash
-    def deep_merge(second)
-        merger = proc { |key, v1, v2| Hash === v1 && Hash === v2 ? v1.merge(v2, &merger) : v2 }
-        self.merge(second, &merger)
-    end
+class ::Hash
+  def deep_merge(second)
+    merger = proc { |_key, v1, v2| Hash == v1 && Hash == v2 ? v1.merge(v2, &merger) : v2 }
+    merge(second, &merger)
   end
+end
 
 def run_flrtvc(m)
   # check other properties
@@ -134,10 +134,10 @@ def run_flrtvc(m)
 
   out
 end
-  
+
 def parse_report_csv(s)
-  csv = CSV.new(s, :headers => true, :col_sep => '|')
-  arr = csv.to_a.map {|row| row.to_hash }
+  csv = CSV.new(s, headers: true, col_sep: '|')
+  arr = csv.to_a.map(&:to_hash)
   filesets = []
   arr.each do |url|
     filesets << url['Fileset']
@@ -163,84 +163,94 @@ def download_and_check_fixes(urls, to)
     if url =~ %r{^(.*?)://(.*?)/(.*)/$}
       dir_name = to + '/efixes/' + fileset + '/' + url.split('/')[-1]
       ::FileUtils.mkdir_p(dir_name) unless ::File.directory?(dir_name)
-      protocol, srv, dir = Regexp.last_match(1), Regexp.last_match(2), Regexp.last_match(3)
+      protocol = Regexp.last_match(1)
+      srv = Regexp.last_match(2)
+      dir = Regexp.last_match(3)
       case protocol
       when 'http', 'https'
         uri = URI(url)
         res = Net::HTTP.get_response(uri)
         if res.is_a?(Net::HTTPSuccess)
           res.body.each_line do |l|
-            if l =~ %r{<a href="(.*?.epkg.Z)">(.*?.epkg.Z)</a>}
-              filename = url + Regexp.last_match(1)
-              path = dir_name + '/' + Regexp.last_match(1)
-              # download file
-              print "\033[2K\rDownloading #{count}/#{total} fixes. (#{filename})"
-              download(filename, path)
-              # check level prereq
-              print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename}) "
-              if check_level_prereq?(path, level)
-                print "... MATCH PREREQ\n"
-                item['Filename'] = path
-                break
-              end
-            end
-          end
-        end
-      when 'ftp'
-        ftp = Net::FTP::new
-        ftp.connect(srv)
-        ftp.login
-        ftp.chdir(dir)
-        files = ftp.nlst()
-        ftp.close
-        files.each do |file|
-          filename = url + file
-          path = dir_name + '/' + file
-          # download file
-          print "\033[2K\rDownloading #{count}/#{total} fixes. (#{filename})"
-          download(filename, path)
-          # check level prereq
-          print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename}) "
-          if check_level_prereq?(path, level)
+            next unless l =~ %r{<a href="(.*?.epkg.Z)">(.*?.epkg.Z)</a>}
+            filename = url + Regexp.last_match(1)
+            path = dir_name + '/' + Regexp.last_match(1)
+
+            # download file
+            print "\033[2K\rDownloading #{count}/#{total} fixes. (#{filename})"
+            download(filename, path)
+
+            # check level prereq
+            print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename}) "
+            next unless check_level_prereq?(path, level)
+
             print "... MATCH PREREQ\n"
             item['Filename'] = path
             break
           end
+        end
+      when 'ftp'
+        ftp = Net::FTP.new
+        ftp.connect(srv)
+        ftp.login
+        ftp.chdir(dir)
+        files = ftp.nlst
+        ftp.close
+        files.each do |file|
+          filename = url + file
+          path = dir_name + '/' + file
+
+          # download file
+          print "\033[2K\rDownloading #{count}/#{total} fixes. (#{filename})"
+          download(filename, path)
+
+          # check level prereq
+          print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename}) "
+          next unless check_level_prereq?(path, level)
+
+          print "... MATCH PREREQ\n"
+          item['Filename'] = path
+          break
         end
       end
     elsif url.end_with?('.tar')
       dir_name = to + '/efixes/' + fileset + '/' + url.split('/')[-2]
       ::FileUtils.mkdir_p(dir_name) unless ::File.directory?(dir_name)
       path = dir_name + '/' + url.split('/')[-1]
+
       # download file
       print "\033[2K\rDownloading #{count}/#{total} fixes. (#{url})"
       download(url, path)
+
       # untar
       print "\033[2K\rUntarring #{count}/#{total} fixes.)"
       shell_out!("/bin/tar -xf #{path} -C #{dir_name} `tar -tf #{path} | grep epkg.Z$`")
+
       # check level prereq
       Dir.glob(dir_name + '/' + url.split('/')[-1].split('.')[0] + '/*').each do |f|
         print "\033[2K\rChecking #{count}/#{total} fixes. (#{url}:#{f.split('/')[-1]}) "
-        if check_level_prereq?(f, level)
-          print "... MATCH PREREQ\n"
-          item['Filename'] = f
-          break
-        end
+        next unless check_level_prereq?(f, level)
+
+        print "... MATCH PREREQ\n"
+        item['Filename'] = f
+        break
       end
     elsif url.end_with?('.epkg.Z')
       dir_name = to + '/efixes/' + fileset + '/' + url.split('/')[-2]
       ::FileUtils.mkdir_p(dir_name) unless ::File.directory?(dir_name)
       path = dir_name + '/' + url.split('/')[-1]
+
       # download file
       print "\033[2K\rDownloading #{count}/#{total} fixes. (#{url})"
       download(url, path)
+
       # check level prereq
       print "\033[2K\rChecking #{count}/#{total} fixes. (#{url}) "
-      if check_level_prereq?(path, level)
-        print "... MATCH PREREQ\n"
-        item['Filename'] = path
-        break
-      end
+      next unless check_level_prereq?(path, level)
+
+      print "... MATCH PREREQ\n"
+      item['Filename'] = path
+      break
     end
   end # end urls
   print "\n"
@@ -260,7 +270,7 @@ def check_level_prereq?(src, ref)
   # get actual level
   lvl_a = ref.split('.')
   lvl = SpLevel.new(lvl_a[0], lvl_a[1], lvl_a[2], lvl_a[3])
-  
+
   # get min/max level
   so = shell_out("/usr/sbin/emgr -v3 -d -e #{src} 2>&1 | grep -p \\\"PREREQ | egrep \"0*#{lvl_a[0].to_i}.0*#{lvl_a[1].to_i}.0*#{lvl_a[2].to_i}\"", environment: { 'LANG' => 'C' }).stdout
   return false unless so =~ /^(.*?)\s+(.*?)\s+(.*?)$/
@@ -269,10 +279,10 @@ def check_level_prereq?(src, ref)
   min = SpLevel.new(min_a[0], min_a[1], min_a[2], min_a[3])
   max_a = Regexp.last_match(3).split('.')
   max = SpLevel.new(max_a[0], max_a[1], max_a[2], max_a[3])
-  #puts "#{src}: #{lvl} #{min} #{max}"
+  # puts "#{src}: #{lvl} #{min} #{max}"
   return false unless min <= lvl && lvl <= max
 
-  return true
+  true
 end
 
 ##############################
@@ -348,7 +358,7 @@ action :patch do
     # run flrtvc
     begin
       out = run_flrtvc(m)
-    rescue Exception => e
+    rescue Mixlib::ShellOut::ShellCommandFailed => e
       Chef::Log.warn("#{m} cannot be contacted (#{e.message})")
       next # target unreachable
     end
@@ -394,7 +404,7 @@ action :patch do
           shell_out!("/usr/sbin/geninstall -d #{lpp_source_dir} all")
         rescue
           Chef::Log.warn('failed installing some efixes. See /var/adm/ras/emgr.log for details')
-          puts shell_out("cat /var/adm/ras/emgr.log | grep -p \"EPKG NUMBER\"").stdout
+          puts shell_out('cat /var/adm/ras/emgr.log | grep -p "EPKG NUMBER"').stdout
         end
       end
     else
@@ -404,7 +414,7 @@ action :patch do
         nim.define_lpp_source(lpp_source, lpp_source_dir) unless nim.exist?(lpp_source)
         begin
           nim.perform_efix_customization(lpp_source, m)
-        rescue Exception => e
+        rescue NimCustError => e
           $stderr.puts e.message
           Chef::Log.warn("#{m} failed installing some efixes. See /var/adm/ras/emgr.log on #{m} for details")
         end
