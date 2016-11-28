@@ -26,9 +26,10 @@ include AIX::PatchMgmt
 # PROPERTIES
 ##############################
 property :targets, String, default: 'master'
-property :apar, ['sec', 'hiper', nil], default: nil
+property :apar, ['sec', 'hiper', 'all', nil], default: nil
 property :filesets, String
 property :csv, String
+property :path, String
 property :verbose, [true, false], default: false
 property :clean, [true, false], default: true
 property :check_only, [true, false], default: false
@@ -59,7 +60,7 @@ def check_flrtvc
 end
 
 def validate_apar(apar)
-  if apar.nil?
+  if apar.nil? || apar.eql?('all')
     ''
   elsif apar =~ /(sec|hiper)/
     "-t #{apar}"
@@ -86,11 +87,15 @@ def validate_csv(csv)
   end
 end
 
-class ::Hash
-  def deep_merge(second)
-    merger = proc { |_key, v1, v2| Hash == v1 && Hash == v2 ? v1.merge(v2, &merger) : v2 }
-    merge(second, &merger)
+def increase_filesystem(path)
+  mounts = []
+  node['filesystem'].each_value do |v|
+    mounts << v['mount']
   end
+  # get longest match
+  mount = mounts.sort_by!(&:length).reverse!.detect { |mnt| path =~ %r{#{mnt}} }
+  so = shell_out!("/usr/sbin/chfs -a size=+500M #{mount}")
+  Chef::Log.warn(so.stdout)
 end
 
 def run_flrtvc(m)
@@ -106,8 +111,7 @@ def run_flrtvc(m)
 
   lslpp_file = "#{Chef::Config[:file_cache_path]}/lslpp_#{m}.txt"
   emgr_file = "#{Chef::Config[:file_cache_path]}/emgr_#{m}.txt"
-  flrtvc_file = "#{Chef::Config[:file_cache_path]}/flrtvc_#{m}.txt"
-
+  
   if m == 'master'
     # execute lslpp -Lcq
     shell_out!("/usr/bin/lslpp -Lcq > #{lslpp_file}")
@@ -120,38 +124,51 @@ def run_flrtvc(m)
     shell_out!("/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{m} \"/usr/sbin/emgr -lv3\" > #{emgr_file}")
   end
 
-  # execute flrtvc script
-  shell_out!("/usr/bin/flrtvc.ksh -l #{lslpp_file} -e #{emgr_file} #{apar_s} #{filesets_s} #{csv_s} > #{flrtvc_file}", environment: { 'LANG' => 'C' })
-  out = ::IO.read(flrtvc_file)
-  if verbose
-    puts
-    puts shell_out!("/usr/bin/flrtvc.ksh -l #{lslpp_file} -e #{emgr_file} #{apar_s} #{filesets_s} #{csv_s} -v", environment: { 'LANG' => 'C' }).stdout
+  # execute both compact and verbose flrtvc script
+  out_c = shell_out!("/usr/bin/flrtvc.ksh -l #{lslpp_file} -e #{emgr_file} #{apar_s} #{filesets_s} #{csv_s}", environment: { 'LANG' => 'C' }).stdout
+  out_v = shell_out!("/usr/bin/flrtvc.ksh -l #{lslpp_file} -e #{emgr_file} #{apar_s} #{filesets_s} #{csv_s} -v", environment: { 'LANG' => 'C' }).stdout
+
+  # write report file
+  unless path.nil?
+    ::FileUtils.mkdir_p(path) unless ::File.directory?(path)
+    flrtvc_file = "#{path}/#{m}.flrtvc"
+    ::IO.write(flrtvc_file, verbose == true ? out_v : out_c)
+    Chef::Log.warn("[#{m}] Flrtvc report has been saved to '#{flrtvc_file}'")
   end
+
+  # display in verbose mode
+  puts out_v if verbose
 
   # clean temporary files
   ::File.delete(lslpp_file) if clean == true
   ::File.delete(emgr_file) if clean == true
-  ::File.delete(flrtvc_file) if clean == true
 
-  out
+  out_c
 end
 
-def parse_report_csv(s)
+def parse_report_csv(m, s)
+  # ### BUG FLRTVC WORKAROUND ###
+  # s.each_line do |line|
+  #   s.delete!(line) if line =~ /Not connected./
+  # end
+  # ######### END ###############
+  Chef::Log.debug("s = #{s}")
   csv = CSV.new(s, headers: true, col_sep: '|')
   arr = csv.to_a.map(&:to_hash)
+  Chef::Log.debug("csv = #{arr}")
   filesets = []
   arr.each do |url|
     filesets << url['Fileset']
   end
   filesets.uniq!
-  urls = arr.select { |url| url['Download URL'] =~ %r{(http|https|ftp)://(aix.software.ibm.com|public.dhe.ibm.com)(/aix/ifixes/.*?/|/aix/efixes/security/.*?.tar)} }
+  urls = arr.select { |url| url['Download URL'] =~ %r{^(http|https|ftp)://(aix.software.ibm.com|public.dhe.ibm.com)/(aix/ifixes/.*?/|aix/efixes/security/.*?.tar)$} }
   urls.uniq! { |url| url['Download URL'] }
-  Chef::Log.debug(urls)
-  Chef::Log.warn("Found #{urls.size} different download links over #{arr.size} vulnerabilities and #{filesets.size} filesets")
+  Chef::Log.debug("urls = #{urls}")
+  Chef::Log.warn("[#{m}] Found #{urls.size} different download links over #{arr.size} vulnerabilities and #{filesets.size} filesets")
   urls
 end
 
-def download_and_check_fixes(urls, to)
+def download_and_check_fixes(m, urls, to)
   print "\n"
   count = 0
   total = urls.size
@@ -161,12 +178,9 @@ def download_and_check_fixes(urls, to)
     level = item['Current Version']
     count += 1
 
-    if url =~ %r{^(.*?)://(.*?)/(.*)/$}
+    if %r{^(?<protocol>.*?)://(?<srv>.*?)/(?<dir>.*)/$} =~ url
       dir_name = to + '/efixes/' + fileset + '/' + url.split('/')[-1]
       ::FileUtils.mkdir_p(dir_name) unless ::File.directory?(dir_name)
-      protocol = Regexp.last_match(1)
-      srv = Regexp.last_match(2)
-      dir = Regexp.last_match(3)
       case protocol
       when 'http', 'https'
         uri = URI(url)
@@ -182,7 +196,7 @@ def download_and_check_fixes(urls, to)
             download(filename, path)
 
             # check level prereq
-            print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename}) "
+            print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename})"
             next unless check_level_prereq?(path, level)
 
             print "... MATCH PREREQ\n"
@@ -206,7 +220,7 @@ def download_and_check_fixes(urls, to)
           download(filename, path)
 
           # check level prereq
-          print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename}) "
+          print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename})"
           next unless check_level_prereq?(path, level)
 
           print "... MATCH PREREQ\n"
@@ -224,12 +238,17 @@ def download_and_check_fixes(urls, to)
       download(url, path)
 
       # untar
-      print "\033[2K\rUntarring #{count}/#{total} fixes.)"
-      shell_out!("/bin/tar -xf #{path} -C #{dir_name} `tar -tf #{path} | grep epkg.Z$`")
-
+      print "\033[2K\rUntarring #{count}/#{total} fixes."
+      begin
+        shell_out!("/bin/tar -xf #{path} -C #{dir_name} `tar -tf #{path} | grep epkg.Z$`")
+      rescue
+        increase_filesystem(dir_name)
+        shell_out("/bin/tar -xf #{path} -C #{dir_name} `tar -tf #{path} | grep epkg.Z$`")
+      end
+      
       # check level prereq
       Dir.glob(dir_name + '/' + url.split('/')[-1].split('.')[0] + '/*').each do |f|
-        print "\033[2K\rChecking #{count}/#{total} fixes. (#{url}:#{f.split('/')[-1]}) "
+        print "\033[2K\rChecking #{count}/#{total} fixes. (#{url}:#{f.split('/')[-1]})"
         next unless check_level_prereq?(f, level)
 
         print "... MATCH PREREQ\n"
@@ -246,7 +265,7 @@ def download_and_check_fixes(urls, to)
       download(url, path)
 
       # check level prereq
-      print "\033[2K\rChecking #{count}/#{total} fixes. (#{url}) "
+      print "\033[2K\rChecking #{count}/#{total} fixes. (#{url})"
       next unless check_level_prereq?(path, level)
 
       print "... MATCH PREREQ\n"
@@ -256,15 +275,22 @@ def download_and_check_fixes(urls, to)
   end # end urls
   print "\n"
   urls.reject! { |url| url['Filename'].nil? }
-  Chef::Log.debug(urls)
-  Chef::Log.warn("Found #{urls.size} fixes to install")
+  Chef::Log.debug("urls = #{urls}")
+  Chef::Log.warn("[#{m}] Found #{urls.size} fixes to install")
   urls
 end
 
 def download(src, dst)
-  ::File.open(dst, 'w') do |f|
-    ::IO.copy_stream(open(src), f)
-  end unless ::File.exist?(dst)
+  begin
+    ::File.open(dst, 'w') do |f|
+      ::IO.copy_stream(open(src), f)
+    end unless ::File.exist?(dst)
+  rescue
+    increase_filesystem(dst)
+    ::File.open(dst, 'w') do |f|
+      ::IO.copy_stream(open(src), f)
+    end unless ::File.exist?(dst)
+  end
 end
 
 def check_level_prereq?(src, ref)
@@ -365,7 +391,7 @@ action :patch do
     end
 
     # parse report
-    urls = parse_report_csv(out)
+    urls = parse_report_csv(m, out)
     Chef::Log.info("urls: #{urls}")
     if urls.empty?
       Chef::Log.warn("#{m} does not have known vulnerabilities")
@@ -375,7 +401,7 @@ action :patch do
     next if check_only == true
 
     # download and check fixes
-    efixes = download_and_check_fixes(urls, base_dir)
+    efixes = download_and_check_fixes(m, urls, base_dir)
     Chef::Log.debug("efixes: #{efixes}")
     if efixes.empty?
       Chef::Log.warn("#{m} have #{urls.size} vulnerabilities but none meet pre-requisites")
@@ -396,7 +422,12 @@ action :patch do
     # copy efix
     efixes.each do |efix|
       converge_by("[#{m}] #{efix['Type']} fix '#{efix['Filename'].split('/')[-1]}' meets level pre-requisite") do
-        ::FileUtils.cp_r(efix['Filename'], lpp_source_dir)
+        begin
+          ::FileUtils.cp_r(efix['Filename'], lpp_source_dir)
+        rescue
+          increase_filesystem(lpp_source_dir)
+          ::FileUtils.cp_r(efix['Filename'], lpp_source_dir)
+        end
       end
     end
 
@@ -416,7 +447,7 @@ action :patch do
         end
         if so.error?
           puts so.stderr
-          Chef::Log.warn('failed installing some efixes. See /var/adm/ras/emgr.log for details')
+          Chef::Log.warn("#{m} failed installing some efixes. See /var/adm/ras/emgr.log for details")
         end
       end
     else

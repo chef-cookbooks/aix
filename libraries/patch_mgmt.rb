@@ -22,12 +22,6 @@ module AIX
     class OhaiNimPluginNotFound < StandardError
     end
 
-    class InvalidOsLevelProperty < StandardError
-    end
-
-    class InvalidLocationProperty < StandardError
-    end
-
     class InvalidLppSourceProperty < StandardError
     end
 
@@ -395,6 +389,19 @@ module AIX
       end
     end
 
+    # -----------------------------------------------------------------
+    # Print hash in column format
+    #
+    #    +---------+-----------------+---------------------------+
+    #    | machine |     oslevel     |          Cstate           |
+    #    +---------+-----------------+---------------------------+
+    #    | client1 | 7100-01-04-1216 | ready for a NIM operation |
+    #    | client2 | 7100-03-01-1341 | ready for a NIM operation |
+    #    | client3 | 7100-04-00-0000 | ready for a NIM operation |
+    #    | master  | 7200-01-00-0000 |                           |
+    #    +---------+-----------------+---------------------------+
+    #
+    # -----------------------------------------------------------------
     def print_hash_by_columns(data)
       widths = {}
       data.keys.each do |key|
@@ -427,6 +434,11 @@ module AIX
       result
     end
 
+    # -----------------------------------------------------------------
+    # Check ohai nim plugin has been run
+    #
+    #    raise OhaiNimPluginNotFound in case of error
+    # -----------------------------------------------------------------
     def check_ohai
       # get list of all NIM machines from Ohai
       master = node.fetch('nim', {}).fetch('master').fetch('oslevel')
@@ -448,7 +460,7 @@ module AIX
     #        performed locally
     #
     #    raise InvalidTargetsProperty in case of error
-    #    - connot contact the target machines
+    #    - cannot contact the target machines
     # -----------------------------------------------------------------
     def expand_targets(clients)
       selected_machines = []
@@ -478,6 +490,11 @@ module AIX
       selected_machines
     end
 
+    # -----------------------------------------------------------------
+    # Check lpp source exists
+    #
+    #    raise InvalidLppSourceProperty in case of error
+    # -----------------------------------------------------------------
     def check_lpp_source_name(lpp_source)
       if node['nim']['lpp_sources'].fetch(lpp_source)
         Chef::Log.debug("Found lpp source #{lpp_source}")
@@ -486,187 +503,39 @@ module AIX
       raise InvalidLppSourceProperty, "Error: cannot find lpp_source '#{lpp_source}' from Ohai output"
     end
 
-    def compute_rq_type
-      if property_is_set?(:oslevel)
-        if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/
-          rq_type = 'TL'
-        elsif oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
-          rq_type = 'SP'
-        elsif oslevel.empty? || oslevel.casecmp('latest') == 0
-          rq_type = 'Latest'
-        else
-          raise InvalidOsLevelProperty, 'Error: oslevel is not recognized'
-        end
-      else # default
-        rq_type = 'Latest'
-      end
-      rq_type
-    end
-
-    def compute_filter_ml(targets, oslevel)
-      # build machine-oslevel hash
-      hash = Hash.new { |h, k| h[k] = (k == 'master') ? node['nim']['master'].fetch('oslevel', nil) : node['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
-      targets.each { |k| hash[k] }
-      hash.delete_if { |_k, v| v.nil? || v.empty? || v.to_i != oslevel.to_i }
-      Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
-
-      unless hash.empty?
-        # discover FilterML level
-        ary = hash.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
-        # find lowest ML
-        filter_ml = ary.min
-      end
-
-      if filter_ml.nil?
-        raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets'
-      else
-        filter_ml.insert(4, '-')
-      end
-      filter_ml
-    end
-
-    def compute_rq_name(rq_type, targets)
-      case rq_type
-      when 'Latest'
-        # build machine-oslevel hash
-        hash = Hash.new { |h, k| h[k] = (k == 'master') ? node['nim']['master'].fetch('oslevel', nil) : node['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
-        targets.each { |k| hash[k] }
-        hash.delete_if { |_k, v| v.nil? || v.empty? }
-        Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
-        unless hash.empty?
-          # discover FilterML level
-          ary = hash.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
-          # find highest ML
-          metadata_filter_ml = ary.max
-          # check ml level of machines
-          if ary.min[0..3].to_i < ary.max[0..3].to_i
-            Chef::Log.warn("Release level mismatch, only AIX #{ary.max[0]}.#{ary.max[1]} SP/TL will be downloaded")
-          end
-        end
-        if metadata_filter_ml.nil?
-          raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets'
-        else
-          metadata_filter_ml.insert(4, '-')
-        end
-        Chef::Log.info("Found highest ML #{metadata_filter_ml} from client list")
-
-        # suma metadata
-        tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
-        suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
-        suma.metadata
-
-        # find latest SP for highest TL
-        sps = shell_out("ls #{tmp_dir}/installp/ppc/*.install.tips.html").stdout.split
-        sps.collect! do |file|
-          file.gsub!('install.tips.html', 'xml')
-          text = ::File.open(file).read
-          text.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1].delete('-')
-        end
-        rq_name = sps.max
-        unless rq_name.nil?
-          rq_name.insert(4, '-')
-          rq_name.insert(7, '-')
-          rq_name.insert(10, '-')
-        end
-        Chef::Log.info("Discover RqName #{rq_name} with metadata suma command")
-
-      when 'TL'
-        # pad with 0
-        rq_name = "#{oslevel.match(/^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/)[1]}-00-0000"
-
-      when 'SP'
-        if oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}$/
-          rq_name = oslevel
-        elsif oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/
-          # suma metadata
-          metadata_filter_ml = oslevel.match(/^([0-9]{4}-[0-9]{2})-[0-9]{2}$/)[1]
-          tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
-          suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
-          suma.metadata
-
-          # find SP build number
-          text = ::File.open("#{tmp_dir}/installp/ppc/#{oslevel}.xml").read
-          rq_name = text.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1]
-          Chef::Log.info("Discover RqName #{rq_name} with metadata suma command")
-        end
-      end
-      rq_name
-    end
-
-    def compute_lpp_source_name(rq_name)
-      if property_is_set?(:location)
-        location.chomp!('\/')
-        lpp_source = (location.start_with?('/') || location.empty?) ? "#{rq_name}-lpp_source" : location
-      else # default
-        lpp_source = "#{rq_name}-lpp_source"
-      end
-      lpp_source
-    end
-
-    def compute_dl_target(lpp_source)
-      if property_is_set?(:location)
-        location.chomp!('\/')
-        if location.start_with?('/')
-          dl_target = "#{location}/#{lpp_source}"
-          unless node['nim']['lpp_sources'].fetch(lpp_source, {}).fetch('location', nil).nil?
-            Chef::Log.debug("Found lpp source '#{lpp_source}' location")
-            unless node['nim']['lpp_sources'][lpp_source]['location'] =~ /^#{dl_target}/
-              raise InvalidLocationProperty, 'Error: lpp source location mismatch'
-            end
-          end
-        elsif location.empty? # empty
-          dl_target = "/usr/sys/inst.images/#{lpp_source}"
-        else # directory
-          begin
-            dl_target = node['nim']['lpp_sources'].fetch(location).fetch('location')
-            Chef::Log.debug("Discover '#{location}' lpp source's location: '#{dl_target}'")
-          rescue KeyError
-            raise InvalidLocationProperty, "Error: cannot find lpp_source '#{location}' from Ohai output"
-          end
-        end
-      else # default
-        dl_target = "/usr/sys/inst.images/#{lpp_source}"
-      end
-      dl_target
-    end
-
-    # this function is used to search a lpp_source resource
-    # find_resource("sp","latest") --> search the latest available service pack for your system
-    # find_resource("sp","next")   --> search the next available service pack for your system
-    # find_resource("tl","latest") --> search the latest available technology level for your system
-    # find_resource("tl","next")   --> search the next available technology level for your system
+    # -----------------------------------------------------------------
+    # Search for a lpp_source resource into available nim resources
+    #
+    #    "type" : 'sp' or 'tl'
+    #    "time" : 'latest' or 'next'
+    #    "oslevel" : the oslevel of the machine for example 7100-01-01-1210
+    #
+    #    returns the corresponding lpp source if found
+    #    or else the current oslevel
+    # -----------------------------------------------------------------
     def find_resource_by_client(type, time, oslevel)
       Chef::Log.debug("nim: finding #{time} #{type}")
-      # this command should show an outpout like this on
-      # 7100-01-01-1210-lpp_source
-      # 7100-01-02-1415-lpp_source
-      # 7100-03-04-1415-lpp_source
-      # 7100-03-05-1514-lpp_source
-      aixlevel = oslevel[0]
-      tllevel = oslevel[1]
-      splevel = oslevel[2]
       lppsource = ''
-      if type == 'tl'
+      case type
+      when 'tl'
         # reading output until I have found the good tl
         node['nim']['lpp_sources'].keys.each do |key|
           a_key = key.split('-')
-          if a_key[0] == aixlevel && a_key[1] > tllevel
-            lppsource = key
-            break if time == 'next'
-          end
+          next unless a_key[0] == oslevel[0] && a_key[1] > oslevel[1]
+          lppsource = key
+          break if time == 'next'
         end
-      elsif type == 'sp'
+      when 'sp'
         # reading output until I have found the good sp
         node['nim']['lpp_sources'].keys.each do |key|
           a_key = key.split('-')
-          if a_key[0] == aixlevel && a_key[1] == tllevel && a_key[2] > splevel
-            lppsource = key
-            break if time == 'next'
-          end
+          next unless a_key[0] == oslevel[0] && a_key[1] == oslevel[1] && a_key[2] > oslevel[2]
+          lppsource = key
+          break if time == 'next'
         end
       end
       if lppsource.empty?
-        # setting lpp_source to current oslevel
+        # setting lpp_source to current oslevel if not found
         lppsource = oslevel[0] + '-' + oslevel[1] + '-' + oslevel[2] + '-' + oslevel[3] + '-lpp_source'
         Chef::Log.debug("nim: server already to the #{time} #{type}, or no lpp_source were found, #{lppsource} will be utilized")
       else

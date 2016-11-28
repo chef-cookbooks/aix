@@ -34,11 +34,179 @@ default_action :download
 # load_current_value
 ##############################
 load_current_value do
+  task_id = -1
+  hash = {}
+  hash_info = {}
+  so = shell_out!('/usr/sbin/suma -l')
+  so.stdout.each_line do |line|
+    line.chomp!
+    if line =~ /^([0-9]+):$/
+      task_id = Regexp.last_match(1)
+    elsif line =~ /^\s+(.*?)=(.*?)$/
+      hash_info[Regexp.last_match(1)] = Regexp.last_match(2)
+    elsif line.empty?
+      hash[task_id] = Hash[hash_info]
+      hash_info.clear
+    end
+  end
+  # puts hash
 end
 
 ##############################
 # DEFINITIONS
 ##############################
+class InvalidOsLevelProperty < StandardError
+end
+
+class InvalidLocationProperty < StandardError
+end
+
+def compute_rq_type
+  if property_is_set?(:oslevel)
+    if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/
+      rq_type = 'TL'
+    elsif oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
+      rq_type = 'SP'
+    elsif oslevel.empty? || oslevel.casecmp('latest') == 0
+      rq_type = 'Latest'
+    else
+      raise InvalidOsLevelProperty, 'Error: oslevel is not recognized'
+    end
+  else # default
+    rq_type = 'Latest'
+  end
+  rq_type
+end
+
+def compute_filter_ml(targets, oslevel)
+  # build machine-oslevel hash
+  hash = Hash.new { |h, k| h[k] = (k == 'master') ? node['nim']['master'].fetch('oslevel', nil) : node['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
+  targets.each { |k| hash[k] }
+  hash.delete_if { |_k, v| v.nil? || v.empty? || v.to_i != oslevel.to_i }
+  Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
+
+  unless hash.empty?
+    # discover FilterML level
+    ary = hash.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
+    # find lowest ML
+    filter_ml = ary.min
+  end
+
+  if filter_ml.nil?
+    raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets'
+  else
+    filter_ml.insert(4, '-')
+  end
+  filter_ml
+end
+
+def compute_rq_name(rq_type, targets)
+  case rq_type
+  when 'Latest'
+    # build machine-oslevel hash
+    hash = Hash.new { |h, k| h[k] = (k == 'master') ? node['nim']['master'].fetch('oslevel', nil) : node['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
+    targets.each { |k| hash[k] }
+    hash.delete_if { |_k, v| v.nil? || v.empty? }
+    Chef::Log.debug("Hash table (machine/oslevel) built #{hash}")
+    unless hash.empty?
+      # discover FilterML level
+      ary = hash.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
+      # find highest ML
+      metadata_filter_ml = ary.max
+      # check ml level of machines
+      if ary.min[0..3].to_i < ary.max[0..3].to_i
+        Chef::Log.warn("Release level mismatch, only AIX #{ary.max[0]}.#{ary.max[1]} SP/TL will be downloaded")
+      end
+    end
+    if metadata_filter_ml.nil?
+      raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets'
+    else
+      metadata_filter_ml.insert(4, '-')
+    end
+    Chef::Log.info("Found highest ML #{metadata_filter_ml} from client list")
+
+    # suma metadata
+    tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
+    suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
+    suma.metadata
+
+    # find latest SP for highest TL
+    sps = shell_out("ls #{tmp_dir}/installp/ppc/*.install.tips.html").stdout.split
+    sps.collect! do |file|
+      file.gsub!('install.tips.html', 'xml')
+      text = ::File.open(file).read
+      text.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1].delete('-')
+    end
+    rq_name = sps.max
+    unless rq_name.nil?
+      rq_name.insert(4, '-')
+      rq_name.insert(7, '-')
+      rq_name.insert(10, '-')
+    end
+    ::File.delete(tmp_dir)
+    Chef::Log.info("Discover RqName #{rq_name} with metadata suma command")
+
+  when 'TL'
+    # pad with 0
+    rq_name = "#{oslevel.match(/^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/)[1]}-00-0000"
+
+  when 'SP'
+    if oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}$/
+      rq_name = oslevel
+    elsif oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/
+      # suma metadata
+      metadata_filter_ml = oslevel.match(/^([0-9]{4}-[0-9]{2})-[0-9]{2}$/)[1]
+      tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
+      suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
+      suma.metadata
+
+      # find SP build number
+      text = ::File.open("#{tmp_dir}/installp/ppc/#{oslevel}.xml").read
+      rq_name = text.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1]
+	  ::File.delete(tmp_dir)
+      Chef::Log.info("Discover RqName #{rq_name} with metadata suma command")
+    end
+  end
+  rq_name
+end
+
+def compute_lpp_source_name(rq_name)
+  if property_is_set?(:location)
+    location.chomp!('\/')
+    lpp_source = (location.start_with?('/') || location.empty?) ? "#{rq_name}-lpp_source" : location
+  else # default
+    lpp_source = "#{rq_name}-lpp_source"
+  end
+  lpp_source
+end
+
+def compute_dl_target(lpp_source)
+  if property_is_set?(:location)
+    location.chomp!('\/')
+    if location.start_with?('/')
+      dl_target = "#{location}/#{lpp_source}"
+      unless node['nim']['lpp_sources'].fetch(lpp_source, {}).fetch('location', nil).nil?
+        Chef::Log.debug("Found lpp source '#{lpp_source}' location")
+        unless node['nim']['lpp_sources'][lpp_source]['location'] =~ /^#{dl_target}/
+          raise InvalidLocationProperty, 'Error: lpp source location mismatch'
+        end
+      end
+    elsif location.empty? # empty
+      dl_target = "/usr/sys/inst.images/#{lpp_source}"
+    else # directory
+      begin
+        dl_target = node['nim']['lpp_sources'].fetch(location).fetch('location')
+        Chef::Log.debug("Discover '#{location}' lpp source's location: '#{dl_target}'")
+      rescue KeyError
+        raise InvalidLocationProperty, "Error: cannot find lpp_source '#{location}' from Ohai output"
+      end
+    end
+  else # default
+    dl_target = "/usr/sys/inst.images/#{lpp_source}"
+  end
+  dl_target
+end
+
 def suma_params
   params = {}
 
@@ -175,7 +343,7 @@ action :unschedule do
       shell_out!('/usr/sbin/suma -u ' + task_id.to_s)
     end
   else
-    raise MissingTaskIdProperty, 'Please provide a task_id property to delete !'
+    raise MissingTaskIdProperty, 'Please provide a task_id property to unschedule !'
   end
 end
 
