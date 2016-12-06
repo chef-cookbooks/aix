@@ -15,6 +15,7 @@
 #
 
 require 'open3'
+require 'English'
 
 module AIXLVM
   class LVMException < Exception
