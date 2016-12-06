@@ -382,10 +382,9 @@ Actions:
 Use suma to download fixes on a NIM server.
 You can download service pack, or technology level.
 You can also download latest service pack of latest technology level for the HIGHEST release in the client list.
-It means if you provide AIX 7.1 and 7.2 clients, only last 7.2 TL and SP is downloaded.
+It means if you provide AIX 7.1 and 7.2 clients, only last 7.2 TL or SP is downloaded.
 
 In some cases a metadata operation is performed to discover the oslevel build number or the latest service pack level.
-The tmp_dir property is used to store metadata files and is automatically created if it does not exist.
 
 The location directory is automatically created if it does not exist.
 
@@ -425,7 +424,6 @@ aix_suma "... perform suma metadata operation to discover build number and store
   oslevel "7100-03-01"
   location "/export/extra/nim"
   targets "client1,client2,client3"
-  tmp_dir "/tmp/suma/metadata"
   action :download
 end
 
@@ -456,11 +454,10 @@ Parameters:
 * `oslevel` - service pack, technology level or 'latest' (with or without build number) (default: Latest)
 * `location` - directory to store downloaded fixes (default: /usr/sys/inst.images)
 * `targets` - space or comma separated list of clients to consider for update process (star wildcard accepted)
-* `tmp_dir` - directory to store suma metadata files (default: /usr/sys/inst.images)
+* `preview_only` - preview only, no packages are downloaded
 
 Actions:
 * `download` - preview and download fixes
-* `preview` - preview only
 
 ### nim
 
@@ -518,6 +515,12 @@ Parameters:
 * `lpp_source` - name of NIM lpp_source resource to install or latest_sp or latest_tl
 * `targets` - comma or space separated list of clients to update (star wildcard accepted)
 * `async` - if true, customization is performed asynchronously (default: false) (cannot be used for latest_sp or latest_tl customization)
+* `device` - 
+* `script` - 
+* `resource` - 
+* `location` - 
+* `group` - 
+* `force` - 
 
 Actions:
 * `master_setup` - setup the NIM server
@@ -527,10 +530,18 @@ Actions:
 * `allocate` - allocate a nim resource
 * `deallocate` - deallocate a nim resource
 * `script` - execute a script resource
+* `bos_inst` - run a bos installation
+* `remove` - remove a nim resource
+* `reset` - reset a nim resource
+* `reboot` - reboot nim client(s)
 
 ### flrtvc
 
-Use flrtvc tool to download recommended efix, and install them to patch security and/or hiper vulnerabilities.
+Use flrtvc tool to generate flrtvc report, download recommended efix, and install them to patch security and/or hiper vulnerabilities.
+
+A nim lpp_source resource is automatically created for fixes to be installed. It is removed 
+
+If space is needed, filesystem is automatically extended by increment of 500Mb.
 
 ```ruby
 aix_flrtvc "install flrtvc tool (download unzip if needed)" do
@@ -565,6 +576,12 @@ aix_flrtvc "use custom csv file" do
   action :patch
 end
 
+aix_flrtvc "generate flrtvc report" do
+  path '/tmp/flrtvc'
+  check_only true
+  action :patch
+end
+
 ```
 Parameters:
 
@@ -572,10 +589,15 @@ Parameters:
 * `apar` - security or hiper data (default: both)
 * `filesets` - filter on fileset name
 * `csv` - custom apar csv file
+* `path` - directory where the report is saved
+* `clean` - clean temporary files and remove nim lpp_source resource (default: true)
+* `verbose` - display the report on output  (default: false)
+* `check_only` - generate report only, no fixes are downloaded nor installed  (default: false)
+* `download_only` - generate report and download fixes, do not install them  (default: false)
 
 Actions:
 * `install` - install flrtvc tool
-* `patch` - download recommended fixes and patch the machine
+* `patch` - generate report, download recommended fixes and patch the machine
 
 ### niminit
 

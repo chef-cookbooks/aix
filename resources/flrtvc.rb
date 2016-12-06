@@ -94,7 +94,7 @@ def increase_filesystem(path)
   end
   # get longest match
   mount = mounts.sort_by!(&:length).reverse!.detect { |mnt| path =~ %r{#{mnt}} }
-  so = shell_out!("/usr/sbin/chfs -a size=+500M #{mount}")
+  so = shell_out!("/usr/sbin/chfs -a size=+100M #{mount}")
   Chef::Log.warn(so.stdout)
 end
 
