@@ -35,7 +35,7 @@ module AIXLVM
     def run(cmd)
       stdout, @last_error, status = Open3.capture3({ 'LANG' => 'C' }, *cmd)
       if status.success?
-        return stdout.slice!(0..-(1 + $INPUT_RECORD_SEPARATOR.size))
+        return stdout.slice!(0..-(1 + $/.size))
       else
         return nil
       end
