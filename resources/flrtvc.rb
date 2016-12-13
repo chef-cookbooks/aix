@@ -112,7 +112,7 @@ def run_flrtvc(m)
 
   lslpp_file = "#{Chef::Config[:file_cache_path]}/lslpp_#{m}.txt"
   emgr_file = "#{Chef::Config[:file_cache_path]}/emgr_#{m}.txt"
-  
+
   if m == 'master'
     # execute lslpp -Lcq
     shell_out!("/usr/bin/lslpp -Lcq > #{lslpp_file}")
@@ -246,7 +246,7 @@ def download_and_check_fixes(m, urls, to)
         increase_filesystem(dir_name)
         shell_out("/bin/tar -xf #{path} -C #{dir_name} `tar -tf #{path} | grep epkg.Z$`")
       end
-      
+
       # check level prereq
       Dir.glob(dir_name + '/' + url.split('/')[-1].split('.')[0] + '/*').each do |f|
         print "\033[2K\rChecking #{count}/#{total} fixes. (#{url}:#{f.split('/')[-1]})"
@@ -282,16 +282,14 @@ def download_and_check_fixes(m, urls, to)
 end
 
 def download(src, dst)
-  begin
-    ::File.open(dst, 'w') do |f|
-      ::IO.copy_stream(open(src), f)
-    end unless ::File.exist?(dst)
-  rescue
-    increase_filesystem(dst)
-    ::File.open(dst, 'w') do |f|
-      ::IO.copy_stream(open(src), f)
-    end unless ::File.exist?(dst)
-  end
+  ::File.open(dst, 'w') do |f|
+    ::IO.copy_stream(open(src), f)
+  end unless ::File.exist?(dst)
+rescue
+  increase_filesystem(dst)
+  ::File.open(dst, 'w') do |f|
+    ::IO.copy_stream(open(src), f)
+  end unless ::File.exist?(dst)
 end
 
 def check_level_prereq?(src, ref)
@@ -436,7 +434,7 @@ action :patch do
       # install package
       converge_by("geninstall: install all efixes from '#{lpp_source_dir}'") do
         so = shell_out("/usr/sbin/geninstall -d #{lpp_source_dir} all")
-        puts ""
+        puts ''
         so.stdout.each_line do |line|
           if line =~ /^EPKG NUMBER/ || line =~ /^===========/ || line =~ /\sINSTALL\s/
             puts line

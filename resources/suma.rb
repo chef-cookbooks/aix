@@ -163,7 +163,7 @@ def compute_rq_name(rq_type, targets)
       # find SP build number
       text = ::File.open("#{tmp_dir}/installp/ppc/#{oslevel}.xml").read
       rq_name = text.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1]
-	  ::File.delete(tmp_dir)
+      ::File.delete(tmp_dir)
       Chef::Log.info("Discover RqName #{rq_name} with metadata suma command")
     end
   end
