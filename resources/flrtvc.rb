@@ -19,6 +19,7 @@ require 'open-uri'
 require 'fileutils'
 require 'net/http'
 require 'net/ftp'
+require 'csv'
 
 include AIX::PatchMgmt
 
