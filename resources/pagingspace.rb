@@ -25,6 +25,6 @@ attr_accessor :exists
 attribute :name, name_attribute: true, kind_of: String
 attribute :vgname, kind_of: String
 attribute :pvname, kind_of: String
-attribute :size, kind_of: Fixnum
+attribute :size, kind_of: Integer
 attribute :active, kind_of: [TrueClass, FalseClass], default: true
 attribute :auto, kind_of: [TrueClass, FalseClass], default: true

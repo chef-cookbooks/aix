@@ -363,7 +363,7 @@ module Opscode
           'zlib-devel' => { version: '1.2.7-1', rpm: 'zlib/zlib-devel-1.2.7-1.aix6.1.ppc.rpm' },
           'zlib' => { version: '1.2.7-1', rpm: 'zlib/zlib-1.2.7-1.aix6.1.ppc.rpm' },
           'zoo' => { version: '2.10-5', rpm: 'zoo/zoo-2.10-5.aix5.1.ppc.rpm' },
-          'zsh' => { version: '4.0.4-3', rpm: 'zsh/zsh-4.0.4-3.aix5.1.ppc.rpm' }
+          'zsh' => { version: '4.0.4-3', rpm: 'zsh/zsh-4.0.4-3.aix5.1.ppc.rpm' },
         }
 
         "#{base_url}/#{pkgmap[pkg][:rpm]}" if pkgmap.key?(pkg)

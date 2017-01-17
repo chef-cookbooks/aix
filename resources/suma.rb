@@ -170,7 +170,7 @@ def compute_rq_name(rq_type, filter_ml)
         rq_name.insert(4, '-')
         rq_name.insert(7, '-')
         rq_name.insert(10, '-')
-        end
+      end
     end
 
   when 'TL'
@@ -309,7 +309,7 @@ action :download do
     end
   end
 
-  unless preview_dl.to_f == 0
+  unless preview_dl.to_f.zero?
     succeeded = 0
     failed = 0
     skipped = 0
@@ -341,7 +341,7 @@ action :download do
             # do nothing
           else
             puts line
-      end
+          end
           print "\rSUCCEEDED: #{succeeded}/#{preview_downloaded}\tFAILED: #{failed}/#{preview_failed}\tSKIPPED: #{skipped}/#{preview_skipped}"
         end
         puts ''
@@ -358,7 +358,7 @@ action :download do
       end
     end
 
-    if failed.to_i == 0 && node['nim']['lpp_sources'].fetch(lpp_source, nil).nil?
+    if failed.to_i.zero? && node['nim']['lpp_sources'].fetch(lpp_source, nil).nil?
       # nim define
       nim_s = "nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
       Chef::Log.info("NIM operation: #{nim_s}")
