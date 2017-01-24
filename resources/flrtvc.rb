@@ -292,7 +292,7 @@ rescue
   unless ::File.exist?(dst)
     ::File.open(dst, 'w') do |f|
       ::IO.copy_stream(open(src), f)
-	end
+    end
   end
 end
 

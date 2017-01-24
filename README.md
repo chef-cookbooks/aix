@@ -396,6 +396,7 @@ Name contains build number and ends with the type of resource:
 
 You can provide a NIM lpp_source as oslevel property.
 
+Suma resource uses Ohai to discover nim environment.
 You may want to reload Ohai info after a successfull download by adding:
  * the following resource to your recipe:
 ```ruby
@@ -420,7 +421,7 @@ aix_suma "download needed fixes to update client list to 7.1 TL3 SP1" do
   action :download
 end
 
-aix_suma "... perform suma metadata operation to discover build number and store files in tmp_dir" do
+aix_suma "... perform suma metadata operation to discover build number" do
   oslevel "7100-03-01"
   location "/export/extra/nim"
   targets "client1,client2,client3"
@@ -492,22 +493,6 @@ aix_nim "updating clients to latest TL (forced synchronous)" do
   action :update
 end
 
-aix_nim "run script on targets" do
-  script "7100-03-01-1341-lpp_source"
-  targets "client1,client2,client3"
-  async	true
-  action :update
-end
-
-aix_nim "check client status" do
-  action :check
-end
-
-aix_nim "compare machines installation" do
-  targets "master,client1,client2,client3"
-  action :compare
-end
-
 ```
 Parameters:
 
@@ -515,44 +500,29 @@ Parameters:
 * `lpp_source` - name of NIM lpp_source resource to install or latest_sp or latest_tl
 * `targets` - comma or space separated list of clients to update (star wildcard accepted)
 * `async` - if true, customization is performed asynchronously (default: false) (cannot be used for latest_sp or latest_tl customization)
-* `device` - 
-* `script` - 
-* `resource` - 
-* `location` - 
-* `group` - 
-* `force` - 
 
 Actions:
 * `master_setup` - setup the NIM server
 * `update` - install downloaded fixes
-* `check` - display all NIM standalone clients status
-* `compare` - display installation inventory comparison
-* `allocate` - allocate a nim resource
-* `deallocate` - deallocate a nim resource
-* `script` - execute a script resource
-* `bos_inst` - run a bos installation
-* `remove` - remove a nim resource
-* `reset` - reset a nim resource
-* `reboot` - reboot nim client(s)
 
 ### flrtvc
 
 Use flrtvc tool to generate flrtvc report, download recommended efix, and install them to patch security and/or hiper vulnerabilities.
 
-A nim lpp_source resource is automatically created for fixes to be installed. It is removed 
+A nim lpp_source resource is automatically created for fixes to be installed. It is removed at the end of the installation.
 
-If space is needed, filesystem is automatically extended by increment of 500Mb.
+If space is needed, filesystem is automatically extended by increment of 100MB.
 
 ```ruby
 aix_flrtvc "install flrtvc tool (download unzip if needed)" do
   action :install
 end
 
-aix_flrtvc "download and install recommended efix (local)" do
+aix_flrtvc "download and install recommended efixes locally" do
   action :patch
 end
 
-aix_flrtvc "download and install security vulnerabilities" do
+aix_flrtvc "download and install security vulnerabilities on the remote targets" do
   apar "security"
   targets "client1,client2,client3"
   action :patch
@@ -576,9 +546,15 @@ aix_flrtvc "use custom csv file" do
   action :patch
 end
 
-aix_flrtvc "generate flrtvc report" do
+aix_flrtvc "generate flrtvc report only" do
   path '/tmp/flrtvc'
   check_only true
+  action :patch
+end
+
+aix_flrtvc "download recommended efixes only" do
+  path '/tmp/flrtvc'
+  download_only true
   action :patch
 end
 
@@ -591,13 +567,13 @@ Parameters:
 * `csv` - custom apar csv file
 * `path` - directory where the report is saved
 * `clean` - clean temporary files and remove nim lpp_source resource (default: true)
-* `verbose` - display the report on output  (default: false)
+* `verbose` - save and display the report in verbose mode (default: false)
 * `check_only` - generate report only, no fixes are downloaded nor installed  (default: false)
 * `download_only` - generate report and download fixes, do not install them  (default: false)
 
 Actions:
 * `install` - install flrtvc tool
-* `patch` - generate report, download recommended fixes and patch the machine
+* `patch` - generate report, download recommended fixes and patch the machine(s)
 
 ### niminit
 

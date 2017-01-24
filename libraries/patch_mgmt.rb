@@ -18,17 +18,17 @@ module AIX
   module PatchMgmt
     def log_debug(message)
       Chef::Log.debug(message)
-      STDERR.puts('DEBUG : ' + message)
+      #STDERR.puts('DEBUG : ' + message)
     end
 
     def log_info(message)
       Chef::Log.info(message)
-      puts('INFO : ' + message)
+      #puts('INFO : ' + message)
     end
 
     def log_warn(message)
       Chef::Log.warn(message)
-      puts('WARN : ' + message)
+      #puts('WARN : ' + message)
     end
 
     #############################
@@ -238,7 +238,7 @@ module AIX
         download_failed = 0
         download_skipped = 0
         puts "\nStart downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to '#{@dl_target}' directory."
-        exit_status = Open3.popen3({ 'LANG' => 'C' }, suma_s) do |stdin, stdout, stderr, wait_thr|
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, suma_s) do |_stdin, stdout, stderr, wait_thr|
           thr = Thread.new do
             start = Time.now
             loop do
@@ -248,7 +248,7 @@ module AIX
           end
           stdout.each_line do |line|
             succeeded += 1 if line =~ /^Download SUCCEEDED:/
-			failed += 1 if line =~ /^Download FAILED:/
+            failed += 1 if line =~ /^Download FAILED:/
             skipped += 1 if line =~ /^Download SKIPPED:/
             download_downloaded = Regexp.last_match(1) if line =~ /([0-9]+) downloaded/
             download_failed = Regexp.last_match(1) if line =~ /([0-9]+) failed/
@@ -324,7 +324,7 @@ module AIX
           log_info("Done nim customize operation \"#{nim_s}\"")
         else # synchronous
           do_not_error = false
-          exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |stdin, stdout, stderr, wait_thr|
+          exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
             stdout.each_line do |line|
               print "\033[2K\r#{line.chomp}" if line =~ /^Filesets processed:.*?[0-9]+ of [0-9]+/
               print "\033[2K\r#{line.chomp}" if line =~ /^Finished processing all filesets./
@@ -345,7 +345,7 @@ module AIX
       def perform_efix_customization(lpp_source, client)
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a filesets=all #{client}"
         puts "\nStart patching machine(s) '#{client}'."
-        exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |stdin, stdout, stderr, wait_thr|
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line do |line|
             print "\033[2K\r#{line.chomp}" if line =~ /^Processing Efix Package .*?[0-9]+ of .*?[0-9]+.$/
             puts line if line =~ /^EPKG NUMBER/ || line =~ /^===========/ || line =~ /INSTALL/
@@ -582,7 +582,7 @@ module AIX
     #
     # -----------------------------------------------------------------
     def compute_lpp_source_name(location, rq_name)
-      return "#{rq_name}-lpp_source" if location.nil? || location.empty? || location.start_with?('/') 
+      return "#{rq_name}-lpp_source" if location.nil? || location.empty? || location.start_with?('/')
       # else
       location.chomp('\/')
     end
