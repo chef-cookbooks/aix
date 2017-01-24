@@ -25,7 +25,7 @@ property :location, String
 property :targets, String
 property :save_it, [true, false], default: false
 property :sched_time, String
-property :task_id, Fixnum
+property :task_id, Integer
 property :preview_only, [true, false], default: false
 
 default_action :download
@@ -55,11 +55,6 @@ load_current_value do
 end
 
 ##############################
-# DEFINITIONS
-##############################
-
-
-##############################
 # ACTION: download
 ##############################
 action :download do
@@ -82,7 +77,7 @@ action :download do
     end
 
     # create nim lpp source
-    if suma.failed.to_i == 0 && node['nim']['lpp_sources'].fetch(params['lpp_source'], nil).nil?
+    if suma.failed.to_i.zero? && node['nim']['lpp_sources'].fetch(params['lpp_source'], nil).nil?
       nim = Nim.new
       converge_by("define nim lpp source \'#{params['lpp_source']}\'") do
         nim.define_lpp_source(params['lpp_source'], params['dl_target'])
@@ -128,11 +123,8 @@ action :edit do
     suma_s << ' -w'
   end
 
-  if property_is_set?(:task_id)
-    suma_s << ' ' << task_id.to_s
-  else
-    raise MissingTaskIdProperty, 'Please provide a task_id property to edit !'
-  end
+  raise MissingTaskIdProperty, 'Please provide a task_id property to edit !' unless property_is_set?(:task_id)
+  suma_s << ' ' << task_id.to_s
 
   Chef::Log.warn(suma_s)
   converge_by("Edit suma task #{task_id}") do
@@ -144,12 +136,9 @@ end
 # ACTION: unschedule
 ##############################
 action :unschedule do
-  if property_is_set?(:task_id)
-    converge_by("Unschedule suma task #{task_id}") do
-      shell_out!('/usr/sbin/suma -u ' + task_id.to_s)
-    end
-  else
-    raise MissingTaskIdProperty, 'Please provide a task_id property to unschedule !'
+  raise MissingTaskIdProperty, 'Please provide a task_id property to unschedule !' unless property_is_set?(:task_id)
+  converge_by("Unschedule suma task #{task_id}") do
+    shell_out!('/usr/sbin/suma -u ' + task_id.to_s)
   end
 end
 
@@ -157,12 +146,9 @@ end
 # ACTION: delete
 ##############################
 action :delete do
-  if property_is_set?(:task_id)
-    converge_by("Delete suma task #{task_id}") do
-      shell_out!('/usr/sbin/suma -d ' + task_id.to_s)
-    end
-  else
-    raise MissingTaskIdProperty, 'Please provide a task_id property to delete !'
+  raise MissingTaskIdProperty, 'Please provide a task_id property to delete !' unless property_is_set?(:task_id)
+  converge_by("Delete suma task #{task_id}") do
+    shell_out!('/usr/sbin/suma -d ' + task_id.to_s)
   end
 end
 

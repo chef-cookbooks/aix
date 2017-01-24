@@ -17,16 +17,18 @@
 module AIX
   module PatchMgmt
     def log_debug(message)
-        Chef::Log.debug(message)
-        STDERR.puts('DEBUG : ' + message)
+      Chef::Log.debug(message)
+      STDERR.puts('DEBUG : ' + message)
     end
+
     def log_info(message)
-        Chef::Log.info(message)
-        puts('INFO : ' + message)
+      Chef::Log.info(message)
+      puts('INFO : ' + message)
     end
+
     def log_warn(message)
-        Chef::Log.warn(message)
-        puts('WARN : ' + message)
+      Chef::Log.warn(message)
+      puts('WARN : ' + message)
     end
 
     #############################
@@ -244,44 +246,24 @@ module AIX
               sleep 1
             end
           end
-          stdin.close
           stdout.each_line do |line|
-            if line =~ /^Download SUCCEEDED:/
-              succeeded += 1
-            elsif line =~ /^Download FAILED:/
-              failed += 1
-            elsif line =~ /^Download SKIPPED:/
-              skipped += 1
-            elsif line =~ /([0-9]+) downloaded/
-              download_downloaded = Regexp.last_match(1)
-            elsif line =~ /([0-9]+) failed/
-              download_failed = Regexp.last_match(1)
-            elsif line =~ /([0-9]+) skipped/
-              download_skipped = Regexp.last_match(1)
-            elsif line =~ /(Total bytes of updates downloaded|Summary|Partition id|Filesystem size changed to|### SUMA FAKE)/
-              # do nothing
-            else
-              puts "\n#{line}"
-            end
+            succeeded += 1 if line =~ /^Download SUCCEEDED:/
+			failed += 1 if line =~ /^Download FAILED:/
+            skipped += 1 if line =~ /^Download SKIPPED:/
+            download_downloaded = Regexp.last_match(1) if line =~ /([0-9]+) downloaded/
+            download_failed = Regexp.last_match(1) if line =~ /([0-9]+) failed/
+            download_skipped = Regexp.last_match(1) if line =~ /([0-9]+) skipped/
             log_info("[STDOUT] #{line.chomp}")
-            stdout.flush
           end
-          stdout.close
           stderr.each_line do |line|
-            if line =~ /Task ID ([0-9]+) created./
-              log_warn("Created task #{Regexp.last_match(1)}")
-            else
-              puts line
-            end
+            log_warn("Created task #{Regexp.last_match(1)}") if line =~ /Task ID ([0-9]+) created./
+            STDERR.puts line
             log_info("[STDERR] #{line.chomp}")
           end
-          stderr.close
           thr.exit
           wait_thr.value # Process::Status object returned.
         end
-        unless exit_status.success?
-          raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns above error!"
-        end
+        raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns above error!" unless exit_status.success?
         puts "\nFinish downloading #{succeeded} fixes."
         @download = download_downloaded
         @failed = download_failed
@@ -296,9 +278,6 @@ module AIX
       include Chef::Mixin::ShellOut
       include AIX::PatchMgmt
 
-      def initialize
-      end
-
       def exist?(resource)
         !shell_out("lsnim | grep #{resource}").error?
       end
@@ -312,11 +291,8 @@ module AIX
         so.stderr.each_line do |line|
           log_info("[STDERR] #{line.chomp}")
         end
-        if so.error?
-          raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
-        else
-          log_info("Done nim define operation \"#{nim_s}\"")
-        end
+        raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------" if so.error?
+        log_info("Done nim define operation \"#{nim_s}\"")
       end
 
       def remove_resource(resource)
@@ -328,11 +304,8 @@ module AIX
         so.stderr.each_line do |line|
           log_info("[STDERR] #{line.chomp}")
         end
-        if so.error?
-          raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
-        else
-          log_info("Done nim remove operation \"#{nim_s}\"")
-        end
+        raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------" if so.error?
+        log_info("Done nim remove operation \"#{nim_s}\"")
       end
 
       def perform_customization(lpp_source, clients, async = true)
@@ -347,38 +320,25 @@ module AIX
           so.stderr.each_line do |line|
             log_info("[STDERR] #{line.chomp}")
           end
-          if so.error? && so.stdout !~ /Either the software is already at the same level as on the media, or/m
-            raise NimCustError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
-          else
-            log_info("Done nim customize operation \"#{nim_s}\"")
-          end
+          raise NimCustError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------" if so.error? && so.stdout !~ /Either the software is already at the same level as on the media, or/m
+          log_info("Done nim customize operation \"#{nim_s}\"")
         else # synchronous
           do_not_error = false
           exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |stdin, stdout, stderr, wait_thr|
-            stdin.close
             stdout.each_line do |line|
-              if line =~ /^Filesets processed:.*?[0-9]+ of [0-9]+/
-                print "\033[2K\r#{line.chomp}"
-              elsif line =~ /^Finished processing all filesets./
-                print "\033[2K\r#{line.chomp}"
-              end
+              print "\033[2K\r#{line.chomp}" if line =~ /^Filesets processed:.*?[0-9]+ of [0-9]+/
+              print "\033[2K\r#{line.chomp}" if line =~ /^Finished processing all filesets./
               log_info("[STDOUT] #{line.chomp}")
             end
-            stdout.close
             stderr.each_line do |line|
-              if line =~ /Either the software is already at the same level as on the media, or/
-                do_not_error = true
-              end
-              puts line
+              do_not_error = true if line =~ /Either the software is already at the same level as on the media, or/
+              STDERR.puts line
               log_info("[STDERR] #{line.chomp}")
             end
-            stderr.close
             wait_thr.value # Process::Status object returned.
           end
           puts "\nFinish updating #{clients}."
-          unless exit_status.success? || do_not_error
-            raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!"
-          end
+          raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success? || do_not_error
         end
       end
 
@@ -386,27 +346,19 @@ module AIX
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a filesets=all #{client}"
         puts "\nStart patching machine(s) '#{client}'."
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |stdin, stdout, stderr, wait_thr|
-          stdin.close
           stdout.each_line do |line|
-            if line =~ /^Processing Efix Package .*?[0-9]+ of .*?[0-9]+.$/
-              print "\033[2K\r#{line.chomp}"
-            elsif line =~ /^EPKG NUMBER/ || line =~ /^===========/ || line =~ /INSTALL/
-              puts line
-            end
+            print "\033[2K\r#{line.chomp}" if line =~ /^Processing Efix Package .*?[0-9]+ of .*?[0-9]+.$/
+            puts line if line =~ /^EPKG NUMBER/ || line =~ /^===========/ || line =~ /INSTALL/
             log_info("[STDOUT] #{line.chomp}")
           end
-          stdout.close
           stderr.each_line do |line|
             puts line
             log_info("[STDERR] #{line.chomp}")
           end
-          stderr.close
           wait_thr.value # Process::Status object returned.
         end
         puts "\nFinish patching #{client}."
-        unless exit_status.success?
-          raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!"
-        end
+        raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success?
       end
     end
 
@@ -429,9 +381,9 @@ module AIX
         widths[key] = 5 # minimum column width
         # longest string len of values
         val_len = data[key].max_by { |v| v.to_s.length }.to_s.length
-        widths[key] = (val_len > widths[key]) ? val_len : widths[key]
+        widths[key] = val_len > widths[key] ? val_len : widths[key]
         # length of key
-        widths[key] = (key.to_s.length > widths[key]) ? key.to_s.length : widths[key]
+        widths[key] = key.to_s.length > widths[key] ? key.to_s.length : widths[key]
       end
 
       result = '+'
@@ -452,7 +404,7 @@ module AIX
       result += '+'
       data.keys.each { |key| result += ''.center(widths[key] + 2, '-') + '+' }
       result += "\n"
-      return result
+      result
     end
 
     # -----------------------------------------------------------------
@@ -485,7 +437,7 @@ module AIX
     #    - cannot contact the target machines
     # -----------------------------------------------------------------
     def expand_targets(targets, clients)
-      return [ 'master' ] if targets.nil? || targets.empty?
+      return ['master'] if targets.nil? || targets.empty?
 
       selected_machines = []
       targets.split(/[,\s]/).each do |machine|
@@ -499,7 +451,7 @@ module AIX
       raise InvalidTargetsProperty, "Error: cannot contact any machines in '#{targets}'" if selected_machines.empty?
       selected_machines = selected_machines.sort.uniq
       log_info("List of targets expanded to #{selected_machines}")
-      return selected_machines
+      selected_machines
     end
 
     # -----------------------------------------------------------------
@@ -519,7 +471,7 @@ module AIX
     #    raise InvalidOsLevelProperty in case of error
     # -----------------------------------------------------------------
     def compute_rq_type(oslevel)
-      return 'Latest' if oslevel.nil? || oslevel.empty? || oslevel.casecmp('latest') == 0
+      return 'Latest' if oslevel.nil? || oslevel.empty? || oslevel.casecmp('latest').zero?
       return 'TL' if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/
       return 'SP' if oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
       # else raise exception
@@ -535,7 +487,7 @@ module AIX
       case rq_type
       when 'Latest'
         # build machine-oslevel hash
-        levels = Hash.new { |h, k| h[k] = (k == 'master') ? niminfo['nim']['master'].fetch('oslevel', nil) : niminfo['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
+        levels = Hash.new { |h, k| h[k] = k == 'master' ? niminfo['nim']['master'].fetch('oslevel', nil) : niminfo['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
         targets.each { |k| levels[k] }
         levels.delete_if { |_k, v| v.nil? || v.empty? }
         log_debug("Hash table (machine/oslevel) built #{levels}")
@@ -550,11 +502,8 @@ module AIX
             log_warn("Release level mismatch, only AIX #{ary.max[0]}.#{ary.max[1]} SP/TL will be downloaded")
           end
         end
-        if metadata_filter_ml.nil?
-          raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets'
-        else
-          metadata_filter_ml.insert(4, '-')
-        end
+        raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets' if metadata_filter_ml.nil?
+        metadata_filter_ml.insert(4, '-')
         log_info("Found highest ML #{metadata_filter_ml} from client list")
 
         # suma metadata
@@ -595,13 +544,13 @@ module AIX
 
           # find SP build number
           ::File.open("#{tmp_dir}/installp/ppc/#{oslevel}.xml") do |f|
-              rq_name = f.read.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1]
+            rq_name = f.read.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1]
           end
           FileUtils.rm_rf(tmp_dir)
           log_info("Discover RqName #{rq_name} with metadata suma command")
         end
       end
-      return rq_name
+      rq_name
     end
 
     # -----------------------------------------------------------------
@@ -611,7 +560,7 @@ module AIX
     # -----------------------------------------------------------------
     def compute_filter_ml(targets, rq_name, niminfo)
       # build machine-oslevel hash
-      levels = Hash.new { |h, k| h[k] = (k == 'master') ? niminfo['nim']['master'].fetch('oslevel', nil) : niminfo['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
+      levels = Hash.new { |h, k| h[k] = k == 'master' ? niminfo['nim']['master'].fetch('oslevel', nil) : niminfo['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
       targets.each { |k| levels[k] }
       levels.delete_if { |_k, v| v.nil? || v.empty? || v.to_i != rq_name.to_i }
       log_debug("Hash table (machine/oslevel) built #{levels}")
@@ -623,12 +572,9 @@ module AIX
         filter_ml = ary.min
       end
 
-      if filter_ml.nil?
-        raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets'
-      else
-        filter_ml.insert(4, '-')
-      end
-      return filter_ml
+      raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets' if filter_ml.nil?
+      filter_ml.insert(4, '-')
+      filter_ml
     end
 
     # -----------------------------------------------------------------
@@ -638,7 +584,7 @@ module AIX
     def compute_lpp_source_name(location, rq_name)
       return "#{rq_name}-lpp_source" if location.nil? || location.empty? || location.start_with?('/') 
       # else
-      return location.chomp('\/')
+      location.chomp('\/')
     end
 
     # -----------------------------------------------------------------
@@ -667,7 +613,7 @@ module AIX
           raise InvalidLocationProperty, "Error: cannot find lpp_source '#{location}' from nim info"
         end
       end
-      return dl_target
+      dl_target
     end
 
     # -----------------------------------------------------------------
@@ -717,7 +663,7 @@ module AIX
       log_debug("dl_target=#{dl_target}")
       params['dl_target'] = dl_target
 
-      return params
+      params
     end
 
     # -----------------------------------------------------------------
@@ -759,7 +705,7 @@ module AIX
       else
         log_debug("nim: we found the #{time} lpp_source, #{lppsource} will be utilized")
       end
-      return lppsource
+      lppsource
     end
   end
 end

@@ -282,14 +282,18 @@ def download_and_check_fixes(m, urls, to)
 end
 
 def download(src, dst)
-  ::File.open(dst, 'w') do |f|
-    ::IO.copy_stream(open(src), f)
-  end unless ::File.exist?(dst)
+  unless ::File.exist?(dst)
+    ::File.open(dst, 'w') do |f|
+      ::IO.copy_stream(open(src), f)
+    end
+  end
 rescue
   increase_filesystem(dst)
-  ::File.open(dst, 'w') do |f|
-    ::IO.copy_stream(open(src), f)
-  end unless ::File.exist?(dst)
+  unless ::File.exist?(dst)
+    ::File.open(dst, 'w') do |f|
+      ::IO.copy_stream(open(src), f)
+	end
+  end
 end
 
 def check_level_prereq?(src, ref)
