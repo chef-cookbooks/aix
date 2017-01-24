@@ -376,7 +376,8 @@ action :patch do
 
   # build list of targets
   so = Mixlib::ShellOut.new("lsnim -t standalone | cut -d' ' -f1 | sort").run_command.stdout.split
-  target_list = expand_targets(so)
+  so.concat Mixlib::ShellOut.new("lsnim -t vios | cut -d' ' -f1 | sort").run_command.stdout.split
+  target_list = expand_targets(targets, so)
   Chef::Log.debug("target_list: #{target_list}")
 
   # loop on clients

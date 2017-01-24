@@ -7,6 +7,7 @@
 # suma download :
 # nim define :
 
+node.default['nim']['master'] = { 'oslevel' => '7100-02-01' }
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01-1316' } }
 node.default['nim']['lpp_sources'] = { '7100-02-02-1316-lpp_source' => { 'location' => '/usr/sys/inst.images/7100-02-02-1316-lpp_source' } }
 

@@ -1,6 +1,6 @@
 # Expected values
 # return code : 1
-# exception : OhaiNimPluginNotFound
+# exception : NimInfoNotFound
 # suma directory :
 # suma metadata :
 # suma preview :

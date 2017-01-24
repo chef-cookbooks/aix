@@ -2,7 +2,8 @@
 # return code : 1
 # exception : AIX::PatchMgmt::InvalidTargetsProperty
 
-node.default['nim'] = { 'clients' => { 'client1' => { 'oslevel' => '' },
+node.default['nim'] = { 'master' => { 'oslevel' => '7100-02-01' },
+                        'clients' => { 'client1' => { 'oslevel' => '' },
                                        'client2' => { 'oslevel' => '' },
                                        'client3' => { 'oslevel' => '' } },
                         'lpp_sources' => {} }

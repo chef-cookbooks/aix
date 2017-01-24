@@ -16,16 +16,35 @@
 
 module AIX
   module PatchMgmt
+    def log_debug(message)
+        Chef::Log.debug(message)
+        STDERR.puts('DEBUG : ' + message)
+    end
+    def log_info(message)
+        Chef::Log.info(message)
+        puts('INFO : ' + message)
+    end
+    def log_warn(message)
+        Chef::Log.warn(message)
+        puts('WARN : ' + message)
+    end
+
     #############################
     #     E X C E P T I O N     #
     #############################
-    class OhaiNimPluginNotFound < StandardError
+    class NimInfoNotFound < StandardError
     end
 
     class InvalidLppSourceProperty < StandardError
     end
 
     class InvalidTargetsProperty < StandardError
+    end
+
+    class InvalidOsLevelProperty < StandardError
+    end
+
+    class InvalidLocationProperty < StandardError
     end
 
     class SumaError < StandardError
@@ -99,6 +118,7 @@ module AIX
     ###################
     class Suma
       include Chef::Mixin::ShellOut
+      include AIX::PatchMgmt
 
       attr_reader :dl
       attr_reader :downloaded
@@ -143,23 +163,23 @@ module AIX
         end
         suma_s << (save_it ? ' -w' : '')
 
-        Chef::Log.debug("SUMA metadata operation: #{suma_s}")
+        log_debug("SUMA metadata operation: #{suma_s}")
         so = shell_out(suma_s, environment: { 'LANG' => 'C' }, timeout: 3000)
         so.stdout.each_line do |line|
-          Chef::Log.info("[STDOUT] #{line.chomp}")
+          log_info("[STDOUT] #{line.chomp}")
         end
         so.stderr.each_line do |line|
           if line =~ /Task ID ([0-9]+) created./
-            Chef::Log.warn("Created task #{Regexp.last_match(1)}")
+            log_warn("Created task #{Regexp.last_match(1)}")
           end
-          Chef::Log.info("[STDERR] #{line.chomp}")
+          log_info("[STDERR] #{line.chomp}")
         end
         if so.stderr =~ /^0500-035 No fixes match your query.$/
-          Chef::Log.info("Done suma metadata operation \"#{suma_s}\"")
+          log_info("Done suma metadata operation \"#{suma_s}\"")
         elsif so.error?
           raise SumaMetadataError, "Error: Command \"#{suma_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         else
-          Chef::Log.info("Done suma metadata operation \"#{suma_s}\"")
+          log_info("Done suma metadata operation \"#{suma_s}\"")
         end
       end
 
@@ -173,27 +193,27 @@ module AIX
         end
         suma_s << (save_it ? ' -w' : '')
 
-        Chef::Log.debug("SUMA preview operation: #{suma_s}")
+        log_debug("SUMA preview operation: #{suma_s}")
         so = shell_out(suma_s, environment: { 'LANG' => 'C' }, timeout: 3000)
         so.stdout.each_line do |line|
-          Chef::Log.info("[STDOUT] #{line.chomp}")
+          log_info("[STDOUT] #{line.chomp}")
         end
         so.stderr.each_line do |line|
           if line =~ /Task ID ([0-9]+) created./
-            Chef::Log.warn("Created task #{Regexp.last_match(1)}")
+            log_warn("Created task #{Regexp.last_match(1)}")
           end
-          Chef::Log.info("[STDERR] #{line.chomp}")
+          log_info("[STDERR] #{line.chomp}")
         end
         if so.stderr =~ /^0500-035 No fixes match your query.$/
-          Chef::Log.info("Done suma preview operation \"#{suma_s}\"")
+          log_info("Done suma preview operation \"#{suma_s}\"")
         elsif so.stdout =~ /Total bytes of updates downloaded: ([0-9]+).*?([0-9]+) downloaded.*?([0-9]+) failed.*?([0-9]+) skipped/m
           @dl = Regexp.last_match(1).to_f / 1024 / 1024 / 1024
           @downloaded = Regexp.last_match(2)
           @failed = Regexp.last_match(3)
           @skipped = Regexp.last_match(4)
-          Chef::Log.debug(so.stdout)
-          Chef::Log.warn("Preview: #{@downloaded} downloaded (#{@dl.to_f.round(2)} GB), #{@failed} failed, #{@skipped} skipped fixes")
-          Chef::Log.info("Done suma preview operation \"#{suma_s}\"")
+          log_debug(so.stdout)
+          log_warn("Preview: #{@downloaded} downloaded (#{@dl.to_f.round(2)} GB), #{@failed} failed, #{@skipped} skipped fixes")
+          log_info("Done suma preview operation \"#{suma_s}\"")
         else
           raise SumaPreviewError, "Error: Command \"#{suma_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         end
@@ -207,7 +227,7 @@ module AIX
         when 'TL'
           suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}"
         end
-        suma_s << (save_it ? ' -w' : '')
+        suma_s << ' -w' if save_it
 
         succeeded = 0
         failed = 0
@@ -243,17 +263,17 @@ module AIX
             else
               puts "\n#{line}"
             end
-            Chef::Log.info("[STDOUT] #{line.chomp}")
+            log_info("[STDOUT] #{line.chomp}")
             stdout.flush
           end
           stdout.close
           stderr.each_line do |line|
             if line =~ /Task ID ([0-9]+) created./
-              Chef::Log.warn("Created task #{Regexp.last_match(1)}")
+              log_warn("Created task #{Regexp.last_match(1)}")
             else
               puts line
             end
-            Chef::Log.info("[STDERR] #{line.chomp}")
+            log_info("[STDERR] #{line.chomp}")
           end
           stderr.close
           thr.exit
@@ -274,6 +294,7 @@ module AIX
     #################
     class Nim
       include Chef::Mixin::ShellOut
+      include AIX::PatchMgmt
 
       def initialize
       end
@@ -286,15 +307,15 @@ module AIX
         nim_s = "/usr/sbin/nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
         so = shell_out(nim_s)
         so.stdout.each_line do |line|
-          Chef::Log.info("[STDOUT] #{line.chomp}")
+          log_info("[STDOUT] #{line.chomp}")
         end
         so.stderr.each_line do |line|
-          Chef::Log.info("[STDERR] #{line.chomp}")
+          log_info("[STDERR] #{line.chomp}")
         end
         if so.error?
           raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         else
-          Chef::Log.info("Done nim define operation \"#{nim_s}\"")
+          log_info("Done nim define operation \"#{nim_s}\"")
         end
       end
 
@@ -302,15 +323,15 @@ module AIX
         nim_s = "/usr/sbin/nim -o remove #{resource}"
         so = shell_out(nim_s)
         so.stdout.each_line do |line|
-          Chef::Log.info("[STDOUT] #{line.chomp}")
+          log_info("[STDOUT] #{line.chomp}")
         end
         so.stderr.each_line do |line|
-          Chef::Log.info("[STDERR] #{line.chomp}")
+          log_info("[STDERR] #{line.chomp}")
         end
         if so.error?
           raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
         else
-          Chef::Log.info("Done nim remove operation \"#{nim_s}\"")
+          log_info("Done nim remove operation \"#{nim_s}\"")
         end
       end
 
@@ -321,15 +342,15 @@ module AIX
         if async # asynchronous
           so = shell_out(nim_s, environment: { 'LANG' => 'C' }, timeout: 3000)
           so.stdout.each_line do |line|
-            Chef::Log.info("[STDOUT] #{line.chomp}")
+            log_info("[STDOUT] #{line.chomp}")
           end
           so.stderr.each_line do |line|
-            Chef::Log.info("[STDERR] #{line.chomp}")
+            log_info("[STDERR] #{line.chomp}")
           end
           if so.error? && so.stdout !~ /Either the software is already at the same level as on the media, or/m
             raise NimCustError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
           else
-            Chef::Log.info("Done nim customize operation \"#{nim_s}\"")
+            log_info("Done nim customize operation \"#{nim_s}\"")
           end
         else # synchronous
           do_not_error = false
@@ -341,7 +362,7 @@ module AIX
               elsif line =~ /^Finished processing all filesets./
                 print "\033[2K\r#{line.chomp}"
               end
-              Chef::Log.info("[STDOUT] #{line.chomp}")
+              log_info("[STDOUT] #{line.chomp}")
             end
             stdout.close
             stderr.each_line do |line|
@@ -349,7 +370,7 @@ module AIX
                 do_not_error = true
               end
               puts line
-              Chef::Log.info("[STDERR] #{line.chomp}")
+              log_info("[STDERR] #{line.chomp}")
             end
             stderr.close
             wait_thr.value # Process::Status object returned.
@@ -372,12 +393,12 @@ module AIX
             elsif line =~ /^EPKG NUMBER/ || line =~ /^===========/ || line =~ /INSTALL/
               puts line
             end
-            Chef::Log.info("[STDOUT] #{line.chomp}")
+            log_info("[STDOUT] #{line.chomp}")
           end
           stdout.close
           stderr.each_line do |line|
             puts line
-            Chef::Log.info("[STDERR] #{line.chomp}")
+            log_info("[STDERR] #{line.chomp}")
           end
           stderr.close
           wait_thr.value # Process::Status object returned.
@@ -431,24 +452,25 @@ module AIX
       result += '+'
       data.keys.each { |key| result += ''.center(widths[key] + 2, '-') + '+' }
       result += "\n"
-      result
+      return result
     end
 
     # -----------------------------------------------------------------
-    # Check ohai nim plugin has been run
+    # Check nim hash info is well configured
     #
-    #    raise OhaiNimPluginNotFound in case of error
+    #    raise NimInfoNotFound in case of error
     # -----------------------------------------------------------------
-    def check_ohai
-      # get list of all NIM machines from Ohai
-      master = node.fetch('nim', {}).fetch('master').fetch('oslevel')
-      Chef::Log.debug("Ohai master oslevel is #{master}")
-      all_machines = node.fetch('nim', {}).fetch('clients').keys
-      Chef::Log.debug("Ohai client machine's list is #{all_machines}")
-      all_lpp_sources = node.fetch('nim', {}).fetch('lpp_sources').keys
-      Chef::Log.debug("Ohai lpp source's list is #{all_lpp_sources}")
+    def check_nim_info(hash)
+      master = hash.fetch('nim', {}).fetch('master').fetch('oslevel')
+      log_debug("master oslevel is #{master}")
+
+      all_machines = hash.fetch('nim', {}).fetch('clients').keys
+      log_debug("client machine's list is #{all_machines}")
+
+      all_lpp_sources = hash.fetch('nim', {}).fetch('lpp_sources').keys
+      log_debug("lpp source's list is #{all_lpp_sources}")
     rescue KeyError
-      raise OhaiNimPluginNotFound, 'Error: cannot find nim info from Ohai output'
+      raise NimInfoNotFound, 'Error: cannot find nim info'
     end
 
     # -----------------------------------------------------------------
@@ -462,32 +484,22 @@ module AIX
     #    raise InvalidTargetsProperty in case of error
     #    - cannot contact the target machines
     # -----------------------------------------------------------------
-    def expand_targets(clients)
-      selected_machines = []
-      # compute list of machines based on targets property
-      if property_is_set?(:targets)
-        if !targets.empty?
-          targets.split(/[,\s]/).each do |machine|
-            selected_machines.push(machine) if machine == 'master'
-            # expand wildcard
-            machine.gsub!(/\*/, '.*?')
-            clients.each do |m|
-              selected_machines.concat(m.split) if m =~ /^#{machine}$/
-            end
-          end
-          selected_machines = selected_machines.sort.uniq
-        else # empty
-          selected_machines.push('master')
-        end
-      else # not set
-        selected_machines.push('master')
-      end
-      Chef::Log.info("List of targets expanded to #{selected_machines}")
+    def expand_targets(targets, clients)
+      return [ 'master' ] if targets.nil? || targets.empty?
 
-      if selected_machines.empty?
-        raise InvalidTargetsProperty, "Error: cannot contact any machines in '#{targets}'"
+      selected_machines = []
+      targets.split(/[,\s]/).each do |machine|
+        selected_machines.push(machine) if machine == 'master'
+        # expand wildcard
+        machine.gsub!(/\*/, '.*?')
+        clients.each do |m|
+          selected_machines.concat(m.split) if m =~ /^#{machine}$/
+        end
       end
-      selected_machines
+      raise InvalidTargetsProperty, "Error: cannot contact any machines in '#{targets}'" if selected_machines.empty?
+      selected_machines = selected_machines.sort.uniq
+      log_info("List of targets expanded to #{selected_machines}")
+      return selected_machines
     end
 
     # -----------------------------------------------------------------
@@ -495,12 +507,217 @@ module AIX
     #
     #    raise InvalidLppSourceProperty in case of error
     # -----------------------------------------------------------------
-    def check_lpp_source_name(lpp_source)
-      if node['nim']['lpp_sources'].fetch(lpp_source)
-        Chef::Log.debug("Found lpp source #{lpp_source}")
-      end
+    def check_lpp_source_name(lpp_source, niminfo)
+      log_debug("Found lpp source #{lpp_source}") if niminfo['nim']['lpp_sources'].fetch(lpp_source)
     rescue KeyError
-      raise InvalidLppSourceProperty, "Error: cannot find lpp_source '#{lpp_source}' from Ohai output"
+      raise InvalidLppSourceProperty, "Error: cannot find lpp_source '#{lpp_source}'"
+    end
+
+    # -----------------------------------------------------------------
+    # Compute RqType suma parameter
+    #
+    #    raise InvalidOsLevelProperty in case of error
+    # -----------------------------------------------------------------
+    def compute_rq_type(oslevel)
+      return 'Latest' if oslevel.nil? || oslevel.empty? || oslevel.casecmp('latest') == 0
+      return 'TL' if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/
+      return 'SP' if oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
+      # else raise exception
+      raise InvalidOsLevelProperty, 'Error: oslevel is not recognized'
+    end
+
+    # -----------------------------------------------------------------
+    # Compute RqName suma parameter
+    #
+    #    raise InvalidTargetsProperty in case of error
+    # -----------------------------------------------------------------
+    def compute_rq_name(rq_type, targets, niminfo)
+      case rq_type
+      when 'Latest'
+        # build machine-oslevel hash
+        levels = Hash.new { |h, k| h[k] = (k == 'master') ? niminfo['nim']['master'].fetch('oslevel', nil) : niminfo['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
+        targets.each { |k| levels[k] }
+        levels.delete_if { |_k, v| v.nil? || v.empty? }
+        log_debug("Hash table (machine/oslevel) built #{levels}")
+
+        unless levels.empty?
+          # discover FilterML level
+          ary = levels.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
+          # find highest ML
+          metadata_filter_ml = ary.max
+          # check ml level of machines
+          if ary.min[0..3].to_i < ary.max[0..3].to_i
+            log_warn("Release level mismatch, only AIX #{ary.max[0]}.#{ary.max[1]} SP/TL will be downloaded")
+          end
+        end
+        if metadata_filter_ml.nil?
+          raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets'
+        else
+          metadata_filter_ml.insert(4, '-')
+        end
+        log_info("Found highest ML #{metadata_filter_ml} from client list")
+
+        # suma metadata
+        tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
+        suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
+        suma.metadata
+
+        # find latest SP for highest TL
+        sps = shell_out("ls #{tmp_dir}/installp/ppc/*.install.tips.html").stdout.split
+        sps.collect! do |file|
+          file.gsub!('install.tips.html', 'xml')
+          ::File.open(file) do |f|
+            f.read.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1].delete('-')
+          end
+        end
+        rq_name = sps.max
+        unless rq_name.nil?
+          rq_name.insert(4, '-')
+          rq_name.insert(7, '-')
+          rq_name.insert(10, '-')
+        end
+        FileUtils.rm_rf(tmp_dir)
+        log_info("Discover RqName #{rq_name} with metadata suma command")
+
+      when 'TL'
+        # pad with 0
+        rq_name = "#{oslevel.match(/^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/)[1]}-00-0000"
+
+      when 'SP'
+        if oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}$/
+          rq_name = oslevel
+        elsif oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/
+          # suma metadata
+          metadata_filter_ml = oslevel.match(/^([0-9]{4}-[0-9]{2})-[0-9]{2}$/)[1]
+          tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
+          suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
+          suma.metadata
+
+          # find SP build number
+          ::File.open("#{tmp_dir}/installp/ppc/#{oslevel}.xml") do |f|
+              rq_name = f.read.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1]
+          end
+          FileUtils.rm_rf(tmp_dir)
+          log_info("Discover RqName #{rq_name} with metadata suma command")
+        end
+      end
+      return rq_name
+    end
+
+    # -----------------------------------------------------------------
+    # Compute FilterML suma parameter
+    #
+    #    raise InvalidTargetsProperty in case of error
+    # -----------------------------------------------------------------
+    def compute_filter_ml(targets, rq_name, niminfo)
+      # build machine-oslevel hash
+      levels = Hash.new { |h, k| h[k] = (k == 'master') ? niminfo['nim']['master'].fetch('oslevel', nil) : niminfo['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
+      targets.each { |k| levels[k] }
+      levels.delete_if { |_k, v| v.nil? || v.empty? || v.to_i != rq_name.to_i }
+      log_debug("Hash table (machine/oslevel) built #{levels}")
+
+      unless levels.empty?
+        # discover FilterML level
+        ary = levels.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
+        # find lowest ML
+        filter_ml = ary.min
+      end
+
+      if filter_ml.nil?
+        raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets'
+      else
+        filter_ml.insert(4, '-')
+      end
+      return filter_ml
+    end
+
+    # -----------------------------------------------------------------
+    # Compute lpp source name based on the location
+    #
+    # -----------------------------------------------------------------
+    def compute_lpp_source_name(location, rq_name)
+      return "#{rq_name}-lpp_source" if location.nil? || location.empty? || location.start_with?('/') 
+      # else
+      return location.chomp('\/')
+    end
+
+    # -----------------------------------------------------------------
+    # Compute DLTarget suma parameter
+    #
+    #    raise InvalidLocationProperty in case of error
+    # -----------------------------------------------------------------
+    def compute_dl_target(location, lpp_source, niminfo)
+      return "/usr/sys/inst.images/#{lpp_source}" if location.nil? || location.empty?
+
+      location.chomp!('\/')
+      if location.start_with?('/') # location is a directory
+        dl_target = "#{location}/#{lpp_source}"
+        # check if DLTarget match the one in lpp_source
+        unless niminfo['nim']['lpp_sources'].fetch(lpp_source, {}).fetch('location', nil).nil?
+          log_debug("Found lpp source '#{lpp_source}' location")
+          unless niminfo['nim']['lpp_sources'][lpp_source]['location'] =~ /^#{dl_target}/
+            raise InvalidLocationProperty, 'Error: lpp source location mismatch'
+          end
+        end
+      else # location is a lpp_source
+        begin
+          dl_target = niminfo['nim']['lpp_sources'].fetch(location).fetch('location')
+          log_debug("Discover '#{location}' lpp source's location: '#{dl_target}'")
+        rescue KeyError
+          raise InvalidLocationProperty, "Error: cannot find lpp_source '#{location}' from nim info"
+        end
+      end
+      return dl_target
+    end
+
+    # -----------------------------------------------------------------
+    # returns a hash with all suma params
+    #
+    # -----------------------------------------------------------------
+    def suma_params(niminfo)
+      params = {}
+
+      # build list of targets
+      target_list = expand_targets(targets, niminfo['nim']['clients'].keys)
+      log_debug("target_list=#{target_list}")
+
+      # compute suma request type based on oslevel property
+      rq_type = compute_rq_type(oslevel)
+      log_debug("rq_type=#{rq_type}")
+      params['rq_type'] = rq_type
+
+      # compute suma request name based on metadata info
+      rq_name = compute_rq_name(rq_type, target_list, niminfo)
+      log_debug("rq_name=#{rq_name}")
+      params['rq_name'] = rq_name
+
+      # metadata does not match any fixes
+      return nil if params['rq_name'].nil? || params['rq_name'].empty?
+
+      # compute suma filter ml based on targets property
+      filter_ml = compute_filter_ml(target_list, rq_name, niminfo)
+      log_debug("filter_ml=#{filter_ml}")
+      params['filter_ml'] = filter_ml
+
+      # check ml level of machines against expected oslevel
+      # case rq_type
+      # when 'SP', 'TL'
+      #   if filter_ml[0..3].to_i < oslevel.match(/^([0-9]{4})-[0-9]{2}(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].to_i
+      #     raise InvalidOsLevelProperty, 'Error: cannot upgrade machines to a new release using suma'
+      #   end
+      # end
+
+      # compute lpp source name based on request name
+      lpp_source = compute_lpp_source_name(location, rq_name)
+      log_debug("lpp_source=#{lpp_source}")
+      params['lpp_source'] = lpp_source
+
+      # compute suma dl target based on lpp source name
+      dl_target = compute_dl_target(location, lpp_source, niminfo)
+      log_debug("dl_target=#{dl_target}")
+      params['dl_target'] = dl_target
+
+      return params
     end
 
     # -----------------------------------------------------------------
@@ -509,17 +726,18 @@ module AIX
     #    "type" : 'sp' or 'tl'
     #    "time" : 'latest' or 'next'
     #    "oslevel" : the oslevel of the machine for example 7100-01-01-1210
+    #    "niminfo" : the hash to look lpp_source into
     #
     #    returns the corresponding lpp source if found
     #    or else the current oslevel
     # -----------------------------------------------------------------
-    def find_resource_by_client(type, time, oslevel)
-      Chef::Log.debug("nim: finding #{time} #{type}")
+    def find_resource_by_client(type, time, oslevel, niminfo)
+      log_debug("nim: finding #{time} #{type}")
       lppsource = ''
       case type
       when 'tl'
         # reading output until I have found the good tl
-        node['nim']['lpp_sources'].keys.each do |key|
+        niminfo['nim']['lpp_sources'].keys.each do |key|
           a_key = key.split('-')
           next unless a_key[0] == oslevel[0] && a_key[1] > oslevel[1]
           lppsource = key
@@ -527,7 +745,7 @@ module AIX
         end
       when 'sp'
         # reading output until I have found the good sp
-        node['nim']['lpp_sources'].keys.each do |key|
+        niminfo['nim']['lpp_sources'].keys.each do |key|
           a_key = key.split('-')
           next unless a_key[0] == oslevel[0] && a_key[1] == oslevel[1] && a_key[2] > oslevel[2]
           lppsource = key
@@ -537,11 +755,11 @@ module AIX
       if lppsource.empty?
         # setting lpp_source to current oslevel if not found
         lppsource = oslevel[0] + '-' + oslevel[1] + '-' + oslevel[2] + '-' + oslevel[3] + '-lpp_source'
-        Chef::Log.debug("nim: server already to the #{time} #{type}, or no lpp_source were found, #{lppsource} will be utilized")
+        log_debug("nim: server already to the #{time} #{type}, or no lpp_source were found, #{lppsource} will be utilized")
       else
-        Chef::Log.debug("nim: we found the #{time} lpp_source, #{lppsource} will be utilized")
+        log_debug("nim: we found the #{time} lpp_source, #{lppsource} will be utilized")
       end
-      lppsource
+      return lppsource
     end
   end
 end

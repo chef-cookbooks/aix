@@ -7,6 +7,7 @@
 # suma download : ### SUMA FAKE Download ###
 # nim define :
 
+node.default['nim']['master'] = { 'oslevel' => '7100-02-01' }
 node.default['nim']['clients'] = { 'client1' => { 'oslevel' => '7100-02-01-1316' } }
 node.default['nim']['lpp_sources'] = {}
 

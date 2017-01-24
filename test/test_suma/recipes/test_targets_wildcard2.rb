@@ -3,7 +3,8 @@
 # suma log info : INFO: List of targets expanded to ["castle", "cattle"]
 # suma directory : /sumatest/targets/wildcard2/7100-01-01-1316-lpp_source
 
-node.default['nim'] = { 'clients' => { 'castle' => { 'oslevel' => '7100-02-01-1316' },
+node.default['nim'] = { 'master' => { 'oslevel' => '7100-02-01' },
+                        'clients' => { 'castle' => { 'oslevel' => '7100-02-01-1316' },
                                        'cattle' => { 'oslevel' => '7100-03-01-1316' },
                                        'crow' => { 'oslevel' => '7100-04-01-1316' } },
                         'lpp_sources' => {} }
