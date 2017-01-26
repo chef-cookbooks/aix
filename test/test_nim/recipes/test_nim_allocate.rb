@@ -2,7 +2,8 @@
 # return code : 0
 # nim alloc : ### NIM FAKE DONE ALLOCATE OPERATION ###
 #
-node.default['nim'] = { 'clients' => { 'client1' => { 'oslevel' => '7100-07-02-0000' },
+node.default['nim'] = { 'master' => { 'oslevel' => '7100-02-01' },
+                        'clients' => { 'client1' => { 'oslevel' => '7100-07-02-0000' },
                                        'client2' => { 'oslevel' => '7100-09-02-0000' },
                                        'client3' => { 'oslevel' => '7100-09-04-0000' },
                                        'client4' => { 'oslevel' => '7100-09-06-0000' },

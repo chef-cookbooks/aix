@@ -1,10 +1,12 @@
 require 'fileutils'
 
-task :default => [ :clean_all, :copy_recipes, :install_fake, :run_nim, :report, :deinstall_fake ]
+task :default => [ :clean_all, :copy_recipes, :install_fake, :run_nim, :run_lpp_source, :report, :deinstall_fake ]
 task :nim => [ :clean_all, :copy_recipes, :install_fake, :run_nim, :report, :deinstall_fake ]
+task :lpp_source => [ :clean_all, :copy_recipes, :install_fake, :run_lpp_source, :report, :deinstall_fake ]
 
 # %n returns the file name without the extension and directory portions !
 test_nim_list = FileList.new('../test_nim/recipes/test_nim_*.rb').pathmap("%n")
+test_lpp_source_list = FileList.new('../test_nim/recipes/test_lpp_source_*.rb').pathmap("%n")
 
 ##########################################################
 ## Variable definition
@@ -162,6 +164,27 @@ task :run_nim do
   puts '                    Running NIM tests'
   puts '/////////////////////////////////////////////////////////////////////'
   test_nim_list.each do |fl|
+    build_config_file(fl)
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    puts "\033[45m" + '----- Running recipe: ' + fl + ' -----' + "\033[0m"
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    expected_values = parse_expected_values(fl)
+    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |ok, res|
+      if check_expected_values(res.exitstatus, fl, expected_values)
+        print_success
+      else
+        print_failure
+      end
+    end
+  end
+end
+
+desc 'Run all LPPSOURCE tests'
+task :run_lpp_source do
+  puts '/////////////////////////////////////////////////////////////////////'
+  puts '                    Running LPPSOURCE tests'
+  puts '/////////////////////////////////////////////////////////////////////'
+  test_lpp_source_list.each do |fl|
     build_config_file(fl)
     puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
     puts "\033[45m" + '----- Running recipe: ' + fl + ' -----' + "\033[0m"

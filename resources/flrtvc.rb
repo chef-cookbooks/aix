@@ -61,31 +61,20 @@ def check_flrtvc
 end
 
 def validate_apar(apar)
-  if apar.nil? || apar.eql?('all')
-    ''
-  elsif apar =~ /(sec|hiper)/
-    "-t #{apar}"
-  else
-    raise InvalidAparProperty
-  end
+  return '' if apar.nil? || apar.eql?('all')
+  return "-t #{apar}" if apar =~ /(sec|hiper)/
+  raise InvalidAparProperty
 end
 
 def validate_filesets(filesets)
-  if filesets.nil?
-    ''
-  else
-    "-g #{filesets}"
-  end
+  return '' if filesets.nil?
+  return "-g #{filesets}"
 end
 
 def validate_csv(csv)
-  if csv.nil?
-    ''
-  elsif Pathname(csv).absolute? && ::File.exist?(csv)
-    "-f #{csv}"
-  else
-    raise InvalidCsvProperty
-  end
+  return '' if  csv.nil?
+  return "-f #{csv}" if Pathname(csv).absolute? && ::File.exist?(csv)
+  raise InvalidCsvProperty
 end
 
 def increase_filesystem(path)

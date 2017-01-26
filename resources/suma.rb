@@ -69,20 +69,18 @@ action :download do
   suma = Suma.new(desc, params['rq_type'], params['rq_name'], params['filter_ml'], params['dl_target'])
   suma.preview
   return if preview_only == true
+  return unless suma.downloaded?
 
-  if suma.dl.to_f > 0
-    # suma download
-    converge_by("download #{suma.downloaded} fixes to '#{params['dl_target']}'") do
-      suma.download(save_it)
-    end
+  # suma download
+  converge_by("download #{suma.downloaded} fixes to '#{params['dl_target']}'") do
+    suma.download
+  end
+  return if suma.failed? || LppSource.exist?(params['lpp_source'], node)
 
-    # create nim lpp source
-    if suma.failed.to_i.zero? && node['nim']['lpp_sources'].fetch(params['lpp_source'], nil).nil?
-      nim = Nim.new
-      converge_by("define nim lpp source \'#{params['lpp_source']}\'") do
-        nim.define_lpp_source(params['lpp_source'], params['dl_target'])
-      end
-    end
+  # create nim lpp source
+  nim = Nim.new
+  converge_by("define nim lpp source \'#{params['lpp_source']}\'") do
+    nim.define_lpp_source(params['lpp_source'], params['dl_target'])
   end
 end
 

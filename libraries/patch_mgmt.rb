@@ -115,6 +115,12 @@ module AIX
       end
     end
 
+    class LppSource
+      def self.exist?(lpp_source, niminfo)
+        !niminfo['nim']['lpp_sources'].fetch(lpp_source, nil).nil?
+      end
+    end
+
     ###################
     #     S U M A     #
     ###################
@@ -139,6 +145,14 @@ module AIX
         ########## END #############
       end
 
+      def failed?
+        @failed.to_i > 0
+      end
+
+      def downloaded?
+        @dl.to_f > 0 && @downloaded.to_i > 0
+      end
+      
       def duration(d)
         secs  = d.to_int
         mins  = secs / 60
@@ -460,9 +474,8 @@ module AIX
     #    raise InvalidLppSourceProperty in case of error
     # -----------------------------------------------------------------
     def check_lpp_source_name(lpp_source, niminfo)
-      log_debug("Found lpp source #{lpp_source}") if niminfo['nim']['lpp_sources'].fetch(lpp_source)
-    rescue KeyError
-      raise InvalidLppSourceProperty, "Error: cannot find lpp_source '#{lpp_source}'"
+      raise InvalidLppSourceProperty, "Error: cannot find lpp_source '#{lpp_source}'" unless LppSource.exist?(lpp_source, niminfo)
+      log_debug("Found lpp source #{lpp_source}") 
     end
 
     # -----------------------------------------------------------------
