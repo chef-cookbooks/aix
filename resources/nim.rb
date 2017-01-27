@@ -58,7 +58,7 @@ action :update do
     Chef::Log.debug("os_level: #{os_level}")
 
     converge_by("nim: perform asynchronous software customization for client(s) \'#{target_list.join(' ')}\' with resource \'#{lpp_source}\'") do
-      nim.perform_customization(lpp_source, target_list.join(' '), local_async)
+      nim.perform_async_customization(lpp_source, target_list.join(' '))
     end
   else # synchronous update
     target_list.each do |m|
@@ -111,7 +111,7 @@ action :update do
       end
 
       converge_by("nim: perform synchronous software customization for client \'#{m}\' with resource \'#{new_lpp_source}\'") do
-        nim.perform_customization(new_lpp_source, m, local_async)
+        nim.perform_sync_customization(new_lpp_source, m)
       end
     end
   end

@@ -16,6 +16,8 @@
 
 module AIX
   module PatchMgmt
+    include Chef::Mixin::ShellOut
+
     def log_debug(message)
       Chef::Log.debug(message)
       #STDERR.puts('DEBUG : ' + message)
@@ -68,6 +70,9 @@ module AIX
     end
 
     class NimDefineError < NimError
+    end
+
+    class NimRemoveError < NimError
     end
 
     class SpLevel
@@ -125,20 +130,25 @@ module AIX
     #     S U M A     #
     ###################
     class Suma
-      include Chef::Mixin::ShellOut
       include AIX::PatchMgmt
 
-      attr_reader :dl
       attr_reader :downloaded
-      attr_reader :failed
-      attr_reader :skipped
 
-      def initialize(display_name, rq_type, rq_name, filter_ml, dl_target)
+      def initialize(display_name, rq_type, rq_name, filter_ml, dl_target, save_it = false)
         @display_name = display_name
         @rq_type = rq_type
         @rq_name = rq_name
         @filter_ml = filter_ml
         @dl_target = dl_target
+        @save_it = save_it
+        @suma_s = "/usr/sbin/suma -x -a DisplayName=\"#{@display_name}\"  -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
+        @suma_s << " -a RqName=#{@rq_name}" if @rq_type.equal?('SP')
+        @suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}" if @rq_type.equal?('TL')
+        @suma_s << ' -w' if @save_it
+        @dl = 0
+        @downloaded = 0
+        @failed = 0
+        @skipped = 0
         ::FileUtils.mkdir_p(@dl_target) unless ::File.directory?(@dl_target)
         #### BUG SUMA WORKAROUND ###
         ::FileUtils.mkdir_p('/usr/sys/inst.images') unless ::File.directory?('/usr/sys/inst.images')
@@ -169,82 +179,52 @@ module AIX
         end
       end
 
-      def metadata(save_it = false)
-        suma_s = "/usr/sbin/suma -x -a Action=Metadata -a DisplayName=\"#{@display_name}\"  -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
-        case @rq_type
-        when 'SP'
-          suma_s << " -a RqName=#{@rq_name}"
-        when 'TL'
-          suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}"
-        end
-        suma_s << (save_it ? ' -w' : '')
-
-        log_debug("SUMA metadata operation: #{suma_s}")
-        so = shell_out(suma_s, environment: { 'LANG' => 'C' }, timeout: 3000)
-        so.stdout.each_line do |line|
-          log_info("[STDOUT] #{line.chomp}")
-        end
-        so.stderr.each_line do |line|
-          if line =~ /Task ID ([0-9]+) created./
-            log_warn("Created task #{Regexp.last_match(1)}")
+      def metadata
+        @suma_s << " -a Action=Metadata"
+        log_debug("SUMA metadata operation: #{@suma_s}")
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, @suma_s) do |_stdin, stdout, stderr, wait_thr|
+          stdout.each_line do |line|
+            log_info("[STDOUT] #{line.chomp}")
           end
-          log_info("[STDERR] #{line.chomp}")
+          stderr.each_line do |line|
+            log_warn("Created task #{Regexp.last_match(1)}") if line =~ /Task ID ([0-9]+) created./
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          wait_thr.value # Process::Status object returned.
         end
-        if so.stderr =~ /^0500-035 No fixes match your query.$/
-          log_info("Done suma metadata operation \"#{suma_s}\"")
-        elsif so.error?
-          raise SumaMetadataError, "Error: Command \"#{suma_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
-        else
-          log_info("Done suma metadata operation \"#{suma_s}\"")
-        end
+        raise SumaMetadataError, "Error: Command \"#{@suma_s}\" returns above error!" unless exit_status.success?
+        log_info("Done suma metadata operation \"#{@suma_s}\"")
       end
 
-      def preview(save_it = false)
-        suma_s = "/usr/sbin/suma -x -a Action=Preview -a DisplayName=\"#{@display_name}\" -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
-        case @rq_type
-        when 'SP'
-          suma_s << " -a RqName=#{@rq_name}"
-        when 'TL'
-          suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}"
-        end
-        suma_s << (save_it ? ' -w' : '')
-
-        log_debug("SUMA preview operation: #{suma_s}")
-        so = shell_out(suma_s, environment: { 'LANG' => 'C' }, timeout: 3000)
-        so.stdout.each_line do |line|
-          log_info("[STDOUT] #{line.chomp}")
-        end
-        so.stderr.each_line do |line|
-          if line =~ /Task ID ([0-9]+) created./
-            log_warn("Created task #{Regexp.last_match(1)}")
+      def preview
+        @suma_s << " -a Action=Preview"
+        log_debug("SUMA preview operation: #{@suma_s}")
+        do_not_error = false
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, @suma_s) do |_stdin, stdout, stderr, wait_thr|
+          stdout.each_line do |line|
+            @dl = Regexp.last_match(1).to_f / 1024 / 1024 / 1024 if line =~ /Total bytes of updates downloaded: ([0-9]+)/
+            @downloaded = Regexp.last_match(1) if line =~ /([0-9]+) downloaded/
+            @failed = Regexp.last_match(1) if line =~ /([0-9]+) failed/
+            @skipped = Regexp.last_match(1) if line =~ /([0-9]+) skipped/
+            log_info("[STDOUT] #{line.chomp}")
           end
-          log_info("[STDERR] #{line.chomp}")
+          stderr.each_line do |line|
+            do_not_error = true if line =~ /^0500-035 No fixes match your query.$/
+            log_warn("Created task #{Regexp.last_match(1)}") if line =~ /Task ID ([0-9]+) created./
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          wait_thr.value # Process::Status object returned.
         end
-        if so.stderr =~ /^0500-035 No fixes match your query.$/
-          log_info("Done suma preview operation \"#{suma_s}\"")
-        elsif so.stdout =~ /Total bytes of updates downloaded: ([0-9]+).*?([0-9]+) downloaded.*?([0-9]+) failed.*?([0-9]+) skipped/m
-          @dl = Regexp.last_match(1).to_f / 1024 / 1024 / 1024
-          @downloaded = Regexp.last_match(2)
-          @failed = Regexp.last_match(3)
-          @skipped = Regexp.last_match(4)
-          log_debug(so.stdout)
-          log_warn("Preview: #{@downloaded} downloaded (#{@dl.to_f.round(2)} GB), #{@failed} failed, #{@skipped} skipped fixes")
-          log_info("Done suma preview operation \"#{suma_s}\"")
-        else
-          raise SumaPreviewError, "Error: Command \"#{suma_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------"
-        end
+        raise SumaPreviewError, "Error: Command \"#{@suma_s}\" returns above error!" unless exit_status.success? || do_not_error
+        log_warn("Preview: #{@downloaded} downloaded (#{@dl.to_f.round(2)} GB), #{@failed} failed, #{@skipped} skipped fixes") unless do_not_error
+        log_info("Done suma preview operation \"#{@suma_s}\"")
       end
 
-      def download(save_it = false)
-        suma_s = "/usr/sbin/suma -x -a Action=Download -a DisplayName=\"#{@display_name}\" -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
-        case @rq_type
-        when 'SP'
-          suma_s << " -a RqName=#{@rq_name}"
-        when 'TL'
-          suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}"
-        end
-        suma_s << ' -w' if save_it
-
+      def download
+        @suma_s << " -a Action=Download"
+        log_debug("SUMA download operation: #{@suma_s}")
         succeeded = 0
         failed = 0
         skipped = 0
@@ -252,7 +232,7 @@ module AIX
         download_failed = 0
         download_skipped = 0
         puts "\nStart downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to '#{@dl_target}' directory."
-        exit_status = Open3.popen3({ 'LANG' => 'C' }, suma_s) do |_stdin, stdout, stderr, wait_thr|
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, @suma_s) do |_stdin, stdout, stderr, wait_thr|
           thr = Thread.new do
             start = Time.now
             loop do
@@ -277,9 +257,9 @@ module AIX
           thr.exit
           wait_thr.value # Process::Status object returned.
         end
-        raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns above error!" unless exit_status.success?
         puts "\nFinish downloading #{succeeded} fixes."
-        @download = download_downloaded
+        raise SumaDownloadError, "Error: Command \"#{@suma_s}\" returns above error!" unless exit_status.success?
+        @downloaded = download_downloaded
         @failed = download_failed
         @skipped = download_skipped
       end
@@ -289,7 +269,6 @@ module AIX
     #     N I M     #
     #################
     class Nim
-      include Chef::Mixin::ShellOut
       include AIX::PatchMgmt
 
       def exist?(resource)
@@ -298,75 +277,94 @@ module AIX
 
       def define_lpp_source(lpp_source, dl_target)
         nim_s = "/usr/sbin/nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
-        so = shell_out(nim_s)
-        so.stdout.each_line do |line|
-          log_info("[STDOUT] #{line.chomp}")
+        log_debug("NIM define operation: #{nim_s}")
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
+          stdout.each_line do |line|
+            log_info("[STDOUT] #{line.chomp}")
+          end
+          stderr.each_line do |line|
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          wait_thr.value # Process::Status object returned.
         end
-        so.stderr.each_line do |line|
-          log_info("[STDERR] #{line.chomp}")
-        end
-        raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------" if so.error?
+        raise NimDefineError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success?
         log_info("Done nim define operation \"#{nim_s}\"")
       end
 
       def remove_resource(resource)
         nim_s = "/usr/sbin/nim -o remove #{resource}"
-        so = shell_out(nim_s)
-        so.stdout.each_line do |line|
-          log_info("[STDOUT] #{line.chomp}")
+        log_debug("NIM remove operation: #{nim_s}")
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
+          stdout.each_line do |line|
+            log_info("[STDOUT] #{line.chomp}")
+          end
+          stderr.each_line do |line|
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          wait_thr.value # Process::Status object returned.
         end
-        so.stderr.each_line do |line|
-          log_info("[STDERR] #{line.chomp}")
-        end
-        raise NimDefineError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------" if so.error?
+        raise NimRemoveError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success?
         log_info("Done nim remove operation \"#{nim_s}\"")
       end
 
-      def perform_customization(lpp_source, clients, async = true)
-        async_s = async ? 'yes' : 'no'
-        nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all -a accept_licenses=yes -a async=#{async_s} #{clients}"
+      def perform_async_customization(lpp_source, clients)
+        nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all -a accept_licenses=yes -a async=yes #{clients}"
+        log_debug("NIM cust operation: #{nim_s}")
         puts "\nStart updating machine(s) '#{clients}' to #{lpp_source}."
-        if async # asynchronous
-          so = shell_out(nim_s, environment: { 'LANG' => 'C' }, timeout: 3000)
-          so.stdout.each_line do |line|
+        do_not_error = false
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
+          stdout.each_line do |line|
+            do_not_error = true if line =~ /Either the software is already at the same level as on the media, or/
             log_info("[STDOUT] #{line.chomp}")
           end
-          so.stderr.each_line do |line|
+          stderr.each_line do |line|
+            STDERR.puts line
             log_info("[STDERR] #{line.chomp}")
           end
-          raise NimCustError, "Error: Command \"#{nim_s}\" returns:\n--- STDERR ---\n#{so.stderr.chomp!}\n--- STDOUT ---\n#{so.stdout.chomp!}\n--------------" if so.error? && so.stdout !~ /Either the software is already at the same level as on the media, or/m
-          log_info("Done nim customize operation \"#{nim_s}\"")
-        else # synchronous
-          do_not_error = false
-          exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
-            stdout.each_line do |line|
-              print "\033[2K\r#{line.chomp}" if line =~ /^Filesets processed:.*?[0-9]+ of [0-9]+/
-              print "\033[2K\r#{line.chomp}" if line =~ /^Finished processing all filesets./
-              log_info("[STDOUT] #{line.chomp}")
-            end
-            stderr.each_line do |line|
-              do_not_error = true if line =~ /Either the software is already at the same level as on the media, or/
-              STDERR.puts line
-              log_info("[STDERR] #{line.chomp}")
-            end
-            wait_thr.value # Process::Status object returned.
-          end
-          puts "\nFinish updating #{clients}."
-          raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success? || do_not_error
+          wait_thr.value # Process::Status object returned.
         end
+        puts "\nFinish updating #{clients} asynchronously."
+        raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success? || do_not_error
+        log_info("Done nim customize operation \"#{nim_s}\"")
+      end
+
+      def perform_sync_customization(lpp_source, clients)
+        nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all -a accept_licenses=yes -a async=no #{clients}"
+        log_debug("NIM cust operation: #{nim_s}")
+        puts "\nStart updating machine(s) '#{clients}' to #{lpp_source}."
+        do_not_error = false
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
+          stdout.each_line do |line|
+            print "\033[2K\r#{line.chomp}" if line =~ /^Filesets processed:.*?[0-9]+ of [0-9]+/
+            print "\033[2K\r#{line.chomp}" if line =~ /^Finished processing all filesets./
+            log_info("[STDOUT] #{line.chomp}")
+          end
+          stderr.each_line do |line|
+            do_not_error = true if line =~ /Either the software is already at the same level as on the media, or/
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          wait_thr.value # Process::Status object returned.
+        end
+        puts "\nFinish updating #{clients} synchronously."
+        raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success? || do_not_error
+        log_info("Done nim customize operation \"#{nim_s}\"")
       end
 
       def perform_efix_customization(lpp_source, client)
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a filesets=all #{client}"
+        log_debug("NIM cust operation: #{nim_s}")
         puts "\nStart patching machine(s) '#{client}'."
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line do |line|
             print "\033[2K\r#{line.chomp}" if line =~ /^Processing Efix Package .*?[0-9]+ of .*?[0-9]+.$/
-            puts line if line =~ /^EPKG NUMBER/ || line =~ /^===========/ || line =~ /INSTALL/
+            puts line if line =~ /(^EPKG NUMBER|^===========|INSTALL)/
             log_info("[STDOUT] #{line.chomp}")
           end
           stderr.each_line do |line|
-            puts line
+            STDERR.puts line
             log_info("[STDERR] #{line.chomp}")
           end
           wait_thr.value # Process::Status object returned.
@@ -525,7 +523,7 @@ module AIX
         suma.metadata
 
         # find latest SP for highest TL
-        sps = shell_out("ls #{tmp_dir}/installp/ppc/*.install.tips.html").stdout.split
+        sps = Dir.glob("#{tmp_dir}/installp/ppc/*.install.tips.html")
         sps.collect! do |file|
           file.gsub!('install.tips.html', 'xml')
           ::File.open(file) do |f|
