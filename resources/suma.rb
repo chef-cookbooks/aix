@@ -62,25 +62,25 @@ action :download do
   check_nim_info(node)
 
   # obtain suma parameters
-  params = suma_params(node)
+  params = suma_params(node, desc, oslevel, location, targets)
   return if params.nil?
 
   # suma preview
-  suma = Suma.new(desc, params['rq_type'], params['rq_name'], params['filter_ml'], params['dl_target'])
+  suma = Suma.new(params)
   suma.preview
   return if preview_only == true
   return unless suma.downloaded?
 
   # suma download
-  converge_by("download #{suma.downloaded} fixes to '#{params['dl_target']}'") do
+  converge_by("download #{suma.downloaded} fixes to '#{params['DLTarget']}'") do
     suma.download
   end
-  return if suma.failed? || LppSource.exist?(params['lpp_source'], node)
+  return if suma.failed? || LppSource.exist?(params['LppSource'], node)
 
   # create nim lpp source
   nim = Nim.new
-  converge_by("define nim lpp source \'#{params['lpp_source']}\'") do
-    nim.define_lpp_source(params['lpp_source'], params['dl_target'])
+  converge_by("define nim lpp source \'#{params['LppSource']}\'") do
+    nim.define_lpp_source(params['LppSource'], params['DLTarget'])
   end
 end
 

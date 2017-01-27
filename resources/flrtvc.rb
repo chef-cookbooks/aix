@@ -68,11 +68,11 @@ end
 
 def validate_filesets(filesets)
   return '' if filesets.nil?
-  return "-g #{filesets}"
+  "-g #{filesets}"
 end
 
 def validate_csv(csv)
-  return '' if  csv.nil?
+  return '' if csv.nil?
   return "-f #{csv}" if Pathname(csv).absolute? && ::File.exist?(csv)
   raise InvalidCsvProperty
 end
@@ -168,7 +168,7 @@ def download_and_check_fixes(m, urls, to)
     level = item['Current Version']
     count += 1
 
-    if %r{^(?<protocol>.*?)://(?<srv>.*?)/(?<dir>.*)/$} =~ url
+    if url =~ %r{^(?<protocol>.*?)://(?<srv>.*?)/(?<dir>.*)/$}
       dir_name = to + '/efixes/' + fileset + '/' + url.split('/')[-1]
       ::FileUtils.mkdir_p(dir_name) unless ::File.directory?(dir_name)
       case protocol
@@ -260,7 +260,6 @@ def download_and_check_fixes(m, urls, to)
 
       print "... MATCH PREREQ\n"
       item['Filename'] = path
-      break
     end
   end # end urls
   print "\n"

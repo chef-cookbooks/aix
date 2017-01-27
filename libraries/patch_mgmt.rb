@@ -134,12 +134,12 @@ module AIX
 
       attr_reader :downloaded
 
-      def initialize(display_name, rq_type, rq_name, filter_ml, dl_target, save_it = false)
-        @display_name = display_name
-        @rq_type = rq_type
-        @rq_name = rq_name
-        @filter_ml = filter_ml
-        @dl_target = dl_target
+      def initialize(fields, save_it = false)
+        @display_name = fields['DisplayName']
+        @rq_type = fields['RqType']
+        @rq_name = fields['RqName']
+        @filter_ml = fields['FilterML']
+        @dl_target = fields['DLTarget']
         @save_it = save_it
         @suma_s = "/usr/sbin/suma -x -a DisplayName=\"#{@display_name}\"  -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
         @suma_s << " -a RqName=#{@rq_name}" if @rq_type.equal?('SP')
@@ -162,7 +162,7 @@ module AIX
       def downloaded?
         @dl.to_f > 0 && @downloaded.to_i > 0
       end
-      
+
       def duration(d)
         secs  = d.to_int
         mins  = secs / 60
@@ -180,7 +180,7 @@ module AIX
       end
 
       def metadata
-        @suma_s << " -a Action=Metadata"
+        @suma_s << ' -a Action=Metadata'
         log_debug("SUMA metadata operation: #{@suma_s}")
         exit_status = Open3.popen3({ 'LANG' => 'C' }, @suma_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line do |line|
@@ -198,7 +198,7 @@ module AIX
       end
 
       def preview
-        @suma_s << " -a Action=Preview"
+        @suma_s << ' -a Action=Preview'
         log_debug("SUMA preview operation: #{@suma_s}")
         do_not_error = false
         exit_status = Open3.popen3({ 'LANG' => 'C' }, @suma_s) do |_stdin, stdout, stderr, wait_thr|
@@ -223,7 +223,7 @@ module AIX
       end
 
       def download
-        @suma_s << " -a Action=Download"
+        @suma_s << ' -a Action=Download'
         log_debug("SUMA download operation: #{@suma_s}")
         succeeded = 0
         failed = 0
@@ -473,7 +473,7 @@ module AIX
     # -----------------------------------------------------------------
     def check_lpp_source_name(lpp_source, niminfo)
       raise InvalidLppSourceProperty, "Error: cannot find lpp_source '#{lpp_source}'" unless LppSource.exist?(lpp_source, niminfo)
-      log_debug("Found lpp source #{lpp_source}") 
+      log_debug("Found lpp source #{lpp_source}")
     end
 
     # -----------------------------------------------------------------
@@ -519,7 +519,7 @@ module AIX
 
         # suma metadata
         tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
-        suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
+        suma = Suma.new({ 'DisplayName' => desc, 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => metadata_filter_ml, 'DLTarget' => tmp_dir })
         suma.metadata
 
         # find latest SP for highest TL
@@ -550,7 +550,7 @@ module AIX
           # suma metadata
           metadata_filter_ml = oslevel.match(/^([0-9]{4}-[0-9]{2})-[0-9]{2}$/)[1]
           tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
-          suma = Suma.new(desc, 'Latest', nil, metadata_filter_ml, tmp_dir)
+          suma = Suma.new({ 'DisplayName' => desc, 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => metadata_filter_ml, 'DLTarget' => tmp_dir })
           suma.metadata
 
           # find SP build number
@@ -631,30 +631,32 @@ module AIX
     # returns a hash with all suma params
     #
     # -----------------------------------------------------------------
-    def suma_params(niminfo)
+    def suma_params(niminfo, desc, oslevel, location, targets)
       params = {}
 
       # build list of targets
       target_list = expand_targets(targets, niminfo['nim']['clients'].keys)
       log_debug("target_list=#{target_list}")
 
+      params['DisplayName'] = desc
+
       # compute suma request type based on oslevel property
       rq_type = compute_rq_type(oslevel)
       log_debug("rq_type=#{rq_type}")
-      params['rq_type'] = rq_type
+      params['RqType'] = rq_type
 
       # compute suma request name based on metadata info
       rq_name = compute_rq_name(rq_type, target_list, niminfo)
       log_debug("rq_name=#{rq_name}")
-      params['rq_name'] = rq_name
+      params['RqName'] = rq_name
 
       # metadata does not match any fixes
-      return nil if params['rq_name'].nil? || params['rq_name'].empty?
+      return nil if params['RqName'].nil? || params['RqName'].empty?
 
       # compute suma filter ml based on targets property
       filter_ml = compute_filter_ml(target_list, rq_name, niminfo)
       log_debug("filter_ml=#{filter_ml}")
-      params['filter_ml'] = filter_ml
+      params['FilterML'] = filter_ml
 
       # check ml level of machines against expected oslevel
       # case rq_type
@@ -667,12 +669,12 @@ module AIX
       # compute lpp source name based on request name
       lpp_source = compute_lpp_source_name(location, rq_name)
       log_debug("lpp_source=#{lpp_source}")
-      params['lpp_source'] = lpp_source
+      params['LppSource'] = lpp_source
 
       # compute suma dl target based on lpp source name
       dl_target = compute_dl_target(location, lpp_source, niminfo)
       log_debug("dl_target=#{dl_target}")
-      params['dl_target'] = dl_target
+      params['DLTarget'] = dl_target
 
       params
     end
