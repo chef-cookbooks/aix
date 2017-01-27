@@ -142,8 +142,7 @@ module AIX
         @dl_target = fields['DLTarget']
         @save_it = save_it
         @suma_s = "/usr/sbin/suma -x -a DisplayName=\"#{@display_name}\"  -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
-        @suma_s << " -a RqName=#{@rq_name}" if @rq_type.equal?('SP')
-        @suma_s << " -a RqName=#{@rq_name.match(/^([0-9]{4}-[0-9]{2})-00-0000$/)[1]}" if @rq_type.equal?('TL')
+        @suma_s << " -a RqName=#{@rq_name}" if @rq_type != 'Latest'
         @suma_s << ' -w' if @save_it
         @dl = 0
         @downloaded = 0
@@ -494,7 +493,7 @@ module AIX
     #
     #    raise InvalidTargetsProperty in case of error
     # -----------------------------------------------------------------
-    def compute_rq_name(rq_type, targets, niminfo)
+    def compute_rq_name(rq_type, oslevel, targets, niminfo)
       case rq_type
       when 'Latest'
         # build machine-oslevel hash
@@ -646,7 +645,7 @@ module AIX
       params['RqType'] = rq_type
 
       # compute suma request name based on metadata info
-      rq_name = compute_rq_name(rq_type, target_list, niminfo)
+      rq_name = compute_rq_name(rq_type, oslevel, target_list, niminfo)
       log_debug("rq_name=#{rq_name}")
       params['RqName'] = rq_name
 
