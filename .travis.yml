@@ -13,7 +13,7 @@ install: echo "skip bundle install"
 branches:
   only:
     - master
- 
+
 # Ensure we make ChefDK's Ruby the default
 before_script:
   - eval "$(/opt/chefdk/bin/chef shell-init bash)"
