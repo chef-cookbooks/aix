@@ -3,7 +3,7 @@
 
 Chef::Recipe.send(:include, AIX::PatchMgmt)
 
-check_ohai
+check_nim_info(node)
 
 nodes = Hash.new { |h, k| h[k] = {} }
 nodes['machine'] = node['nim']['clients'].keys
