@@ -168,7 +168,7 @@ def download_and_check_fixes(m, urls, to)
     level = item['Current Version']
     count += 1
 
-    if url =~ %r{^(?<protocol>.*?)://(?<srv>.*?)/(?<dir>.*)/$}
+    if %r{^(?<protocol>.*?)://(?<srv>.*?)/(?<dir>.*)/$} =~ url
       dir_name = to + '/efixes/' + fileset + '/' + url.split('/')[-1]
       ::FileUtils.mkdir_p(dir_name) unless ::File.directory?(dir_name)
       case protocol
