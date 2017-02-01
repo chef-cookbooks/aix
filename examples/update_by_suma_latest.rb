@@ -3,38 +3,31 @@
 
 Chef::Recipe.send(:include, AIX::PatchMgmt)
 
-check_nim_info(node)
-
-nodes = Hash.new { |h, k| h[k] = {} }
-nodes['machine'] = node['nim']['clients'].keys
-nodes['oslevel'] = node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
-nodes['Cstate'] = node['nim']['clients'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }
-nodes['machine'].push('master')
-nodes['oslevel'].push(node['nim']['master']['oslevel'])
-
 puts '#########################################################'
 puts 'Available machines and their corresponding oslevel are:'
-puts print_hash_by_columns(nodes)
-puts 'Choose one or more (comma-separated) to update ?'
+puts clients(node)
+puts 'Choose one or more (comma or space separated) to update?'
 client = STDIN.readline.chomp
 
-lpp_source = 'latest_sp'
-directory = '/export/extra/lpp_source'
+puts '#########################################################'
+puts 'Where to download? (default to /export/extra/lpp_source)'
+directory = STDIN.readline.chomp
+directory = '/export/extra/lpp_source' if directory.empty?
 
 ohai 'reload_nim' do
   action :nothing
   plugin 'nim'
 end
 
-aix_suma 'Downloading latest installation images' do
+aix_suma "Downloading latest installation images to '#{directory}'" do
   location directory
   targets client
   action :download
   notifies :reload, 'ohai[reload_nim]', :immediately
 end
 
-aix_nim "Updating machine(s) #{client}" do
-  lpp_source lpp_source
+aix_nim "Updating machine(s) '#{client}'" do
+  lpp_source 'latest_sp'
   targets client
   async true
   action [:update, :reboot]
