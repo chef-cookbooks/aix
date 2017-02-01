@@ -241,9 +241,9 @@ module AIX
             log_info("[STDOUT] #{line.chomp}")
           end
           stderr.each_line do |line|
-            do_not_error = true if line =~ /^0500-035 No fixes match your query.$/
+            do_not_error = true if line =~ /0500-035 No fixes match your query./
             log_warn("Created task #{Regexp.last_match(1)}") if line =~ /Task ID ([0-9]+) created./
-            STDERR.puts line unless line =~ /^(****************************************|Performing preview download.)$/
+            STDERR.puts line unless line =~ /(#{Regexp.quote('****************************************')}|Performing preview download.)/
             log_info("[STDERR] #{line.chomp}")
           end
           wait_thr.value # Process::Status object returned.
