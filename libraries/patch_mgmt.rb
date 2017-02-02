@@ -276,7 +276,7 @@ module AIX
             succeeded += 1 if line =~ /^Download SUCCEEDED:/
             failed += 1 if line =~ /^Download FAILED:/
             skipped += 1 if line =~ /^Download SKIPPED:/
-			download_dl = Regexp.last_match(1).to_f / 1024 / 1024 / 1024 if line =~ /Total bytes of updates downloaded: ([0-9]+)/
+            download_dl = Regexp.last_match(1).to_f / 1024 / 1024 / 1024 if line =~ /Total bytes of updates downloaded: ([0-9]+)/
             download_downloaded = Regexp.last_match(1) if line =~ /([0-9]+) downloaded/
             download_failed = Regexp.last_match(1) if line =~ /([0-9]+) failed/
             download_skipped = Regexp.last_match(1) if line =~ /([0-9]+) skipped/
@@ -553,7 +553,7 @@ module AIX
 
         # suma metadata
         tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
-        suma = Suma.new({ 'DisplayName' => desc, 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => metadata_filter_ml, 'DLTarget' => tmp_dir })
+        suma = Suma.new('DisplayName' => desc, 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => metadata_filter_ml, 'DLTarget' => tmp_dir)
         suma.metadata
 
         # find latest SP for highest TL
@@ -584,7 +584,7 @@ module AIX
           # suma metadata
           metadata_filter_ml = oslevel.match(/^([0-9]{4}-[0-9]{2})-[0-9]{2}$/)[1]
           tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
-          suma = Suma.new({ 'DisplayName' => desc, 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => metadata_filter_ml, 'DLTarget' => tmp_dir })
+          suma = Suma.new('DisplayName' => desc, 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => metadata_filter_ml, 'DLTarget' => tmp_dir)
           suma.metadata
 
           # find SP build number
@@ -619,6 +619,7 @@ module AIX
 
       raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets' if filter_ml.nil?
       filter_ml.insert(4, '-')
+      log_warn("The oldest machine is at level #{filter_ml}.")
       filter_ml
     end
 

@@ -83,7 +83,7 @@ def increase_filesystem(path)
     mounts << v['mount']
   end
   # get longest match
-  mount = mounts.sort_by!(&:length).reverse!.detect { |mnt| path =~ %r{#{mnt}} }
+  mount = mounts.sort_by!(&:length).reverse!.detect { |mnt| path =~ /#{Regexp.quote(mnt.to_s)}/ }
   so = shell_out!("/usr/sbin/chfs -a size=+100M #{mount}")
   Chef::Log.warn(so.stdout)
 end
@@ -374,7 +374,7 @@ action :patch do
 
   # loop on clients
   target_list.each do |m|
-    # run flrtvc
+	# run flrtvc
     begin
       out = run_flrtvc(m)
     rescue Mixlib::ShellOut::ShellCommandFailed => e
