@@ -211,9 +211,9 @@ module AIX
       end
 
       def metadata
-        @suma_s << ' -a Action=Metadata'
-        log_debug("SUMA metadata operation: #{@suma_s}")
-        exit_status = Open3.popen3({ 'LANG' => 'C' }, @suma_s) do |_stdin, stdout, stderr, wait_thr|
+        suma_s = @suma_s + ' -a Action=Metadata'
+        log_debug("SUMA metadata operation: #{suma_s}")
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, suma_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line do |line|
             log_info("[STDOUT] #{line.chomp}")
           end
@@ -224,15 +224,15 @@ module AIX
           end
           wait_thr.value # Process::Status object returned.
         end
-        raise SumaMetadataError, "Error: Command \"#{@suma_s}\" returns above error!" unless exit_status.success?
-        log_info("Done suma metadata operation \"#{@suma_s}\"")
+        raise SumaMetadataError, "Error: Command \"#{suma_s}\" returns above error!" unless exit_status.success?
+        log_info("Done suma metadata operation \"#{suma_s}\"")
       end
 
       def preview
-        @suma_s << ' -a Action=Preview'
-        log_debug("SUMA preview operation: #{@suma_s}")
+        suma_s = @suma_s + ' -a Action=Preview'
+        log_debug("SUMA preview operation: #{suma_s}")
         do_not_error = false
-        exit_status = Open3.popen3({ 'LANG' => 'C' }, @suma_s) do |_stdin, stdout, stderr, wait_thr|
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, suma_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line do |line|
             @dl = Regexp.last_match(1).to_f / 1024 / 1024 / 1024 if line =~ /Total bytes of updates downloaded: ([0-9]+)/
             @downloaded = Regexp.last_match(1) if line =~ /([0-9]+) downloaded/
@@ -248,14 +248,14 @@ module AIX
           end
           wait_thr.value # Process::Status object returned.
         end
-        raise SumaPreviewError, "Error: Command \"#{@suma_s}\" returns above error!" unless exit_status.success? || do_not_error
+        raise SumaPreviewError, "Error: Command \"#{suma_s}\" returns above error!" unless exit_status.success? || do_not_error
         log_warn("Preview: #{@downloaded} downloaded (#{@dl.to_f.round(2)} GB), #{@failed} failed, #{@skipped} skipped fixes") unless do_not_error
-        log_info("Done suma preview operation \"#{@suma_s}\"")
+        log_info("Done suma preview operation \"#{suma_s}\"")
       end
 
       def download
-        @suma_s << ' -a Action=Download'
-        log_debug("SUMA download operation: #{@suma_s}")
+        suma_s = @suma_s + ' -a Action=Download'
+        log_debug("SUMA download operation: #{suma_s}")
         succeeded = 0
         failed = 0
         skipped = 0
@@ -264,7 +264,7 @@ module AIX
         download_failed = 0
         download_skipped = 0
         puts "\nStart downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to '#{@dl_target}' directory."
-        exit_status = Open3.popen3({ 'LANG' => 'C' }, @suma_s) do |_stdin, stdout, stderr, wait_thr|
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, suma_s) do |_stdin, stdout, stderr, wait_thr|
           thr = Thread.new do
             start = Time.now
             loop do
@@ -291,7 +291,7 @@ module AIX
           wait_thr.value # Process::Status object returned.
         end
         puts "\nFinish downloading #{succeeded} fixes (~ #{download_dl.to_f.round(2)} GB)."
-        raise SumaDownloadError, "Error: Command \"#{@suma_s}\" returns above error!" unless exit_status.success?
+        raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns above error!" unless exit_status.success?
         @dl = download_dl
         @downloaded = download_downloaded
         @failed = download_failed
