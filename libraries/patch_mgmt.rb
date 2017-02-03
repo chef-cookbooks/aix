@@ -53,8 +53,8 @@ module AIX
         list_of_sps
     end
 
-    def levels(node)
-      check_nim_info(node, new = true)
+    def levels(node, new = false)
+      check_nim_info(node)
       if new
         levels = { '7.1 TL0' => list_sps('7100-00'),
                    '7.1 TL1' => list_sps('7100-01'),

@@ -10,9 +10,9 @@ puts 'Choose one or more (comma or space separated) to update?'
 client = STDIN.readline.chomp
 
 puts '#########################################################'
-puts 'Where to download? (default to /export/extra/lpp_source)'
+puts 'Where to download? (default to /usr/sys/inst.images)'
 directory = STDIN.readline.chomp
-directory = '/export/extra/lpp_source' if directory.empty?
+directory = '/usr/sys/inst.images' if directory.empty?
 
 ohai 'reload_nim' do
   action :nothing
