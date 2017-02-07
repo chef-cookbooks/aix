@@ -173,8 +173,11 @@ def download_and_check_fixes(m, urls, to)
       case protocol
       when 'http', 'https'
         uri = URI(url)
-        res = Net::HTTP.get_response(uri)
-        if res.is_a?(Net::HTTPSuccess)
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.read_timeout = 10
+        http.open_timeout = 10
+        res = http.start() { |http| http.get(uri.path) }
+        if res.kind_of?(Net::HTTPResponse)
           res.body.each_line do |l|
             next unless l =~ %r{<a href="(.*?.epkg.Z)">(.*?.epkg.Z)</a>}
             filename = url + Regexp.last_match(1)
@@ -276,11 +279,8 @@ def download(src, dst)
   end
 rescue
   increase_filesystem(dst)
-  unless ::File.exist?(dst)
-    ::File.open(dst, 'w') do |f|
-      ::IO.copy_stream(open(src), f)
-    end
-  end
+  ::File.delete(dst)
+  download(src, dst)
 end
 
 def check_level_prereq?(src)
