@@ -165,7 +165,6 @@ def download_and_check_fixes(m, urls, to)
   urls.each do |item|
     fileset = item['Fileset']
     url = item['Download URL']
-    level = item['Current Version']
     count += 1
 
     if %r{^(?<protocol>.*?)://(?<srv>.*?)/(?<dir>.*)/$} =~ url
@@ -187,7 +186,7 @@ def download_and_check_fixes(m, urls, to)
 
             # check level prereq
             print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename})"
-            next unless check_level_prereq?(path, level)
+            next unless check_level_prereq?(path)
 
             print "... MATCH PREREQ\n"
             item['Filename'] = path
@@ -211,7 +210,7 @@ def download_and_check_fixes(m, urls, to)
 
           # check level prereq
           print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename})"
-          next unless check_level_prereq?(path, level)
+          next unless check_level_prereq?(path)
 
           print "... MATCH PREREQ\n"
           item['Filename'] = path
@@ -239,7 +238,7 @@ def download_and_check_fixes(m, urls, to)
       # check level prereq
       Dir.glob(dir_name + '/' + url.split('/')[-1].split('.')[0] + '/*').each do |f|
         print "\033[2K\rChecking #{count}/#{total} fixes. (#{url}:#{f.split('/')[-1]})"
-        next unless check_level_prereq?(f, level)
+        next unless check_level_prereq?(f)
 
         print "... MATCH PREREQ\n"
         item['Filename'] = f
@@ -256,7 +255,7 @@ def download_and_check_fixes(m, urls, to)
 
       # check level prereq
       print "\033[2K\rChecking #{count}/#{total} fixes. (#{url})"
-      next unless check_level_prereq?(path, level)
+      next unless check_level_prereq?(path)
 
       print "... MATCH PREREQ\n"
       item['Filename'] = path
@@ -284,22 +283,25 @@ rescue
   end
 end
 
-def check_level_prereq?(src, ref)
-  # get actual level
-  lvl_a = ref.split('.')
-  lvl = SpLevel.new(lvl_a[0], lvl_a[1], lvl_a[2], lvl_a[3])
-
+def check_level_prereq?(src)
   # get min/max level
-  so = shell_out("/usr/sbin/emgr -v3 -d -e #{src} 2>&1 | grep -p \\\"PREREQ | egrep \"0*#{lvl_a[0].to_i}.0*#{lvl_a[1].to_i}.0*#{lvl_a[2].to_i}\"", environment: { 'LANG' => 'C' }).stdout
-  return false unless so =~ /^(.*?)\s+(.*?)\s+(.*?)$/
+  so = shell_out!("/usr/sbin/emgr -v3 -d -e #{src} 2>&1 | grep -p \\\"PREREQ", environment: { 'LANG' => 'C' }).stdout
+  so.lines[3..-2].each do |line|
+    Chef::Log.debug(line.to_s)
+    return false unless line =~ /^(.*?)\s+(.*?)\s+(.*?)$/
 
-  min_a = Regexp.last_match(2).split('.')
-  min = SpLevel.new(min_a[0], min_a[1], min_a[2], min_a[3])
-  max_a = Regexp.last_match(3).split('.')
-  max = SpLevel.new(max_a[0], max_a[1], max_a[2], max_a[3])
-  # puts "#{src}: #{lvl} #{min} #{max}"
-  return false unless min <= lvl && lvl <= max
-
+    # get actual level
+    ref = shell_out!("/bin/lslpp -L | grep -w #{Regexp.last_match(1)} | awk '{print $2}'", environment: { 'LANG' => 'C' }).stdout
+    lvl_a = ref.split('.')
+    lvl = SpLevel.new(lvl_a[0], lvl_a[1], lvl_a[2], lvl_a[3])
+  
+    min_a = Regexp.last_match(2).split('.')
+    min = SpLevel.new(min_a[0], min_a[1], min_a[2], min_a[3])
+    max_a = Regexp.last_match(3).split('.')
+    max = SpLevel.new(max_a[0], max_a[1], max_a[2], max_a[3])
+    Chef::Log.debug("#{src}: #{lvl} #{min} #{max}")
+    return false unless min <= lvl && lvl <= max
+  end
   true
 end
 
@@ -374,7 +376,7 @@ action :patch do
 
   # loop on clients
   target_list.each do |m|
-	# run flrtvc
+    # run flrtvc
     begin
       out = run_flrtvc(m)
     rescue Mixlib::ShellOut::ShellCommandFailed => e
@@ -438,7 +440,7 @@ action :patch do
           Chef::Log.info("[STDERR] #{line.chomp}")
         end
         if so.error?
-          puts so.stderr
+          # STDERR.puts so.stderr
           Chef::Log.warn("#{m} failed installing some efixes. See /var/adm/ras/emgr.log for details")
         end
       end
@@ -450,7 +452,7 @@ action :patch do
         begin
           nim.perform_efix_customization(lpp_source, m)
         rescue NimCustError => e
-          $stderr.puts e.message
+          STDERR.puts e.message
           Chef::Log.warn("#{m} failed installing some efixes. See /var/adm/ras/emgr.log on #{m} for details")
         end
         nim.remove_resource(lpp_source) if clean == true
