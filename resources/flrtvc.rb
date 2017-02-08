@@ -291,7 +291,7 @@ def check_level_prereq?(src)
     return false unless line =~ /^(.*?)\s+(.*?)\s+(.*?)$/
 
     # get actual level
-    ref = shell_out!("/bin/lslpp -L | grep -w #{Regexp.last_match(1)} | awk '{print $2}'", environment: { 'LANG' => 'C' }).stdout
+    ref = shell_out!("/bin/lslpp -Lcq | grep -w #{Regexp.last_match(1)} | cut -d: -f3", environment: { 'LANG' => 'C' }).stdout
     lvl_a = ref.split('.')
     lvl = SpLevel.new(lvl_a[0], lvl_a[1], lvl_a[2], lvl_a[3])
   
@@ -329,7 +329,7 @@ action :install do
   end
 
   unless ::File.exist?('/usr/bin/flrtvc.ksh')
-    name = 'FLRTVC-0.7.zip'
+    name = 'FLRTVC-latest.zip'
     flrtvc_file = "#{Chef::Config[:file_cache_path]}/#{name}"
     # download flrtvc
     remote_file flrtvc_file.to_s do
