@@ -152,7 +152,8 @@ def parse_report_csv(m, s)
   end
   filesets.uniq!
   urls = arr.select { |url| url['Download URL'] =~ %r{^(http|https|ftp)://(aix.software.ibm.com|public.dhe.ibm.com)/(aix/ifixes/.*?/|aix/efixes/security/.*?.tar)$} }
-  urls.uniq! { |url| url['Download URL'] }
+  # remove duplicates and sort reverse order to have more recent ones first.
+  urls.uniq! { |url| url['Download URL'] }.sort! { |a, b| a['Download URL'] <=> b['Download URL'] }.reverse!
   Chef::Log.debug("urls = #{urls}")
   Chef::Log.warn("[#{m}] Found #{urls.size} different download links over #{arr.size} vulnerabilities and #{filesets.size} filesets")
   urls
@@ -178,6 +179,7 @@ def download_and_check_fixes(m, urls, to)
         http.open_timeout = 10
         res = http.start() { |http| http.get(uri.path) }
         if res.kind_of?(Net::HTTPResponse)
+          found = false
           res.body.each_line do |l|
             next unless l =~ %r{<a href="(.*?.epkg.Z)">(.*?.epkg.Z)</a>}
             filename = url + Regexp.last_match(1)
@@ -192,9 +194,11 @@ def download_and_check_fixes(m, urls, to)
             next unless check_level_prereq?(path)
 
             print "... MATCH PREREQ\n"
+            found = true
             item['Filename'] = path
             break
           end
+          print "... NO MATCH\n" unless found
         end
       when 'ftp'
         ftp = Net::FTP.new
@@ -203,6 +207,7 @@ def download_and_check_fixes(m, urls, to)
         ftp.chdir(dir)
         files = ftp.nlst
         ftp.close
+        found = false
         files.each do |file|
           filename = url + file
           path = dir_name + '/' + file
@@ -216,9 +221,11 @@ def download_and_check_fixes(m, urls, to)
           next unless check_level_prereq?(path)
 
           print "... MATCH PREREQ\n"
+          found = true
           item['Filename'] = path
           break
         end
+        print "... NO MATCH\n" unless found
       end
     elsif url.end_with?('.tar')
       dir_name = to + '/efixes/' + fileset + '/' + url.split('/')[-2]
@@ -231,22 +238,20 @@ def download_and_check_fixes(m, urls, to)
 
       # untar
       print "\033[2K\rUntarring #{count}/#{total} fixes."
-      begin
-        shell_out!("/bin/tar -xf #{path} -C #{dir_name} `tar -tf #{path} | grep epkg.Z$`")
-      rescue
-        increase_filesystem(dir_name)
-        shell_out("/bin/tar -xf #{path} -C #{dir_name} `tar -tf #{path} | grep epkg.Z$`")
-      end
+      untar(path, dir_name)
 
       # check level prereq
+      found = false
       Dir.glob(dir_name + '/' + url.split('/')[-1].split('.')[0] + '/*').each do |f|
         print "\033[2K\rChecking #{count}/#{total} fixes. (#{url}:#{f.split('/')[-1]})"
         next unless check_level_prereq?(f)
 
         print "... MATCH PREREQ\n"
+        found = true
         item['Filename'] = f
         break
       end
+      print "... NO MATCH\n" unless found
     elsif url.end_with?('.epkg.Z')
       dir_name = to + '/efixes/' + fileset + '/' + url.split('/')[-2]
       ::FileUtils.mkdir_p(dir_name) unless ::File.directory?(dir_name)
@@ -258,10 +263,12 @@ def download_and_check_fixes(m, urls, to)
 
       # check level prereq
       print "\033[2K\rChecking #{count}/#{total} fixes. (#{url})"
-      next unless check_level_prereq?(path)
-
-      print "... MATCH PREREQ\n"
-      item['Filename'] = path
+      if check_level_prereq?(path)
+        print "... MATCH PREREQ\n"
+        item['Filename'] = path
+      else
+        print "... NO MATCH\n"
+      end
     end
   end # end urls
   print "\n"
@@ -277,10 +284,17 @@ def download(src, dst)
       ::IO.copy_stream(open(src), f)
     end
   end
-rescue
+rescue Errno::ENOSPC
   increase_filesystem(dst)
   ::File.delete(dst)
   download(src, dst)
+end
+
+def untar(src, dest)
+  shell_out!("/bin/tar -xf #{src} -C #{dest} `tar -tf #{src} | grep epkg.Z$`")
+rescue Errno::ENOSPC
+  increase_filesystem(dir_name)
+  shell_out("/bin/tar -xf #{src} -C #{dest} `tar -tf #{src} | grep epkg.Z$`")
 end
 
 def check_level_prereq?(src)
@@ -362,9 +376,11 @@ action :patch do
   Chef::Log.debug("apar=#{apar}")
   Chef::Log.debug("filesets=#{filesets}")
   Chef::Log.debug("csv=#{csv}")
+  Chef::Log.debug("path=#{path}")
 
   check_flrtvc
 
+  # create directory based on date/time
   base_dir = "#{Chef::Config[:file_cache_path]}/#{Time.now.to_s.gsub(/[:\s-]/, '_')}"
   ::FileUtils.mkdir_p(base_dir)
 
@@ -415,10 +431,10 @@ action :patch do
 
     # copy efix
     efixes.each do |efix|
-      converge_by("[#{m}] #{efix['Type']} fix '#{efix['Filename'].split('/')[-1]}' meets level pre-requisite") do
+      converge_by("[#{m}] #{efix['Type']} fix '#{efix['Filename'].split('/')[-1]}' meets level pre-requisite for fileset '#{efix['Fileset']}'") do
         begin
           ::FileUtils.cp_r(efix['Filename'], lpp_source_dir)
-        rescue
+        rescue Errno::ENOSPC
           increase_filesystem(lpp_source_dir)
           ::FileUtils.cp_r(efix['Filename'], lpp_source_dir)
         end
