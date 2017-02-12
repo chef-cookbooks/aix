@@ -24,6 +24,9 @@ module AIX
       nodes['machine'] = node['nim']['clients'].keys
       nodes['oslevel'] = node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
       nodes['Cstate'] = node['nim']['clients'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }
+      #nodes['machine'].push(node['nim']['vioses'].keys)
+      #nodes['oslevel'].push(node['nim']['vioses'].values.collect { |m| m.fetch('oslevel', nil) })
+      #nodes['Cstate'].push(node['nim']['vioses'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) })
       nodes['machine'].push('master')
       nodes['oslevel'].push(node['nim']['master']['oslevel'])
       print_hash_by_columns(nodes)
@@ -427,13 +430,18 @@ module AIX
         puts "\nStart patching machine(s) '#{client}'."
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line do |line|
-            print "\033[2K\r#{line.chomp}" if line =~ /^Processing Efix Package .*?[0-9]+ of .*?[0-9]+.$/
-            puts line if line =~ /(^EPKG NUMBER|^===========|INSTALL)/
-            log_info("[STDOUT] #{line.chomp}")
+            line.chomp!
+            print "\033[2K\r#{line}" if line =~ /^Processing Efix Package [0-9]+ of [0-9]+.$/
+            puts "\n#{line}" if line =~ /^EPKG NUMBER/
+            puts line if line =~ /^===========/
+            puts "\033[0;31m#{line}\033[0m" if line =~ /INSTALL.*?FAILURE/
+            puts "\033[0;32m#{line}\033[0m" if line =~ /INSTALL.*?SUCCESS/
+            log_info("[STDOUT] #{line}")
           end
           stderr.each_line do |line|
+            line.chomp!
             STDERR.puts line
-            log_info("[STDERR] #{line.chomp}")
+            log_info("[STDERR] #{line}")
           end
           wait_thr.value # Process::Status object returned.
         end
