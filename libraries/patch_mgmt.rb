@@ -424,8 +424,8 @@ module AIX
         log_info("Done nim customize operation \"#{nim_s}\"")
       end
 
-      def perform_efix_customization(lpp_source, client)
-        nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a filesets=all #{client}"
+      def perform_efix_customization(lpp_source, client, filesets = 'all')
+        nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a filesets='#{filesets}' #{client}"
         log_debug("NIM cust operation: #{nim_s}")
         puts "\nStart patching machine(s) '#{client}'."
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
@@ -440,7 +440,7 @@ module AIX
           end
           stderr.each_line do |line|
             line.chomp!
-            STDERR.puts line
+            #STDERR.puts line
             log_info("[STDERR] #{line}")
           end
           wait_thr.value # Process::Status object returned.

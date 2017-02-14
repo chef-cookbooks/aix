@@ -316,7 +316,7 @@ def download_and_check_fixes(m, urls, to)
         end
       end
     rescue Exception => e
-      Chef::Log.warn("An error of type '#{e.class}' happened, message is '#{e.message}' while treating URL: #{url}")
+      Chef::Log.warn("An error of type '#{e.class}' happened while treating URL #{count}/#{total}: #{url}. Message is:\n#{e.message}")
     end
   end # end urls
   print "\n"
@@ -350,6 +350,7 @@ def check_level_prereq?(machine, src)
   so = shell_out!("/usr/sbin/emgr -v3 -d -e #{src} 2>&1 | /bin/grep -p \\\"PREREQ", environment: { 'LANG' => 'C' }).stdout
   so.lines[3..-2].each do |line|
     Chef::Log.debug(line.to_s)
+    next if line.start_with?('#') # skip comments
     return false unless line =~ /^(.*?)\s+(.*?)\s+(.*?)$/
 
     # get actual level
@@ -475,7 +476,8 @@ action :patch do
 
     # create lpp source directory
     lpp_source = "#{m}-lpp_source"
-    lpp_source_dir = base_dir + '/lpp_sources/' + lpp_source + '/emgr/ppc'
+	lpp_source_base_dir = base_dir + '/lpp_sources/' + lpp_source
+    lpp_source_dir = lpp_source_base_dir + '/emgr/ppc'
     unless ::File.directory?(lpp_source_dir)
       converge_by("create directory '#{lpp_source_dir}'") do
         ::FileUtils.mkdir_p(lpp_source_dir)
@@ -483,8 +485,11 @@ action :patch do
     end
 
     # copy efix
+    efixes_basenames = []
     efixes.each do |efix|
-      converge_by("[#{m}] #{efix['Type']} fix '#{efix['Filename'].split('/')[-1]}' meets level pre-requisite for fileset '#{efix['Fileset']}'") do
+      basename = efix['Filename'].split('/')[-1]
+	  efixes_basenames << basename
+      converge_by("[#{m}] #{efix['Type']} fix '#{basename}' meets level pre-requisite for fileset '#{efix['Fileset']}'") do
         begin
           ::FileUtils.cp_r(efix['Filename'], lpp_source_dir)
         rescue Errno::ENOSPC
@@ -496,33 +501,36 @@ action :patch do
 
     if m == 'master'
       # install package
-      converge_by("geninstall: install all efixes from '#{lpp_source_dir}'") do
-        so = shell_out("/usr/sbin/geninstall -d #{lpp_source_dir} all")
-        puts ''
-        so.stdout.each_line do |line|
-          line.chomp!
-          #print "\033[2K\r#{line}" if line =~ /^Processing Efix Package [0-9]+ of [0-9]+.$/
-          puts "\n#{line}" if line =~ /^EPKG NUMBER/
-          puts line if line =~ /^===========/
-          puts "\033[0;31m#{line}\033[0m" if line =~ /INSTALL.*?FAILURE/
-          puts "\033[0;32m#{line}\033[0m" if line =~ /INSTALL.*?SUCCESS/
-          Chef::Log.info("[STDOUT] #{line}")
+      converge_by("geninstall: install all efixes from '#{lpp_source_base_dir}'") do
+	    puts "\nStart patching nim master or local machine."
+        geninstall_s = "/usr/sbin/geninstall -d #{lpp_source_base_dir} #{efixes_basenames.join(' ')}"
+		exit_status = Open3.popen3({ 'LANG' => 'C' }, geninstall_s) do |_stdin, stdout, stderr, wait_thr|
+          stdout.each_line do |line|
+            line.chomp!
+            print "\033[2K\r#{line}" if line =~ /^Processing Efix Package [0-9]+ of [0-9]+.$/
+            puts "\n#{line}" if line =~ /^EPKG NUMBER/
+            puts line if line =~ /^===========/
+            puts "\033[0;31m#{line}\033[0m" if line =~ /INSTALL.*?FAILURE/
+            puts "\033[0;32m#{line}\033[0m" if line =~ /INSTALL.*?SUCCESS/
+            Chef::Log.info("[STDOUT] #{line}")
+          end
+          stderr.each_line do |line|
+            line.chomp!
+            #STDERR.puts line
+            Chef::Log.info("[STDERR] #{line}")
+          end
+          wait_thr.value # Process::Status object returned.
         end
-        so.stderr.each_line do |line|
-          Chef::Log.info("[STDERR] #{line.chomp}")
-        end
-        if so.error?
-          # STDERR.puts so.stderr
-          Chef::Log.warn("#{m} failed installing some efixes. See /var/adm/ras/emgr.log for details")
-        end
+        puts "\nFinish patching nim master or local machine."
+        Chef::Log.warn("#{m} failed installing some efixes. See /var/adm/ras/emgr.log for details") unless exit_status.success?
       end
     else
       # create lpp source, patch and remove it
       converge_by("nim: perform synchronous software customization for client \'#{m}\' with resource \'#{lpp_source}\'") do
         nim = Nim.new
-        nim.define_lpp_source(lpp_source, lpp_source_dir) unless nim.exist?(lpp_source)
+        nim.define_lpp_source(lpp_source, lpp_source_base_dir) unless nim.exist?(lpp_source)
         begin
-          nim.perform_efix_customization(lpp_source, m)
+          nim.perform_efix_customization(lpp_source, m, efixes_basenames.join(' '))
         rescue NimCustError => e
           STDERR.puts e.message
           Chef::Log.warn("#{m} failed installing some efixes. See /var/adm/ras/emgr.log on #{m} for details")
