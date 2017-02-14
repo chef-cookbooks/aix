@@ -336,6 +336,9 @@ rescue Errno::ENOSPC
   increase_filesystem(dst)
   ::File.delete(dst)
   download(src, dst)
+rescue Exception => e
+  Chef::Log.warn("Propagating exception of type '#{e.class}' when downloading!")
+  raise e
 end
 
 def untar(src, dest)
@@ -343,6 +346,9 @@ def untar(src, dest)
 rescue Mixlib::ShellOut::ShellCommandFailed => e
   increase_filesystem(dest) if e.message =~ /No space left on device/
   shell_out("/bin/tar -xf #{src} -C #{dest} `/bin/tar -tf #{src} | /bin/grep epkg.Z$`")
+rescue Exception => e
+  Chef::Log.warn("Propagating exception of type '#{e.class}' when untarring!")
+  raise e
 end
 
 def check_level_prereq?(machine, src)
@@ -371,6 +377,9 @@ def check_level_prereq?(machine, src)
     return false unless min <= lvl && lvl <= max
   end
   true
+rescue Exception => e
+  Chef::Log.warn("Propagating exception of type '#{e.class}' when checking!")
+  raise e
 end
 
 ##############################
@@ -476,7 +485,7 @@ action :patch do
 
     # create lpp source directory
     lpp_source = "#{m}-lpp_source"
-	lpp_source_base_dir = base_dir + '/lpp_sources/' + lpp_source
+    lpp_source_base_dir = base_dir + '/lpp_sources/' + lpp_source
     lpp_source_dir = lpp_source_base_dir + '/emgr/ppc'
     unless ::File.directory?(lpp_source_dir)
       converge_by("create directory '#{lpp_source_dir}'") do
@@ -488,7 +497,7 @@ action :patch do
     efixes_basenames = []
     efixes.each do |efix|
       basename = efix['Filename'].split('/')[-1]
-	  efixes_basenames << basename
+      efixes_basenames << basename
       converge_by("[#{m}] #{efix['Type']} fix '#{basename}' meets level pre-requisite for fileset '#{efix['Fileset']}'") do
         begin
           ::FileUtils.cp_r(efix['Filename'], lpp_source_dir)
@@ -502,9 +511,9 @@ action :patch do
     if m == 'master'
       # install package
       converge_by("geninstall: install all efixes from '#{lpp_source_base_dir}'") do
-	    puts "\nStart patching nim master or local machine."
+        puts "\nStart patching nim master or local machine."
         geninstall_s = "/usr/sbin/geninstall -d #{lpp_source_base_dir} #{efixes_basenames.join(' ')}"
-		exit_status = Open3.popen3({ 'LANG' => 'C' }, geninstall_s) do |_stdin, stdout, stderr, wait_thr|
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, geninstall_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line do |line|
             line.chomp!
             print "\033[2K\r#{line}" if line =~ /^Processing Efix Package [0-9]+ of [0-9]+.$/
