@@ -51,6 +51,9 @@ end
 class FlrtvcNotFound < StandardError
 end
 
+class URLNotMatch < StandardError
+end
+
 class InvalidAparProperty < StandardError
 end
 
@@ -100,8 +103,8 @@ def run_flrtvc(m)
   csv_s = validate_csv(csv)
   Chef::Log.debug("csv_s: #{csv_s}")
 
-  lslpp_file = "#{Chef::Config[:file_cache_path]}/lslpp_#{m}.txt"
-  emgr_file = "#{Chef::Config[:file_cache_path]}/emgr_#{m}.txt"
+  lslpp_file = ::File.join(Chef::Config[:file_cache_path], "lslpp_#{m}.txt")
+  emgr_file = ::File.join(Chef::Config[:file_cache_path], "emgr_#{m}.txt")
 
   if m == 'master'
     # execute lslpp -Lcq
@@ -122,7 +125,7 @@ def run_flrtvc(m)
   # write report file
   unless path.nil?
     ::FileUtils.mkdir_p(path) unless ::File.directory?(path)
-    flrtvc_file = "#{path}/#{m}.flrtvc"
+    flrtvc_file = ::File.join(path, "#{m}.flrtvc")
     ::IO.write(flrtvc_file, verbose == true ? out_v : out_c)
     Chef::Log.warn("[#{m}] Flrtvc report has been saved to '#{flrtvc_file}'")
   end
@@ -162,6 +165,128 @@ def parse_report_csv(m, s)
   urls
 end
 
+def fact(m, url, to, count, total, fileset)
+  filename = nil
+  raise URLNotMatch "link: #{url}" unless %r{^(?<protocol>.*?)://(?<srv>.*?)/(?<dir>.*)/(?<name>.*)$} =~ url
+
+  # create directory to store downloads
+  dir_name = ::File.join(to, 'efixes', fileset, dir.split('/')[-1])
+  ::FileUtils.mkdir_p(dir_name) unless ::File.directory?(dir_name)
+
+  if name.empty?
+    #############################################
+    # URL ends with /, look into that directory #
+    #############################################
+    case protocol
+    when 'http', 'https'
+      uri = URI(url)
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.read_timeout = 10
+      http.open_timeout = 10
+      http.use_ssl = true if protocol.eql?('https')
+      http.verify_mode = OpenSSL::SSL::VERIFY_NONE if protocol.eql?('https')
+      req = Net::HTTP::Get.new(uri.request_uri)
+      res = http.request(req)
+      if res.kind_of?(Net::HTTPResponse)
+        found = false
+        res.body.each_line do |l|
+          next unless l =~ %r{<a href="(.*?.epkg.Z)">(.*?.epkg.Z)</a>}
+          f = ::File.join(url, Regexp.last_match(1))
+          path = ::File.join(dir_name, Regexp.last_match(1))
+
+          # download file
+          print "\033[2K\rDownloading #{count}/#{total} fixes. (#{f})"
+          download(f, path)
+
+          # check level prereq
+          print "\033[2K\rChecking #{count}/#{total} fixes. (#{f})"
+          next unless check_level_prereq?(m, path)
+
+          print "... MATCH PREREQ\n"
+          found = true
+          filename = path
+          break
+        end
+        print "... NO MATCH\n" unless found
+      end
+    when 'ftp'
+      files = []
+      Net::FTP.open(srv) do |ftp|
+        ftp.login
+        ftp.read_timeout = 300
+        files = ftp.nlst(dir)
+        found = false
+        files.each do |file|
+          f = ::File.join(url, ::File.basename(file))
+          path = ::File.join(dir_name, ::File.basename(file))
+
+          # download file
+          print "\033[2K\rDownloading #{count}/#{total} fixes. (#{f})"
+          ftp.getbinaryfile(file, path)
+          #download(f, path)
+
+          # check level prereq
+          print "\033[2K\rChecking #{count}/#{total} fixes. (#{f})"
+          next unless check_level_prereq?(m, path)
+
+          print "... MATCH PREREQ\n"
+          found = true
+          filename = path
+          break
+        end
+        print "... NO MATCH\n" unless found
+      end
+    end
+
+  elsif name.end_with?('.tar')
+    #####################
+    # URL is a tar file #
+    #####################
+    path = ::File.join(dir_name, name)
+
+    # download file
+    print "\033[2K\rDownloading #{count}/#{total} fixes. (#{url})"
+    download(url, path)
+
+    # untar
+    print "\033[2K\rUntarring #{count}/#{total} fixes."
+    untar(path, dir_name)
+
+    # check level prereq
+    found = false
+    Dir.glob(::File.join(dir_name, url.split('/')[-1].split('.')[0], '*')).each do |f|
+      print "\033[2K\rChecking #{count}/#{total} fixes. (#{url}:#{f.split('/')[-1]})"
+      next unless check_level_prereq?(m, f)
+
+      print "... MATCH PREREQ\n"
+      found = true
+      filename = f
+      break
+    end
+    print "... NO MATCH\n" unless found
+
+  elsif name.end_with?('.epkg.Z')
+    #######################
+    # URL is an efix file #
+    #######################
+    path = ::File.join(dir_name, name)
+
+    # download file
+    print "\033[2K\rDownloading #{count}/#{total} fixes. (#{url})"
+    download(url, path)
+
+    # check level prereq
+    print "\033[2K\rChecking #{count}/#{total} fixes. (#{url})"
+    if check_level_prereq?(m, path)
+      print "... MATCH PREREQ\n"
+      filename = path
+    else
+      print "... NO MATCH\n"
+    end
+  end
+  filename
+end
+
 def download_and_check_fixes(m, urls, to)
   print "\n"
   count = 0
@@ -172,151 +297,11 @@ def download_and_check_fixes(m, urls, to)
     count += 1
 
     begin
-      if %r{^(?<protocol>.*?)://(?<srv>.*?)/(?<dir>.*)/$} =~ url
-        dir_name = to + '/efixes/' + fileset + '/' + url.split('/')[-1]
-        ::FileUtils.mkdir_p(dir_name) unless ::File.directory?(dir_name)
-        case protocol
-        when 'http'
-          uri = URI(url)
-          ### 1
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.read_timeout = 10
-          http.open_timeout = 10
-          req = Net::HTTP::Get.new(uri.request_uri)
-          res = http.request(req)
-          ### 2
-          #http = Net::HTTP.new(uri.host, uri.port)
-          #http.read_timeout = 10
-          #http.open_timeout = 10
-          #res = http.start() { |http| http.get(uri.path) }
-          ### 3
-          #res = Net::HTTP.get_response(uri)
-          ###
-          if res.kind_of?(Net::HTTPResponse)
-            found = false
-            res.body.each_line do |l|
-              next unless l =~ %r{<a href="(.*?.epkg.Z)">(.*?.epkg.Z)</a>}
-              filename = url + Regexp.last_match(1)
-              path = dir_name + '/' + Regexp.last_match(1)
-
-              # download file
-              print "\033[2K\rDownloading #{count}/#{total} fixes. (#{filename})"
-              download(filename, path)
-
-              # check level prereq
-              print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename})"
-              next unless check_level_prereq?(m, path)
-
-              print "... MATCH PREREQ\n"
-              found = true
-              item['Filename'] = path
-              break
-            end
-            print "... NO MATCH\n" unless found
-          end
-        when 'https'
-          uri = URI(url)
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.read_timeout = 10
-          http.open_timeout = 10
-          http.use_ssl = true
-          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-          req = Net::HTTP::Get.new(uri.request_uri)
-          res = http.request(req)
-          if res.kind_of?(Net::HTTPResponse)
-            found = false
-            res.body.each_line do |l|
-              next unless l =~ %r{<a href="(.*?.epkg.Z)">(.*?.epkg.Z)</a>}
-              filename = url + Regexp.last_match(1)
-              path = dir_name + '/' + Regexp.last_match(1)
-
-              # download file
-              print "\033[2K\rDownloading #{count}/#{total} fixes. (#{filename})"
-              download(filename, path)
-
-              # check level prereq
-              print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename})"
-              next unless check_level_prereq?(m, path)
-
-              print "... MATCH PREREQ\n"
-              found = true
-              item['Filename'] = path
-              break
-            end
-            print "... NO MATCH\n" unless found
-          end
-        when 'ftp'
-          ftp = Net::FTP.new
-          ftp.connect(srv)
-          ftp.login
-          ftp.chdir(dir)
-          files = ftp.nlst
-          ftp.close
-          found = false
-          files.each do |file|
-            filename = url + file
-            path = dir_name + '/' + file
-
-            # download file
-            print "\033[2K\rDownloading #{count}/#{total} fixes. (#{filename})"
-            download(filename, path)
-
-            # check level prereq
-            print "\033[2K\rChecking #{count}/#{total} fixes. (#{filename})"
-            next unless check_level_prereq?(m, path)
-
-            print "... MATCH PREREQ\n"
-            found = true
-            item['Filename'] = path
-            break
-          end
-          print "... NO MATCH\n" unless found
-        end
-      elsif url.end_with?('.tar')
-        dir_name = to + '/efixes/' + fileset + '/' + url.split('/')[-2]
-        ::FileUtils.mkdir_p(dir_name) unless ::File.directory?(dir_name)
-        path = dir_name + '/' + url.split('/')[-1]
-
-        # download file
-        print "\033[2K\rDownloading #{count}/#{total} fixes. (#{url})"
-        download(url, path)
-
-        # untar
-        print "\033[2K\rUntarring #{count}/#{total} fixes."
-        untar(path, dir_name)
-
-        # check level prereq
-        found = false
-        Dir.glob(dir_name + '/' + url.split('/')[-1].split('.')[0] + '/*').each do |f|
-          print "\033[2K\rChecking #{count}/#{total} fixes. (#{url}:#{f.split('/')[-1]})"
-          next unless check_level_prereq?(m, f)
-
-          print "... MATCH PREREQ\n"
-          found = true
-          item['Filename'] = f
-          break
-        end
-        print "... NO MATCH\n" unless found
-      elsif url.end_with?('.epkg.Z')
-        dir_name = to + '/efixes/' + fileset + '/' + url.split('/')[-2]
-        ::FileUtils.mkdir_p(dir_name) unless ::File.directory?(dir_name)
-        path = dir_name + '/' + url.split('/')[-1]
-
-        # download file
-        print "\033[2K\rDownloading #{count}/#{total} fixes. (#{url})"
-        download(url, path)
-
-        # check level prereq
-        print "\033[2K\rChecking #{count}/#{total} fixes. (#{url})"
-        if check_level_prereq?(m, path)
-          print "... MATCH PREREQ\n"
-          item['Filename'] = path
-        else
-          print "... NO MATCH\n"
-        end
-      end
+      item['Filename'] = fact(m, url, to, count, total, fileset)
     rescue Exception => e
       Chef::Log.warn("An error of type '#{e.class}' happened while treating URL #{count}/#{total}: #{url}. Message is:\n#{e.message}")
+      Chef::Log.warn("Retrying ...")
+      item['Filename'] = fact(m, url, to, count, total, fileset)
     end
   end # end urls
   print "\n"
@@ -342,10 +327,15 @@ rescue Exception => e
 end
 
 def untar(src, dest)
-  shell_out!("/bin/tar -xf #{src} -C #{dest} `/bin/tar -tf #{src} | /bin/grep epkg.Z$`")
+  shell_out!("/bin/tar -xf #{src} -C #{dest} `/bin/tar -tf #{src} | /bin/grep epkg.Z$`", environment: { 'LANG' => 'C' })
 rescue Mixlib::ShellOut::ShellCommandFailed => e
-  increase_filesystem(dest) if e.message =~ /No space left on device/
-  shell_out("/bin/tar -xf #{src} -C #{dest} `/bin/tar -tf #{src} | /bin/grep epkg.Z$`")
+  if e.message =~ /No space left on device/
+    increase_filesystem(dest)
+    untar(src, dest)
+  else
+    Chef::Log.warn("Propagating exception of type '#{e.class}' when untarring!")
+    raise e
+  end
 rescue Exception => e
   Chef::Log.warn("Propagating exception of type '#{e.class}' when untarring!")
   raise e
@@ -353,7 +343,7 @@ end
 
 def check_level_prereq?(machine, src)
   # get min/max level
-  so = shell_out!("/usr/sbin/emgr -v3 -d -e #{src} 2>&1 | /bin/grep -p \\\"PREREQ", environment: { 'LANG' => 'C' }).stdout
+  so = shell_out!("/usr/sbin/emgr -dXv3 -e #{src} | /bin/grep -p \\\"PREREQ", environment: { 'LANG' => 'C' }).stdout
   so.lines[3..-2].each do |line|
     Chef::Log.debug(line.to_s)
     next if line.start_with?('#') # skip comments
@@ -365,7 +355,8 @@ def check_level_prereq?(machine, src)
     #else
     #  ref = shell_out!("/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{machine} \"/bin/lslpp -Lcq #{Regexp.last_match(1)} | /bin/cut -d: -f3\"", environment: { 'LANG' => 'C' }).stdout
     #end
-    ref = shell_out!("/bin/cat #{Chef::Config[:file_cache_path]}/lslpp_#{machine}.txt | /bin/grep -w #{Regexp.last_match(1)} | /bin/cut -d: -f3\"", environment: { 'LANG' => 'C' }).stdout
+    lslpp_file = ::File.join(Chef::Config[:file_cache_path], "lslpp_#{machine}.txt")
+    ref = shell_out!("/bin/cat #{lslpp_file} | /bin/grep -w #{Regexp.last_match(1)} | /bin/cut -d: -f3\"", environment: { 'LANG' => 'C' }).stdout
     lvl_a = ref.split('.')
     lvl = SpLevel.new(lvl_a[0], lvl_a[1], lvl_a[2], lvl_a[3])
 
@@ -387,7 +378,7 @@ end
 ##############################
 action :install do
   if Mixlib::ShellOut.new('which unzip').run_command.error?
-    unzip_file = "#{Chef::Config[:file_cache_path]}/unzip-6.0-3.aix6.1.ppc.rpm"
+    unzip_file = ::File.join(Chef::Config[:file_cache_path], 'unzip-6.0-3.aix6.1.ppc.rpm')
 
     # download unzip
     remote_file unzip_file.to_s do
@@ -407,7 +398,7 @@ action :install do
 
   unless ::File.exist?('/usr/bin/flrtvc.ksh')
     name = 'FLRTVC-latest.zip'
-    flrtvc_file = "#{Chef::Config[:file_cache_path]}/#{name}"
+    flrtvc_file = ::File.join(Chef::Config[:file_cache_path], name)
     # download flrtvc
     remote_file flrtvc_file.to_s do
       source "https://www-304.ibm.com/webapp/set2/sas/f/flrt3/#{name}"
@@ -443,8 +434,10 @@ action :patch do
 
   check_flrtvc
 
+  puts ''
+
   # create directory based on date/time
-  base_dir = "#{Chef::Config[:file_cache_path]}/#{Time.now.to_s.gsub(/[:\s-]/, '_')}"
+  base_dir = ::File.join(Chef::Config[:file_cache_path], Time.now.to_s.gsub(/[:\s-]/, '_'))
   ::FileUtils.mkdir_p(base_dir)
 
   # build list of targets
@@ -459,7 +452,7 @@ action :patch do
     begin
       out = run_flrtvc(m)
     rescue Mixlib::ShellOut::ShellCommandFailed => e
-      Chef::Log.warn("#{m} cannot be contacted")
+      Chef::Log.warn("[#{m}] Cannot be contacted")
       next # target unreachable
     end
 
@@ -467,7 +460,7 @@ action :patch do
     urls = parse_report_csv(m, out)
     Chef::Log.info("urls: #{urls}")
     if urls.empty?
-      Chef::Log.warn("#{m} does not have known vulnerabilities")
+      Chef::Log.warn("[#{m}] Does not have known vulnerabilities")
       next # target up-to-date
     end
 
@@ -477,7 +470,7 @@ action :patch do
     efixes = download_and_check_fixes(m, urls, base_dir)
     Chef::Log.debug("efixes: #{efixes}")
     if efixes.empty?
-      Chef::Log.warn("#{m} have #{urls.size} vulnerabilities but none meet pre-requisites")
+      Chef::Log.warn("[#{m}] Have #{urls.size} vulnerabilities but none meet pre-requisites")
       next
     end
 
@@ -485,8 +478,8 @@ action :patch do
 
     # create lpp source directory
     lpp_source = "#{m}-lpp_source"
-    lpp_source_base_dir = base_dir + '/lpp_sources/' + lpp_source
-    lpp_source_dir = lpp_source_base_dir + '/emgr/ppc'
+    lpp_source_base_dir = ::File.join(base_dir, 'lpp_sources', lpp_source)
+    lpp_source_dir = ::File.join(lpp_source_base_dir, 'emgr', 'ppc')
     unless ::File.directory?(lpp_source_dir)
       converge_by("create directory '#{lpp_source_dir}'") do
         ::FileUtils.mkdir_p(lpp_source_dir)
@@ -525,13 +518,26 @@ action :patch do
           end
           stderr.each_line do |line|
             line.chomp!
-            #STDERR.puts line
+            STDERR.puts line
             Chef::Log.info("[STDERR] #{line}")
           end
           wait_thr.value # Process::Status object returned.
         end
         puts "\nFinish patching nim master or local machine."
-        Chef::Log.warn("#{m} failed installing some efixes. See /var/adm/ras/emgr.log for details") unless exit_status.success?
+        Chef::Log.warn("[#{m}] Failed installing some efixes. See /var/adm/ras/emgr.log for details") unless exit_status.success?
+      end
+    elsif m =~ /vios/
+      # create lpp source, patch and remove it
+      converge_by("nim: perform synchronous software customization for vios \'#{m}\' with resource \'#{lpp_source}\'") do
+        nim = Nim.new
+        nim.define_lpp_source(lpp_source, lpp_source_base_dir) unless nim.exist?(lpp_source)
+        begin
+          nim.perform_efix_vios_customization(lpp_source, m, efixes_basenames.join(' '))
+        rescue NimCustError => e
+          STDERR.puts e.message
+          Chef::Log.warn("[#{m}] Failed installing some efixes. See /var/adm/ras/emgr.log on #{m} for details")
+        end
+        nim.remove_resource(lpp_source) if clean == true
       end
     else
       # create lpp source, patch and remove it
@@ -542,7 +548,7 @@ action :patch do
           nim.perform_efix_customization(lpp_source, m, efixes_basenames.join(' '))
         rescue NimCustError => e
           STDERR.puts e.message
-          Chef::Log.warn("#{m} failed installing some efixes. See /var/adm/ras/emgr.log on #{m} for details")
+          Chef::Log.warn("[#{m}] Failed installing some efixes. See /var/adm/ras/emgr.log on #{m} for details")
         end
         nim.remove_resource(lpp_source) if clean == true
       end

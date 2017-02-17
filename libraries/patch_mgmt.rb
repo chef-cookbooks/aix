@@ -24,9 +24,20 @@ module AIX
       nodes['machine'] = node['nim']['clients'].keys
       nodes['oslevel'] = node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
       nodes['Cstate'] = node['nim']['clients'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }
-      #nodes['machine'].push(node['nim']['vioses'].keys)
-      #nodes['oslevel'].push(node['nim']['vioses'].values.collect { |m| m.fetch('oslevel', nil) })
-      #nodes['Cstate'].push(node['nim']['vioses'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) })
+      nodes['machine'].push('master')
+      nodes['oslevel'].push(node['nim']['master']['oslevel'])
+      print_hash_by_columns(nodes)
+    end
+
+    def clients_and_vios(node)
+      check_nim_info(node)
+      nodes = Hash.new { |h, k| h[k] = {} }
+      nodes['machine'] = node['nim']['clients'].keys
+      nodes['oslevel'] = node['nim']['clients'].values.collect { |m| m.fetch('oslevel', nil) }
+      nodes['Cstate'] = node['nim']['clients'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }
+      nodes['machine'].push(*node['nim']['vioses'].keys.flatten)
+      nodes['oslevel'].push(*node['nim']['vioses'].values.collect { |m| m.fetch('oslevel', nil) }.flatten)
+      nodes['Cstate'].push(*node['nim']['vioses'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }.flatten)
       nodes['machine'].push('master')
       nodes['oslevel'].push(node['nim']['master']['oslevel'])
       print_hash_by_columns(nodes)
@@ -45,7 +56,7 @@ module AIX
           ::File.open(file) do |f|
             s = f.read
             #### BUG SUMA WORKAROUND ###
-            s = s.encode("UTF-8", 'binary', :invalid => :replace, :undef => :replace, :replace => '')
+            s = s.encode('UTF-8', 'binary', :invalid => :replace, :undef => :replace, :replace => '')
             ########## END #############
             lvl = Regexp.last_match(1) if s.to_s =~ /^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2})/
             lvl = Regexp.last_match(1) if s.to_s =~ /^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/
@@ -429,6 +440,12 @@ module AIX
         log_debug("NIM cust operation: #{nim_s}")
         puts "\nStart patching machine(s) '#{client}'."
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
+           thr = Thread.new do
+            loop do
+              print "."
+              sleep 3
+            end
+          end
           stdout.each_line do |line|
             line.chomp!
             print "\033[2K\r#{line}" if line =~ /^Processing Efix Package [0-9]+ of [0-9]+.$/
@@ -440,12 +457,45 @@ module AIX
           end
           stderr.each_line do |line|
             line.chomp!
-            #STDERR.puts line
+            STDERR.puts line
             log_info("[STDERR] #{line}")
           end
+          thr.exit
           wait_thr.value # Process::Status object returned.
         end
         puts "\nFinish patching #{client}."
+        raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success?
+      end
+
+      def perform_efix_vios_customization(lpp_source, vios, filesets = 'all')
+        nim_s = "/usr/sbin/nim -o updateios -a preview=no -a lpp_source=#{lpp_source} #{vios}"
+        log_debug("NIM updateios operation: #{nim_s}")
+        puts "\nStart patching machine(s) '#{vios}'."
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
+           thr = Thread.new do
+            loop do
+              print "."
+              sleep 3
+            end
+          end
+          stdout.each_line do |line|
+            line.chomp!
+            print "\033[2K\r#{line}" if line =~ /^Processing Efix Package [0-9]+ of [0-9]+.$/
+            puts "\n#{line}" if line =~ /^EPKG NUMBER/
+            puts line if line =~ /^===========/
+            puts "\033[0;31m#{line}\033[0m" if line =~ /INSTALL.*?FAILURE/
+            puts "\033[0;32m#{line}\033[0m" if line =~ /INSTALL.*?SUCCESS/
+            log_info("[STDOUT] #{line}")
+          end
+          stderr.each_line do |line|
+            line.chomp!
+            STDERR.puts line
+            log_info("[STDERR] #{line}")
+          end
+          thr.exit
+          wait_thr.value # Process::Status object returned.
+        end
+        puts "\nFinish patching #{vios}."
         raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success?
       end
     end
@@ -537,7 +587,7 @@ module AIX
         end
       end
       raise InvalidTargetsProperty, "Error: cannot contact any machines in '#{targets}'" if selected_machines.empty?
-      selected_machines = selected_machines.sort.uniq
+      selected_machines = selected_machines.uniq
       log_info("List of targets expanded to #{selected_machines}")
       selected_machines
     end

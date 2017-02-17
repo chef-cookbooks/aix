@@ -5,7 +5,7 @@ Chef::Recipe.send(:include, AIX::PatchMgmt)
 
 puts '#########################################################'
 puts 'Available machines and their corresponding oslevel are:'
-puts clients(node)
+puts clients_and_vios(node)
 puts 'Choose one or more (comma or space separated) to update?'
 client = STDIN.readline.chomp
 
