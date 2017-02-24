@@ -53,7 +53,7 @@ def compute_rq_type
       rq_type = 'TL'
     elsif oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
       rq_type = 'SP'
-    elsif oslevel.empty? || oslevel.casecmp('latest').zero?
+    elsif oslevel.empty? || oslevel.casecmp('latest') == 0
       rq_type = 'Latest'
     else
       raise InvalidOsLevelProperty, 'SUMA-SUMA-SUMA oslevel is not recognized'
@@ -309,7 +309,7 @@ action :download do
     end
   end
 
-  unless preview_dl.to_f.zero?
+  unless preview_dl.to_f == 0
     succeeded = 0
     failed = 0
     skipped = 0
@@ -358,7 +358,7 @@ action :download do
       end
     end
 
-    if failed.to_i.zero? && node['nim']['lpp_sources'].fetch(lpp_source, nil).nil?
+    if failed.to_i == 0 && node['nim']['lpp_sources'].fetch(lpp_source, nil).nil?
       # nim define
       nim_s = "nim -o define -t lpp_source -a server=master -a location=#{dl_target} #{lpp_source}"
       Chef::Log.info("NIM operation: #{nim_s}")

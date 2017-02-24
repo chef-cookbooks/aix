@@ -25,7 +25,7 @@ def load_current_resource
   @current_resource = Chef::Resource::AixTcpservice.new(@new_resource.name)
 
   so = shell_out("egrep '^start /usr/(sbin|lib)/#{@new_resource.identifier}' /etc/rc.tcpip")
-  @current_resource.enabled = so.exitstatus.zero?
+  @current_resource.enabled = so.exitstatus == 0
 end
 
 action :enable do

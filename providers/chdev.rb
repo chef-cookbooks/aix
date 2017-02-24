@@ -29,7 +29,7 @@ def load_current_resource
   # does the device exists
   so = shell_out("lsattr -El #{@current_resource.name}")
   Chef::Log.debug("command: #{so}")
-  if so.exitstatus.zero?
+  if so.exitstatus == 0
     @current_resource.exists = true
   else
     @current_resource.exists = false

@@ -53,7 +53,7 @@ module AIXLVM
     end
 
     def read
-      @descript = @system.run('lsvg %s' % @name) if @descript.zero?
+      @descript = @system.run('lsvg %s' % @name) if @descript == 0
     end
 
     def exist?
@@ -197,7 +197,7 @@ module AIXLVM
     end
 
     def read
-      @descript = @system.run('lslv %s' % @name) if @descript.zero?
+      @descript = @system.run('lslv %s' % @name) if @descript == 0
     end
 
     def exist?
@@ -295,7 +295,7 @@ module AIXLVM
     end
 
     def read
-      @descript = @system.run('lsfs -c %s' % @name) if @descript.zero?
+      @descript = @system.run('lsfs -c %s' % @name) if @descript == 0
     end
 
     def exist?
