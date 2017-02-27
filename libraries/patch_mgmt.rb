@@ -221,8 +221,11 @@ module AIX
         @filter_ml = fields['FilterML']
         @dl_target = fields['DLTarget']
         @save_it = save_it
-        @suma_s = "/usr/sbin/suma -x -a DisplayName=\"#{@display_name}\"  -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
-        @suma_s << " -a RqName=#{@rq_name}" if @rq_type != 'Latest'
+        @suma_s = "/usr/sbin/suma -x -a DisplayName=\"#{@display_name}\" -a RqType=#{@rq_type} -a FilterML=#{@filter_ml} -a DLTarget=#{@dl_target}"
+        #### BUG SUMA WORKAROUND ###
+        @suma_s << " -a FilterDir=#{@dl_target}"
+        ########## END #############
+		@suma_s << " -a RqName=#{@rq_name}" if @rq_type != 'Latest'
         @suma_s << ' -w' if @save_it
         @dl = 0
         @downloaded = 0
