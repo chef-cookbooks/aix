@@ -648,7 +648,7 @@ module AIX
         log_info("Found highest ML #{metadata_filter_ml} from client list")
 
         # suma metadata
-        tmp_dir = ::File.join(Chef::Config[:file_cache_path]}, 'metadata')
+        tmp_dir = ::File.join(Chef::Config[:file_cache_path], 'metadata')
         suma = Suma.new('DisplayName' => desc, 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => metadata_filter_ml, 'DLTarget' => tmp_dir)
         suma.metadata
 
@@ -679,7 +679,7 @@ module AIX
         elsif oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/
           # suma metadata
           metadata_filter_ml = oslevel.match(/^([0-9]{4}-[0-9]{2})-[0-9]{2}$/)[1]
-          tmp_dir = ::File.join(Chef::Config[:file_cache_path]}, 'metadata')
+          tmp_dir = ::File.join(Chef::Config[:file_cache_path], 'metadata')
           suma = Suma.new('DisplayName' => desc, 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => metadata_filter_ml, 'DLTarget' => tmp_dir)
           suma.metadata
 
