@@ -45,18 +45,18 @@ module AIX
 
     def list_sps(filter_ml)
         # suma metadata
-        tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
+        tmp_dir = ::File.join(Chef::Config[:file_cache_path], 'metadata')
         suma = Suma.new('DisplayName' => '', 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => filter_ml, 'DLTarget' => tmp_dir)
         suma.metadata
 
         # find latest SP for highest TL
-        list_of_sps = Dir.glob("#{tmp_dir}/installp/ppc/*.install.tips.html")
+        list_of_sps = Dir.glob(::File.join(tmp_dir, 'installp', 'ppc', '*.install.tips.html'))
         list_of_sps.collect! do |file|
           file.gsub!('install.tips.html', 'xml')
           ::File.open(file) do |f|
             s = f.read
             #### BUG SUMA WORKAROUND ###
-            s = s.encode('UTF-8', 'binary', :invalid => :replace, :undef => :replace, :replace => '')
+            s = s.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
             ########## END #############
             lvl = Regexp.last_match(1) if s.to_s =~ /^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2})/
             lvl = Regexp.last_match(1) if s.to_s =~ /^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/
@@ -69,16 +69,16 @@ module AIX
 
     def levels(node, new = false)
       check_nim_info(node)
-      if new
-        levels = { '7.1 TL0' => list_sps('7100-00'),
+      levels = if new
+                 { '7.1 TL0' => list_sps('7100-00'),
                    '7.1 TL1' => list_sps('7100-01'),
                    '7.1 TL2' => list_sps('7100-02'),
                    '7.1 TL3' => list_sps('7100-03'),
                    '7.1 TL4' => list_sps('7100-04'),
-                   '7.2 TL0' => list_sps('7200-00'), 
-                   '7.2 TL1' => list_sps('7200-01'), }
-      else
-        levels = { '7.1 TL0' => ['7100-00-00-0000', '7100-00-01-1037', '7100-00-02-1041', '7100-00-03-1115', '7100-00-04-1140', '7100-00-05-1207', '7100-00-06-1216', '7100-00-07-1228', '7100-00-08-1241', '7100-00-09-1316', '7100-00-10-1334'],
+                   '7.2 TL0' => list_sps('7200-00'),
+                   '7.2 TL1' => list_sps('7200-01') }
+               else
+                 { '7.1 TL0' => ['7100-00-00-0000', '7100-00-01-1037', '7100-00-02-1041', '7100-00-03-1115', '7100-00-04-1140', '7100-00-05-1207', '7100-00-06-1216', '7100-00-07-1228', '7100-00-08-1241', '7100-00-09-1316', '7100-00-10-1334'],
                    '7.1 TL1' => ['7100-01-00-0000', '7100-01-01-1141', '7100-01-02-1150', '7100-01-03-1207', '7100-01-04-1216', '7100-01-05-1228', '7100-01-06-1241', '7100-01-07-1316', '7100-01-08-1334', '7100-01-09-1341', '7100-01-10-1415'],
                    '7.1 TL2' => ['7100-02-00-0000', '7100-02-01-1245', '7100-02-02-1316', '7100-02-03-1334', '7100-02-04-1341', '7100-02-05-1415', '7100-02-06-1441', '7100-02-07-1524'],
                    '7.1 TL3' => ['7100-03-00-0000', '7100-03-01-1341', '7100-03-02-1412', '7100-03-03-1415', '7100-03-04-1441', '7100-03-05-1524', '7100-03-06-1543', '7100-03-07-1614'],
@@ -225,7 +225,7 @@ module AIX
         #### BUG SUMA WORKAROUND ###
         @suma_s << " -a FilterDir=#{@dl_target}"
         ########## END #############
-		@suma_s << " -a RqName=#{@rq_name}" if @rq_type != 'Latest'
+        @suma_s << " -a RqName=#{@rq_name}" if @rq_type != 'Latest'
         @suma_s << ' -w' if @save_it
         @dl = 0
         @downloaded = 0
@@ -233,7 +233,8 @@ module AIX
         @skipped = 0
         ::FileUtils.mkdir_p(@dl_target) unless ::File.directory?(@dl_target)
         #### BUG SUMA WORKAROUND ###
-        ::FileUtils.mkdir_p('/usr/sys/inst.images') unless ::File.directory?('/usr/sys/inst.images')
+        dir = ::File.join('usr', 'sys', 'inst.images')
+        ::FileUtils.mkdir_p(dir) unless ::File.directory?(dir)
         ########## END #############
       end
 
@@ -443,9 +444,9 @@ module AIX
         log_debug("NIM cust operation: #{nim_s}")
         puts "\nStart patching machine(s) '#{client}'."
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
-           thr = Thread.new do
+          thr = Thread.new do
             loop do
-              print "."
+              print '.'
               sleep 3
             end
           end
@@ -470,14 +471,14 @@ module AIX
         raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success?
       end
 
-      def perform_efix_vios_customization(lpp_source, vios, filesets = 'all')
+      def perform_efix_vios_customization(lpp_source, vios, _filesets = 'all')
         nim_s = "/usr/sbin/nim -o updateios -a preview=no -a lpp_source=#{lpp_source} #{vios}"
         log_debug("NIM updateios operation: #{nim_s}")
         puts "\nStart patching machine(s) '#{vios}'."
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
-           thr = Thread.new do
+          thr = Thread.new do
             loop do
-              print "."
+              print '.'
               sleep 3
             end
           end
@@ -647,12 +648,12 @@ module AIX
         log_info("Found highest ML #{metadata_filter_ml} from client list")
 
         # suma metadata
-        tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
+        tmp_dir = ::File.join(Chef::Config[:file_cache_path]}, 'metadata')
         suma = Suma.new('DisplayName' => desc, 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => metadata_filter_ml, 'DLTarget' => tmp_dir)
         suma.metadata
 
         # find latest SP for highest TL
-        sps = Dir.glob("#{tmp_dir}/installp/ppc/*.install.tips.html")
+        sps = Dir.glob(::File.join(tmp_dir, 'installp', 'ppc', '*.install.tips.html'))
         sps.collect! do |file|
           file.gsub!('install.tips.html', 'xml')
           ::File.open(file) do |f|
@@ -678,12 +679,12 @@ module AIX
         elsif oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/
           # suma metadata
           metadata_filter_ml = oslevel.match(/^([0-9]{4}-[0-9]{2})-[0-9]{2}$/)[1]
-          tmp_dir = "#{Chef::Config[:file_cache_path]}/metadata"
+          tmp_dir = ::File.join(Chef::Config[:file_cache_path]}, 'metadata')
           suma = Suma.new('DisplayName' => desc, 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => metadata_filter_ml, 'DLTarget' => tmp_dir)
           suma.metadata
 
           # find SP build number
-          ::File.open("#{tmp_dir}/installp/ppc/#{oslevel}.xml") do |f|
+          ::File.open(::File.join(tmp_dir, 'installp', 'ppc', oslevel, '.xml')) do |f|
             rq_name = f.read.match(/^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/)[1]
           end
           FileUtils.rm_rf(tmp_dir)
@@ -734,11 +735,11 @@ module AIX
     #    raise InvalidLocationProperty in case of error
     # -----------------------------------------------------------------
     def compute_dl_target(location, lpp_source, niminfo)
-      return "/usr/sys/inst.images/#{lpp_source}" if location.nil? || location.empty?
+      return ::File.join('usr', 'sys', 'inst.images', lpp_source) if location.nil? || location.empty?
 
       location.chomp!('\/')
       if location.start_with?('/') # location is a directory
-        dl_target = "#{location}/#{lpp_source}"
+        dl_target = ::File.join(location, lpp_source)
         # check if DLTarget match the one in lpp_source
         unless niminfo['nim']['lpp_sources'].fetch(lpp_source, {}).fetch('location', nil).nil?
           log_debug("Found lpp source '#{lpp_source}' location")

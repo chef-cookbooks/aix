@@ -12,17 +12,10 @@ client = STDIN.readline.chomp
 aix_flrtvc 'patch aix machine(s)' do
   targets client
   action [:install, :patch]
-  # csv '/apar.csv'
-  # apar 'all'
-  # path '/flrtvc'
-  # verbose true
-  # clean false
-  # check_only true
-  # download_only true
+  apar 'all'
+  path '/flrtvc'
+  verbose true
+  clean true
+  check_only false
+  download_only false
 end
-
-# aix_nim 'reboot aix machine(s)' do
-  # targets client
-  # action :reboot
-# end
-

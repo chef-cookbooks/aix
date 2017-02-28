@@ -165,12 +165,12 @@ def parse_report_csv(m, s)
   urls
 end
 
-def fact(m, url, to, count, total, fileset)
+def fact(m, url, to, count, total)
   filename = nil
   raise URLNotMatch "link: #{url}" unless %r{^(?<protocol>.*?)://(?<srv>.*?)/(?<dir>.*)/(?<name>.*)$} =~ url
 
   # create directory to store downloads
-  dir_name = ::File.join(to, 'efixes', fileset, dir.split('/')[-1])
+  dir_name = ::File.join(to, dir.split('/')[-1])
   ::FileUtils.mkdir_p(dir_name) unless ::File.directory?(dir_name)
 
   if name.empty?
@@ -187,7 +187,7 @@ def fact(m, url, to, count, total, fileset)
       http.verify_mode = OpenSSL::SSL::VERIFY_NONE if protocol.eql?('https')
       req = Net::HTTP::Get.new(uri.request_uri)
       res = http.request(req)
-      if res.kind_of?(Net::HTTPResponse)
+      if res.is_a?(Net::HTTPResponse)
         found = false
         res.body.each_line do |l|
           next unless l =~ %r{<a href="(.*?.epkg.Z)">(.*?.epkg.Z)</a>}
@@ -223,7 +223,6 @@ def fact(m, url, to, count, total, fileset)
           # download file
           print "\033[2K\rDownloading #{count}/#{total} fixes. (#{f})"
           ftp.getbinaryfile(file, path)
-          #download(f, path)
 
           # check level prereq
           print "\033[2K\rChecking #{count}/#{total} fixes. (#{f})"
@@ -295,13 +294,14 @@ def download_and_check_fixes(m, urls, to)
     fileset = item['Fileset']
     url = item['Download URL']
     count += 1
+    dir = ::File.join(to, 'efixes', fileset)
 
     begin
-      item['Filename'] = fact(m, url, to, count, total, fileset)
-    rescue Exception => e
+      item['Filename'] = fact(m, url, dir, count, total)
+    rescue StandardError => e
       Chef::Log.warn("An error of type '#{e.class}' happened while treating URL #{count}/#{total}: #{url}. Message is:\n#{e.message}")
-      Chef::Log.warn("Retrying ...")
-      item['Filename'] = fact(m, url, to, count, total, fileset)
+      Chef::Log.warn('Retrying ...')
+      item['Filename'] = fact(m, url, dir, count, total)
     end
   end # end urls
   print "\n"
@@ -321,7 +321,7 @@ rescue Errno::ENOSPC
   increase_filesystem(dst)
   ::File.delete(dst)
   download(src, dst)
-rescue Exception => e
+rescue StandardError => e
   Chef::Log.warn("Propagating exception of type '#{e.class}' when downloading!")
   raise e
 end
@@ -336,7 +336,7 @@ rescue Mixlib::ShellOut::ShellCommandFailed => e
     Chef::Log.warn("Propagating exception of type '#{e.class}' when untarring!")
     raise e
   end
-rescue Exception => e
+rescue StandardError => e
   Chef::Log.warn("Propagating exception of type '#{e.class}' when untarring!")
   raise e
 end
@@ -349,14 +349,8 @@ def check_level_prereq?(machine, src)
     next if line.start_with?('#') # skip comments
     return false unless line =~ /^(.*?)\s+(.*?)\s+(.*?)$/
 
-    # get actual level
-    #if machine.eql?('master')
-    #  ref = shell_out!("/bin/lslpp -Lcq #{Regexp.last_match(1)} | /bin/cut -d: -f3", environment: { 'LANG' => 'C' }).stdout
-    #else
-    #  ref = shell_out!("/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{machine} \"/bin/lslpp -Lcq #{Regexp.last_match(1)} | /bin/cut -d: -f3\"", environment: { 'LANG' => 'C' }).stdout
-    #end
     lslpp_file = ::File.join(Chef::Config[:file_cache_path], "lslpp_#{machine}.txt")
-    ref = shell_out!("/bin/cat #{lslpp_file} | /bin/grep -w #{Regexp.last_match(1)} | /bin/cut -d: -f3\"", environment: { 'LANG' => 'C' }).stdout
+    ref = shell_out!("/bin/cat #{lslpp_file} | /bin/grep -w #{Regexp.last_match(1)} | /bin/cut -d: -f3", environment: { 'LANG' => 'C' }).stdout
     lvl_a = ref.split('.')
     lvl = SpLevel.new(lvl_a[0], lvl_a[1], lvl_a[2], lvl_a[3])
 
@@ -368,7 +362,7 @@ def check_level_prereq?(machine, src)
     return false unless min <= lvl && lvl <= max
   end
   true
-rescue Exception => e
+rescue StandardError => e
   Chef::Log.warn("Propagating exception of type '#{e.class}' when checking!")
   raise e
 end
