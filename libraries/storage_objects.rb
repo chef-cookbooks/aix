@@ -152,7 +152,7 @@ module AIXLVM
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException.new('system error:%s' % @system.last_error)
+        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
       end
     end
 
@@ -161,7 +161,7 @@ module AIXLVM
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException.new('system error:%s' % @system.last_error)
+        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
       end
     end
 
@@ -175,7 +175,7 @@ module AIXLVM
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException.new('system error:%s' % @system.last_error)
+        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
       end
     end
 
@@ -184,7 +184,7 @@ module AIXLVM
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException.new('system error:%s' % @system.last_error)
+        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
       end
     end
   end
@@ -260,7 +260,7 @@ module AIXLVM
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException.new('system error:%s' % @system.last_error)
+        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
       end
     end
 
@@ -269,7 +269,7 @@ module AIXLVM
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException.new('system error:%s' % @system.last_error)
+        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
       end
     end
 
@@ -282,7 +282,7 @@ module AIXLVM
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException.new('system error:%s' % @system.last_error)
+        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
       end
     end
   end
@@ -341,7 +341,7 @@ module AIXLVM
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException.new('system error:%s' % @system.last_error)
+        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
       end
     end
 
@@ -350,7 +350,7 @@ module AIXLVM
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException.new('system error:%s' % @system.last_error)
+        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
       end
     end
 
@@ -364,7 +364,7 @@ module AIXLVM
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException.new('system error:%s' % @system.last_error)
+        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
       end
     end
 
@@ -373,7 +373,7 @@ module AIXLVM
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException.new('system error:%s' % @system.last_error)
+        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
       end
     end
 
@@ -382,7 +382,7 @@ module AIXLVM
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException.new('system error:%s' % @system.last_error)
+        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
       end
     end
   end
