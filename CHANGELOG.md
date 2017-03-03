@@ -2,6 +2,12 @@
 
 This file is used to list changes made in each version of the aix cookbook.
 
+## 1.2.1 (2017-03-02)
+
+- Fix missing attributes for aix_altdisk
+- Update testing to use delivery local
+- Cookstyle fixes
+
 ## 1.2.0 (2016-10-20)
 
 - Fix failures if the wpars gem is missing and dynamically install it instead
