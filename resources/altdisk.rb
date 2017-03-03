@@ -30,3 +30,5 @@ attribute :altdisk_name, kind_of: String
 attribute :new_altdisk_name, kind_of: String
 attribute :change_bootlist, kind_of: [TrueClass, FalseClass], default: false
 attribute :image_location, kind_of: String
+attribute :reset_devices, kind_of: [TrueClass, FalseClass], default: false
+attribute :remain_nimclient, kind_of: [TrueClass, FalseClass], default: false
