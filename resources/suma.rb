@@ -34,24 +34,22 @@ default_action :download
 # load_current_value
 ##############################
 load_current_value do
-=begin
-  task_id = -1
-  hash = {}
-  hash_info = {}
-  so = shell_out!('/usr/sbin/suma -l')
-  so.stdout.each_line do |line|
-    line.chomp!
-    if line =~ /^([0-9]+):$/
-      task_id = Regexp.last_match(1)
-    elsif line =~ /^\s+(.*?)=(.*?)$/
-      hash_info[Regexp.last_match(1)] = Regexp.last_match(2)
-    elsif line.empty?
-      hash[task_id] = Hash[hash_info]
-      hash_info.clear
-    end
-  end
+  # task_id = -1
+  # hash = {}
+  # hash_info = {}
+  # so = shell_out!('/usr/sbin/suma -l')
+  # so.stdout.each_line do |line|
+    # line.chomp!
+    # if line =~ /^([0-9]+):$/
+      # task_id = Regexp.last_match(1)
+    # elsif line =~ /^\s+(.*?)=(.*?)$/
+      # hash_info[Regexp.last_match(1)] = Regexp.last_match(2)
+    # elsif line.empty?
+      # hash[task_id] = Hash[hash_info]
+      # hash_info.clear
+    # end
+  # end
   # puts hash
-=end
 end
 
 ##############################

@@ -44,27 +44,27 @@ module AIX
     end
 
     def list_sps(filter_ml)
-        # suma metadata
-        tmp_dir = ::File.join(Chef::Config[:file_cache_path], 'metadata')
-        suma = Suma.new('DisplayName' => '', 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => filter_ml, 'DLTarget' => tmp_dir)
-        suma.metadata
+      # suma metadata
+      tmp_dir = ::File.join(Chef::Config[:file_cache_path], 'metadata')
+      suma = Suma.new('DisplayName' => '', 'RqType' => 'Latest', 'RqName' => nil, 'FilterML' => filter_ml, 'DLTarget' => tmp_dir)
+      suma.metadata
 
-        # find latest SP for highest TL
-        list_of_sps = Dir.glob(::File.join(tmp_dir, 'installp', 'ppc', '*.install.tips.html'))
-        list_of_sps.collect! do |file|
-          file.gsub!('install.tips.html', 'xml')
-          ::File.open(file) do |f|
-            s = f.read
-            #### BUG SUMA WORKAROUND ###
-            s = s.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
-            ########## END #############
-            lvl = Regexp.last_match(1) if s.to_s =~ /^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2})/
-            lvl = Regexp.last_match(1) if s.to_s =~ /^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/
-            lvl
-          end
+      # find latest SP for highest TL
+      list_of_sps = Dir.glob(::File.join(tmp_dir, 'installp', 'ppc', '*.install.tips.html'))
+      list_of_sps.collect! do |file|
+        file.gsub!('install.tips.html', 'xml')
+        ::File.open(file) do |f|
+          s = f.read
+          #### BUG SUMA WORKAROUND ###
+          s = s.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
+          ########## END #############
+          lvl = Regexp.last_match(1) if s.to_s =~ /^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2})/
+          lvl = Regexp.last_match(1) if s.to_s =~ /^<SP name="([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4})">$/
+          lvl
         end
-        FileUtils.rm_rf(tmp_dir)
-        list_of_sps
+      end
+      FileUtils.rm_rf(tmp_dir)
+      list_of_sps
     end
 
     def levels(node, new = false)
@@ -344,7 +344,7 @@ module AIX
         end
         puts "\nFinish downloading #{succeeded} fixes (~ #{download_dl.to_f.round(2)} GB)."
         log_info("Done suma download operation \"#{suma_s}\"")
-		raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns above error!" unless exit_status.success?
+        raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns above error!" unless exit_status.success?
         @dl = download_dl
         @downloaded = download_downloaded
         @failed = download_failed
@@ -602,17 +602,17 @@ module AIX
     #
     #    raise EmgrListError in case of error
     # -----------------------------------------------------------------
-	def list_fixes(machine)
+    def list_fixes(machine)
       array_fixes = []
       emgr_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{machine} \"/usr/sbin/emgr -l\""
       log_debug("EMGR list: #{emgr_s}")
-	  exit_status = Open3.popen3({ 'LANG' => 'C' }, emgr_s) do |_stdin, stdout, stderr, wait_thr|
+      exit_status = Open3.popen3({ 'LANG' => 'C' }, emgr_s) do |_stdin, stdout, stderr, wait_thr|
         stdout.each_line do |line|
-		  line_array = line.split(' ')
-		  if line_array[0] =~ /[0-9]/
-			log_debug("emgr: adding fix #{line_array[2]} to fixes list")
-			array_fixes.push(line_array[2])
-		  end
+          line_array = line.split(' ')
+          if line_array[0] =~ /[0-9]/
+            log_debug("emgr: adding fix #{line_array[2]} to fixes list")
+            array_fixes.push(line_array[2])
+          end
           log_info("[STDOUT] #{line.chomp}")
         end
         stderr.each_line do |line|
@@ -622,18 +622,18 @@ module AIX
         wait_thr.value # Process::Status object returned.
       end
       raise EmgrListError, "Error: Command \"#{emgr_s}\" returns above error!" unless exit_status.success?
-	  array_fixes
-	end
+      array_fixes
+    end
 
     # -----------------------------------------------------------------
     # Remove fix with emgr
     #
     #    raise EmgrRemoveError in case of error
     # -----------------------------------------------------------------
-	def remove_fix(machine, fix)
+    def remove_fix(machine, fix)
       emgr_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{machine} \"/usr/sbin/emgr -r -L #{fix}\""
       log_debug("EMGR remove: #{emgr_s}")
-	  exit_status = Open3.popen3({ 'LANG' => 'C' }, emgr_s) do |_stdin, stdout, stderr, wait_thr|
+      exit_status = Open3.popen3({ 'LANG' => 'C' }, emgr_s) do |_stdin, stdout, stderr, wait_thr|
         stdout.each_line do |line|
           log_info("[STDOUT] #{line.chomp}")
         end
@@ -644,7 +644,7 @@ module AIX
         wait_thr.value # Process::Status object returned.
       end
       raise EmgrRemoveError, "Error: Command \"#{emgr_s}\" returns above error!" unless exit_status.success?
-	end
+    end
 
     # -----------------------------------------------------------------
     # Check lpp source exists
@@ -793,7 +793,7 @@ module AIX
         # check if DLTarget match the one in lpp_source
         unless niminfo['nim']['lpp_sources'].fetch(lpp_source, {}).fetch('location', nil).nil?
           loc = niminfo['nim']['lpp_sources'][lpp_source]['location']
-		  log_debug("Found lpp source '#{lpp_source}' location: '#{loc}'")
+          log_debug("Found lpp source '#{lpp_source}' location: '#{loc}'")
           unless loc =~ /^#{dl_target}/
             raise InvalidLocationProperty, "Error: lpp source location mismatch, '#{dl_target}' asked but '#{loc}' in existing lpp source"
           end

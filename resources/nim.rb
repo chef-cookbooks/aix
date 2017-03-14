@@ -53,13 +53,13 @@ action :update do
 
   # force interim fixes automatic removal
   if property_is_set?(:force) && force == true
-	target_list.each do |m|
-	  fixes = list_fixes(m)
-	  fixes.each do |fix|
-		remove_fix(m, fix)
-	    Chef::Log.warn("Interim fix #{fix} has been automatically removed")
-	  end
-	end
+    target_list.each do |m|
+      fixes = list_fixes(m)
+      fixes.each do |fix|
+        remove_fix(m, fix)
+        Chef::Log.warn("Interim fix #{fix} has been automatically removed")
+      end
+    end
   end
 
   # nim install
