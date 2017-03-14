@@ -35,6 +35,7 @@ action :update do
   Chef::Log.debug("lpp_source=#{lpp_source}")
   Chef::Log.debug("targets=#{targets}")
   Chef::Log.debug("async=#{async}")
+  Chef::Log.debug("force=#{force}")
 
   check_ohai
 
@@ -49,6 +50,17 @@ action :update do
   # build list of targets
   target_list = expand_targets
   Chef::Log.debug("target_list: #{target_list}")
+
+  # force interim fixes automatic removal
+  if property_is_set?(:force) && force == true
+	target_list.each do |m|
+	  fixes = list_fixes(m)
+	  fixes.each do |fix|
+		remove_fix(m, fix)
+	    Chef::Log.warn("Interim fix #{fix} has been automatically removed")
+	  end
+	end
+  end
 
   # nim install
   nim = Nim.new

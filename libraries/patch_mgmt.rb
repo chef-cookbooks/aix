@@ -343,7 +343,8 @@ module AIX
           wait_thr.value # Process::Status object returned.
         end
         puts "\nFinish downloading #{succeeded} fixes (~ #{download_dl.to_f.round(2)} GB)."
-        raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns above error!" unless exit_status.success?
+        log_info("Done suma download operation \"#{suma_s}\"")
+		raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns above error!" unless exit_status.success?
         @dl = download_dl
         @downloaded = download_downloaded
         @failed = download_failed
@@ -597,6 +598,55 @@ module AIX
     end
 
     # -----------------------------------------------------------------
+    # List fixes with emgr
+    #
+    #    raise EmgrListError in case of error
+    # -----------------------------------------------------------------
+	def list_fixes(machine)
+      array_fixes = []
+      emgr_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{machine} \"/usr/sbin/emgr -l\""
+      log_debug("EMGR list: #{emgr_s}")
+	  exit_status = Open3.popen3({ 'LANG' => 'C' }, emgr_s) do |_stdin, stdout, stderr, wait_thr|
+        stdout.each_line do |line|
+		  line_array = line.split(' ')
+		  if line_array[0] =~ /[0-9]/
+			log_debug("emgr: adding fix #{line_array[2]} to fixes list")
+			array_fixes.push(line_array[2])
+		  end
+          log_info("[STDOUT] #{line.chomp}")
+        end
+        stderr.each_line do |line|
+          STDERR.puts line
+          log_info("[STDERR] #{line.chomp}")
+        end
+        wait_thr.value # Process::Status object returned.
+      end
+      raise EmgrListError, "Error: Command \"#{emgr_s}\" returns above error!" unless exit_status.success?
+	  array_fixes
+	end
+
+    # -----------------------------------------------------------------
+    # Remove fix with emgr
+    #
+    #    raise EmgrRemoveError in case of error
+    # -----------------------------------------------------------------
+	def remove_fix(machine, fix)
+      emgr_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{machine} \"/usr/sbin/emgr -r -L #{fix}\""
+      log_debug("EMGR remove: #{emgr_s}")
+	  exit_status = Open3.popen3({ 'LANG' => 'C' }, emgr_s) do |_stdin, stdout, stderr, wait_thr|
+        stdout.each_line do |line|
+          log_info("[STDOUT] #{line.chomp}")
+        end
+        stderr.each_line do |line|
+          STDERR.puts line
+          log_info("[STDERR] #{line.chomp}")
+        end
+        wait_thr.value # Process::Status object returned.
+      end
+      raise EmgrRemoveError, "Error: Command \"#{emgr_s}\" returns above error!" unless exit_status.success?
+	end
+
+    # -----------------------------------------------------------------
     # Check lpp source exists
     #
     #    raise InvalidLppSourceProperty in case of error
@@ -742,9 +792,10 @@ module AIX
         dl_target = ::File.join(location, lpp_source)
         # check if DLTarget match the one in lpp_source
         unless niminfo['nim']['lpp_sources'].fetch(lpp_source, {}).fetch('location', nil).nil?
-          log_debug("Found lpp source '#{lpp_source}' location")
-          unless niminfo['nim']['lpp_sources'][lpp_source]['location'] =~ /^#{dl_target}/
-            raise InvalidLocationProperty, 'Error: lpp source location mismatch'
+          loc = niminfo['nim']['lpp_sources'][lpp_source]['location']
+		  log_debug("Found lpp source '#{lpp_source}' location: '#{loc}'")
+          unless loc =~ /^#{dl_target}/
+            raise InvalidLocationProperty, "Error: lpp source location mismatch, '#{dl_target}' asked but '#{loc}' in existing lpp source"
           end
         end
       else # location is a lpp_source

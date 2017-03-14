@@ -499,6 +499,7 @@ Parameters:
 * `device` - NFS mount directory containing bos.sysmgt.nim.master package
 * `lpp_source` - name of NIM lpp_source resource to install or latest_sp or latest_tl
 * `targets` - comma or space separated list of clients to update (star wildcard accepted)
+* `force` - if true, installed interim fixes will be automatically removed (default: false)
 * `async` - if true, customization is performed asynchronously (default: false) (cannot be used for latest_sp or latest_tl customization)
 
 Actions:

@@ -8,12 +8,13 @@
 node.default['nim'] = { 'master' => { 'oslevel' => '7100-02-01' },
                         'clients' => { 'client1' => { 'oslevel' => '7100-02-01-1316' },
                                        'client2' => { 'oslevel' => '7200-03-01-1316' }, # 7.2 AIX Release
-                                       'client3' => { 'oslevel' => '7100-04-01-1316' } },
+                                       'client3' => { 'oslevel' => '7100-04-01-1316' },
+                                       'client4' => { 'oslevel' => '7200-02-02-1316' } }, # 7.2 AIX Release
                         'lpp_sources' => {} }
 
 aix_suma 'Release mismatch oslevel latest (ERROR)' do
   oslevel 'latest'
   location '/sumatest/targets/error7'
-  targets 'client1,client2,client3'
+  targets '*'
   action :download
 end
