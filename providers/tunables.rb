@@ -1,5 +1,5 @@
 #
-# Copyright 2015-2016, Alain Dejoux <adejoux@djouxtech.net>
+# Copyright:: 2015-2016, Alain Dejoux <adejoux@djouxtech.net>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ def load_current_resource
       max: current_tunable[5],
       unit: current_tunable[6],
       type: current_tunable[7],
-      dtunable: current_tunable[8] || 'none'
+      dtunable: current_tunable[8] || 'none',
     }
   end
   @current_resource.tunables(all_tunables)

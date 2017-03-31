@@ -656,6 +656,8 @@ Parameters:
 * `change_bootlist` (optional) (default false) - change the bootlist to boot to the new alternate disk
 * `image_location` (optional) - directory containing filesets used for the cust operation
 * `new_altdisk_name` (optional) - new name use for rename action
+* `reset_devices`, (optional) kind_of: [TrueClass, FalseClass], default: false - Performs a device reset on the target. This causes the alternate disk install to not retain any user-defined device configurations. 
+* `remain_nimclient`, (optional) kind_of: [TrueClass, FalseClass], default: false -  `/.rhosts` and `/etc/niminfo` files are copied to the file system
 
 Actions:
 

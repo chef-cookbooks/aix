@@ -1,5 +1,5 @@
 #
-# Copyright 2016, International Business Machines Corporation
+# Copyright:: 2016, International Business Machines Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,32 +39,32 @@ module AIXLVM
     def check_to_change
       @changed = true
       unless [1, 2, 3].include?(@copies)
-        raise AIXLVM::LVMException.new('Illegal number of copies!')
+        raise AIXLVM::LVMException, 'Illegal number of copies!'
       end
       vg_obj = StObjVG.new(@system, @group)
       unless vg_obj.exist?
-        raise AIXLVM::LVMException.new('volume group "%s" does not exist!' % @group)
+        raise AIXLVM::LVMException, 'volume group "%s" does not exist!' % @group
       end
       if vg_obj.get_nbpv < @copies
-        raise AIXLVM::LVMException.new('Illegal number of copies!')
+        raise AIXLVM::LVMException, 'Illegal number of copies!'
       end
       ppsize = vg_obj.get_ppsize
       @nb_pp = @size.to_f / ppsize.to_f
       if @nb_pp != @nb_pp.to_i
-        raise AIXLVM::LVMException.new('size must be multiple to the PP size!')
+        raise AIXLVM::LVMException, 'size must be multiple to the PP size!'
       end
       lv_obj = StObjLV.new(@system, @name)
       current_volgroup = lv_obj.get_vg
       if !current_volgroup.nil?
         if current_volgroup != @group
-          raise AIXLVM::LVMException.new('logical volume "%s" exist with other volume group!' % @name)
+          raise AIXLVM::LVMException, 'logical volume "%s" exist with other volume group!' % @name
         end
         current_size = lv_obj.get_nbpp
         @diff_pp = @nb_pp - current_size
         if @diff_pp > 0
           free_pp_in_vg = vg_obj.get_freepp
           if free_pp_in_vg < @diff_pp
-            raise AIXLVM::LVMException.new('Insufficient space available!')
+            raise AIXLVM::LVMException, 'Insufficient space available!'
           end
         else
           @current_copies = lv_obj.get_copies
@@ -75,7 +75,7 @@ module AIXLVM
         @diff_pp = -1
         free_pp_in_vg = vg_obj.get_freepp
         if free_pp_in_vg < @nb_pp
-          raise AIXLVM::LVMException.new('Insufficient space available!')
+          raise AIXLVM::LVMException, 'Insufficient space available!'
         end
       end
       @changed

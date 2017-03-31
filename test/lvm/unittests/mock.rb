@@ -1,5 +1,5 @@
 #
-# Copyright 2016, International Business Machines Corporation
+# Copyright:: 2016, International Business Machines Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ class MockSystem < AIXLVM::BaseSystem
     @cmd_add.push(cmd)
     expected_cmd, retvalue = @out_retrun.shift
     if expected_cmd != cmd
-      raise AIXLVM::LVMException.new("System command error:'%s' expected, '%s' return!" % [expected_cmd, cmd])
+      raise AIXLVM::LVMException, "System command error:'%s' expected, '%s' return!" % [expected_cmd, cmd]
     end
     @last_error = cmd if retvalue.nil?
     retvalue

@@ -1,5 +1,5 @@
 #
-# Copyright 2016, International Business Machines Corporation
+# Copyright:: 2016, International Business Machines Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,16 +35,16 @@ module AIXLVM
     def check_to_change
       @changed = true
       if !@mirror_pool_name.nil? && !(@mirror_pool_name =~ /^[0-9a-zA-Z]{1,15}$/)
-        raise AIXLVM::LVMException.new('illegal_mirror_pool_name!')
+        raise AIXLVM::LVMException, 'illegal_mirror_pool_name!'
       end
       for current_pv in @physical_volumes
         pv_obj = StObjPV.new(@system, current_pv)
         unless pv_obj.exist?
-          raise AIXLVM::LVMException.new('physical volume "%s" does not exist!' % current_pv)
+          raise AIXLVM::LVMException, 'physical volume "%s" does not exist!' % current_pv
         end
         current_vg = pv_obj.get_vgname
         if !current_vg.nil? && current_vg != @name
-          raise AIXLVM::LVMException.new('physical volume "%s" is use in a different volume group!' % current_pv)
+          raise AIXLVM::LVMException, 'physical volume "%s" is use in a different volume group!' % current_pv
         end
       end
       @current_physical_volumes = []

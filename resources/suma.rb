@@ -1,5 +1,5 @@
 #
-# Copyright 2016, Atos <jerome.hurstel@atos.net>
+# Copyright:: 2016, Atos <jerome.hurstel@atos.net>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ def compute_rq_type
       rq_type = 'TL'
     elsif oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
       rq_type = 'SP'
-    elsif oslevel.empty? || oslevel.casecmp('latest').zero?
+    elsif oslevel.empty? || oslevel.casecmp('latest') == 0
       rq_type = 'Latest'
     else
       raise InvalidOsLevelProperty, 'SUMA-SUMA-SUMA oslevel is not recognized'
@@ -170,7 +170,7 @@ def compute_rq_name(rq_type, filter_ml)
         rq_name.insert(4, '-')
         rq_name.insert(7, '-')
         rq_name.insert(10, '-')
-        end
+      end
     end
 
   when 'TL'
@@ -341,7 +341,7 @@ action :download do
             # do nothing
           else
             puts line
-      end
+          end
           print "\rSUCCEEDED: #{succeeded}/#{preview_downloaded}\tFAILED: #{failed}/#{preview_failed}\tSKIPPED: #{skipped}/#{preview_skipped}"
         end
         puts ''

@@ -1,5 +1,5 @@
 #
-# Copyright 2016, International Business Machines Corporation
+# Copyright:: 2016, International Business Machines Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,15 +44,15 @@ module AIXLVM
                           @size.to_f / 2.0
                         end
       else
-        raise AIXLVM::LVMException.new('Invalid size!')
+        raise AIXLVM::LVMException, 'Invalid size!'
       end
       lv_obj = StObjLV.new(@system, @logical_volume)
       unless lv_obj.exist?
-        raise AIXLVM::LVMException.new('logical volume "%s" does not exist!' % @logical_volume)
+        raise AIXLVM::LVMException, 'logical volume "%s" does not exist!' % @logical_volume
       end
       current_mount = lv_obj.get_mount
       if !current_mount.nil? && (current_mount != '') && (current_mount != @name)
-        raise AIXLVM::LVMException.new('logical volume "%s" has already another file system!' % @logical_volume)
+        raise AIXLVM::LVMException, 'logical volume "%s" has already another file system!' % @logical_volume
       end
       fs_obj = StObjFS.new(@system, @name)
       if fs_obj.exist?
@@ -60,7 +60,7 @@ module AIXLVM
         @changed = (@complet_size != @current_size)
       end
       if @complet_size > (lv_obj.get_nbpp * lv_obj.get_ppsize)
-        raise AIXLVM::LVMException.new('Insufficient space available!')
+        raise AIXLVM::LVMException, 'Insufficient space available!'
       end
       @changed
     end
@@ -84,7 +84,7 @@ module AIXLVM
     def check_to_mount(is_mount)
       fs_obj = StObjFS.new(@system, @name)
       unless fs_obj.exist?
-        raise AIXLVM::LVMException.new("Filesystem doesn't exist!")
+        raise AIXLVM::LVMException, "Filesystem doesn't exist!"
       end
       if is_mount
         return !fs_obj.mounted?
@@ -112,16 +112,14 @@ module AIXLVM
     def check_to_defrag
       fs_obj = StObjFS.new(@system, @name)
       unless fs_obj.exist?
-        raise AIXLVM::LVMException.new("Filesystem doesn't exist!")
+        raise AIXLVM::LVMException, "Filesystem doesn't exist!"
       end
       if fs_obj.get_format != 'jfs2'
-        raise AIXLVM::LVMException.new("Filesystem doesn't jfs2!")
+        raise AIXLVM::LVMException, "Filesystem doesn't jfs2!"
       end
-      if fs_obj.readonly?
-        raise AIXLVM::LVMException.new('Filesystem is readonly!')
-      end
+      raise AIXLVM::LVMException, 'Filesystem is readonly!' if fs_obj.readonly?
       unless fs_obj.mounted?
-        raise AIXLVM::LVMException.new("Filesystem doesn't mount!")
+        raise AIXLVM::LVMException, "Filesystem doesn't mount!"
       end
       true
     end

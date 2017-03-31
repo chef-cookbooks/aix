@@ -1,5 +1,5 @@
 #
-# Copyright 2014-2016, Chef Software, Inc.
+# Copyright:: 2014-2016, Chef Software, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 name             'aix'
 maintainer       'Chef Software, Inc.'
-maintainer_email 'jdunn@chef.io'
+maintainer_email 'cookbooks@chef.io'
 license          'Apache 2.0'
 description      'Custom resources useful for AIX systems'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
