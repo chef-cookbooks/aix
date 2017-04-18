@@ -13,5 +13,6 @@ node.default['nim'] = { 'master' => { 'oslevel' => '7100-02-01' },
 aix_nim 'run script on targets' do
   script 'toto'
   targets 'client*'
+  async true
   action :script
 end

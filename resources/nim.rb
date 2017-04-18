@@ -23,6 +23,7 @@ property :async, [true, false], default: false
 property :device, String, required: true
 property :script, String
 property :resource, String
+property :location, String
 
 default_action :update
 
@@ -180,14 +181,17 @@ end
 action :script do
   Chef::Log.debug("targets: #{targets}")
   Chef::Log.debug("script: #{script}")
+  Chef::Log.debug("async: #{async}")
 
   check_ohai
+
+  local_async = (async == true) ? 'yes' : 'no'
 
   # build list of targets
   target_list = expand_targets
   Chef::Log.debug("target_list: #{target_list}")
 
-  nim_s = "nim -o cust -a script=#{script} #{target_list.join(' ')}"
+  nim_s = "nim -o cust -a script=#{script} -a async=#{local_async} #{target_list.join(' ')}"
   # converge here
   converge_by("nim: script customization operation \"#{nim_s}\"") do
     nim = Mixlib::ShellOut.new(nim_s)
@@ -273,8 +277,21 @@ action :bos_inst do
   end
 end
 
-action :define do
-  puts 'NOT YET IMPLEMENTED'
+action :define_script do
+  Chef::Log.debug("resource: #{resource}")
+  Chef::Log.debug("location: #{location}")
+
+  nim_s = "nim -o define -t script -a location=#{location} -a server=master #{resource}"
+  # converge here
+  converge_by("nim: define operation \"#{nim_s}\"") do
+    nim = Mixlib::ShellOut.new(nim_s)
+    nim.valid_exit_codes = 0
+    nim.run_command
+    nim.stdout.each_line { |line| Chef::Log.info("[STDOUT] #{line.chomp}") }
+    nim.stderr.each_line { |line| Chef::Log.info("[STDERR] #{line.chomp}") }
+    nim.error!
+    nim.error?
+  end
 end
 
 action :remove do
