@@ -67,11 +67,12 @@ action :download do
   suma = Suma.new(params)
   suma.preview
   return if preview_only == true
-  return unless suma.downloaded?
 
-  # suma download
-  converge_by("download #{suma.downloaded} fixes to '#{params['DLTarget']}'") do
-    suma.download
+  if suma.downloaded?
+     # suma download
+    converge_by("download #{suma.downloaded} fixes to '#{params['DLTarget']}'") do
+      suma.download
+    end
   end
   return if suma.failed? || LppSource.exist?(params['LppSource'], node)
 
