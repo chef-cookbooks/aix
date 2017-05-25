@@ -16,13 +16,13 @@
 
 actions :install, :remove
 
-attribute :identifier, name_attribute: true, kind_of: String
-attribute :runlevel, kind_of: String, required: true
-attribute :processaction, kind_of: String, required: true, equal_to: %w(respawn wait once boot bootwait powerfail off hold ondemand initdefault sysinit)
-attribute :command, kind_of: String, required: true
+property :identifier, name_property: true, kind_of: String
+property :runlevel, kind_of: String, required: true
+property :processaction, kind_of: String, required: true, equal_to: %w(respawn wait once boot bootwait powerfail off hold ondemand initdefault sysinit)
+property :command, kind_of: String, required: true
 
-attribute :follows, kind_of: String
-attribute :exists, [TrueClass, FalseClass], desired_state: false
+property :follows, kind_of: String
+property :exists, [TrueClass, FalseClass], desired_state: false
 
 default_action :install
 
