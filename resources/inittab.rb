@@ -22,18 +22,15 @@ attribute :processaction, kind_of: String, required: true, equal_to: %w(respawn 
 attribute :command, kind_of: String, required: true
 
 attribute :follows, kind_of: String
-
-attr_accessor :exists
+attribute :exists, [TrueClass, FalseClass], desired_state: false
 
 default_action :install
 
-
 load_current_value do |new_resource|
-  exists = false
-
+  exists false
   so = shell_out("lsitab #{new_resource.identifier}")
   unless so.error?
-    exists = true
+    exists true
     fields = so.stdout.lines.first.chomp.split(':')
     # perfstat:2:once:/usr/lib/perf/libperfstat_updt_dictionary >/dev/console 2>&1
     identifier(fields[0])
