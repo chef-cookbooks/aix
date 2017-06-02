@@ -342,12 +342,13 @@ rescue StandardError => e
 end
 
 def check_level_prereq?(machine, src)
+  res = true
   # get min/max level
   so = shell_out!("/usr/sbin/emgr -dXv3 -e #{src} | /bin/grep -p \\\"PREREQ", environment: { 'LANG' => 'C' }).stdout
   so.lines[3..-2].each do |line|
     Chef::Log.debug(line.to_s)
     next if line.start_with?('#') # skip comments
-    return false unless line =~ /^(.*?)\s+(.*?)\s+(.*?)$/
+    next unless line =~ /^(.*?)\s+(\d+\.\d+\.\d+\.\d+)\s+(\d+\.\d+\.\d+\.\d+)$/
 
     lslpp_file = ::File.join(Chef::Config[:file_cache_path], "lslpp_#{machine}.txt")
     ref = shell_out!("/bin/cat #{lslpp_file} | /bin/grep -w #{Regexp.last_match(1)} | /bin/cut -d: -f3", environment: { 'LANG' => 'C' }).stdout
@@ -483,6 +484,7 @@ action :patch do
     # copy efix
     efixes_basenames = []
     efixes.each do |efix|
+      # build the efix basenames array
       basename = efix['Filename'].split('/')[-1]
       efixes_basenames << basename
       converge_by("[#{m}] #{efix['Type']} fix '#{basename}' meets level pre-requisite for fileset '#{efix['Fileset']}'") do
@@ -494,6 +496,8 @@ action :patch do
         end
       end
     end
+    # sort the efix basenames array
+    efixes_basenames.sort! {|x, y| y <=> x}
 
     if m == 'master'
       # install package

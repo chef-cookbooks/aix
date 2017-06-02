@@ -86,7 +86,7 @@ module AIX
                    '7.2 TL0' => ['7200-00-00-0000', '7200-00-01-1543', '7200-00-02-1614', '7200-00-03-1642', '7200-00-04-1717'],
                    '7.2 TL1' => ['7200-01-00-0000', '7200-01-01-1643', '7200-01-02-1717'] }
 
-      end
+               end
       levels.each do |k, v|
         levels[k] = v.collect do |oslevel|
           if node['nim']['lpp_sources'].keys.include?("#{oslevel}-lpp_source")
@@ -101,17 +101,17 @@ module AIX
 
     def log_debug(message)
       Chef::Log.debug(message)
-      #STDERR.puts('DEBUG : ' + message)
+      # STDERR.puts('DEBUG : ' + message)
     end
 
     def log_info(message)
       Chef::Log.info(message)
-      #puts('INFO : ' + message)
+      # puts('INFO : ' + message)
     end
 
     def log_warn(message)
       Chef::Log.warn(message)
-      #puts('WARN : ' + message)
+      # puts('WARN : ' + message)
     end
 
     #############################
@@ -739,7 +739,7 @@ module AIX
           suma.metadata
 
           # find SP build number
-          file_name = oslevel + ".xml"
+          file_name = oslevel + '.xml'
           ::File.open(::File.join(tmp_dir, 'installp', 'ppc', file_name)) do |f|
             s = f.read
             #### BUG SUMA WORKAROUND ###
