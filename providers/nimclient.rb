@@ -1,8 +1,5 @@
-# Author:: Benoit Creau (<benoit.creau@chmod666.org>)
-# Cookbook Name:: aix
-# Provider:: nimclient
 #
-# Copyright:: 2015, Benoit Creau
+# Copyright:: 2015-2016, Benoit Creau <benoit.creau@chmod666.org>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-require 'chef/mixin/shell_out'
+#
 
-include Chef::Mixin::ShellOut
 use_inline_resources
 
 # nim client reminder
@@ -48,11 +44,7 @@ end
 action :set_date do
   nimclient_s = 'nimclient -d'
   converge_by("nimclient: set the client's date to that of the master") do
-    nimclient = Mixlib::ShellOut.new(nimclient_s)
-    nimclient.valid_exit_codes = 0
-    nimclient.run_command
-    nimclient.error!
-    nimclient.error?
+    shell_out!(nimclient_s)
   end
 end
 
@@ -64,11 +56,7 @@ action :enable_push do
   ps = shell_out('ps -ef | grep nimsh')
   if ps.stdout.include? '-P'
     converge_by('nimclient: enable push operation from client') do
-      nimclient = Mixlib::ShellOut.new(nimclient_s)
-      nimclient.valid_exit_codes = 0
-      nimclient.run_command
-      nimclient.error!
-      nimclient.error?
+      shell_out!(nimclient_s)
     end
   end
 end
@@ -80,11 +68,7 @@ action :disable_push do
   ps = shell_out('ps -ef | grep nimsh')
   unless ps.stdout.include? '-P'
     converge_by('nimclient: disable push operation from client') do
-      nimclient = Mixlib::ShellOut.new(nimclient_s)
-      nimclient.valid_exit_codes = 0
-      nimclient.run_command
-      nimclient.error!
-      nimclient.error?
+      shell_out!(nimclient_s)
     end
   end
 end
@@ -96,11 +80,7 @@ action :enable_crypto do
   ps = shell_out('ps -ef | grep nimsh')
   unless ps.stdout.include? '-c'
     converge_by('nimclient: enable nimsh crypto') do
-      nimclient = Mixlib::ShellOut.new(nimclient_s)
-      nimclient.valid_exit_codes = 0
-      nimclient.run_command
-      nimclient.error!
-      nimclient.error?
+      shell_out!(nimclient_s)
     end
   end
 end
@@ -112,11 +92,7 @@ action :disable_crypto do
   ps = shell_out('ps -ef | grep nimsh')
   if ps.stdout.include? '-c'
     converge_by('nimclient: disable nimsh crypto') do
-      nimclient = Mixlib::ShellOut.new(nimclient_s)
-      nimclient.valid_exit_codes = 0
-      nimclient.run_command
-      nimclient.error!
-      nimclient.error?
+      shell_out!(nimclient_s)
     end
   end
 end
@@ -157,11 +133,7 @@ action :allocate do
   # don't converge if there is nothing to allocate
   if nimclient_s != 'nimclient -o allocate'
     converge_by("nimclient: allocating resources \"#{nimclient_s}\"") do
-      nimclient = Mixlib::ShellOut.new(nimclient_s)
-      nimclient.valid_exit_codes = 0
-      nimclient.run_command
-      nimclient.error!
-      nimclient.error?
+      shell_out!(nimclient_s)
     end
   end
 end
@@ -193,11 +165,7 @@ action :maint_boot do
   if nimclient_s != 'nimclient -o maint_boot'
     unless do_not_converge
       converge_by("nimclient: maint_boot \"#{nimclient_s}\"") do
-        nimclient = Mixlib::ShellOut.new(nimclient_s)
-        nimclient.valid_exit_codes = 0
-        nimclient.run_command
-        nimclient.error!
-        nimclient.error?
+        shell_out!(nimclient_s)
       end
     end
   end
@@ -238,11 +206,7 @@ action :bos_inst do
   if nimclient_s != 'nimclient -o bos_inst'
     unless do_not_converge
       converge_by("nimclient: bos_inst \"#{nimclient_s}\"") do
-        nimclient = Mixlib::ShellOut.new(nimclient_s)
-        nimclient.valid_exit_codes = 0
-        nimclient.run_command
-        nimclient.error!
-        nimclient.error?
+        shell_out!(nimclient_s)
       end
     end
   end
@@ -330,11 +294,7 @@ action :cust do
   # converge here
   unless do_not_converge
     converge_by("nimclient cust operation: \"#{nimclient_s}\"") do
-      nimclient = Mixlib::ShellOut.new(nimclient_s, timeout: 7200)
-      nimclient.valid_exit_codes = 0
-      nimclient.run_command
-      nimclient.error!
-      nimclient.error?
+      shell_out!(nimclient_s, timeout: 7200)
     end
   end
 end
@@ -343,12 +303,7 @@ end
 # for reset and deallocate we always use the force option (-F)
 action :deallocate do
   converge_by("nimclient: deallocating all resources for client #{node['hostname']}") do
-    nimclient_s = 'nimclient -Fo deallocate -a subclass=all'
-    nimclient = Mixlib::ShellOut.new(nimclient_s)
-    nimclient.valid_exit_codes = 0
-    nimclient.run_command
-    nimclient.error!
-    nimclient.error?
+    shell_out!('nimclient -Fo deallocate -a subclass=all')
   end
 end
 
@@ -356,12 +311,7 @@ end
 # for reset and deallocate we always use the force option (-F)
 action :reset do
   converge_by("nimclient: reseting client #{node['hostname']}") do
-    nimclient_s = 'nimclient -Fo reset'
-    nimclient = Mixlib::ShellOut.new(nimclient_s)
-    nimclient.valid_exit_codes = 0
-    nimclient.run_command
-    nimclient.error!
-    nimclient.error?
+    shell_out!('nimclient -Fo reset')
   end
 end
 

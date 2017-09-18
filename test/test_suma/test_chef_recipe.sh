@@ -1,4 +1,19 @@
 #!/bin/ksh93
+#
+# Copyright 2016, Atos <jerome.hurstel@atos.net>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 function show_error_chef
 {
@@ -54,7 +69,7 @@ function check_nim
     expected_name=$2
     expected_server=$3
     expected_location=$lpp_source
-	
+
 	if [ -z "$expected_name" -a -z "$expected_server" ]
 	then
 		if [ -f "$lpp_source/nim.log" ]
@@ -151,7 +166,7 @@ function run_test
 	nb_test_wanted=$2
 	must_be_success=$3
 	log_manage=$4
-	
+
     rm -rf $current_dir/aixtest/trace.log
     rm -rf $current_dir/aixtest/chef.log
 	echo "{\n\"run_list\": [ \"recipe[aixtest::${ruby_test_name}]\" ]\n}\n" > $current_dir/firstrun.json
@@ -172,7 +187,7 @@ function run_test
 	else # chef exit with success
 		res=0 # return success
 		[ $must_be_success -eq 0 ] && res=1 # if not be success => error
-	fi 	
+	fi
 	if [ $res -ne 0 ]
 	then
 		show_error_chef
@@ -208,7 +223,7 @@ echo "--------- Run tests recipes ---------"
 
 nb_failure=0
 if [ ! -z "$(echo $run_option | grep 'A')" ]
-then 
+then
 	echo "---- oslevel tests ----"
 	rm -rf /tmp/img.source
 	run_test "test_oslevel" 8 1
@@ -275,7 +290,7 @@ then
 			show_error_chef
 		fi
 	fi
-	
+
 	echo '== aix_suma "19. Unknown property oslevel (ERROR)" =='
 	run_test "test_oslevel_error_unknown" 1 0
 	if [ $? -eq 0 ]
@@ -287,8 +302,8 @@ then
 			if [ $? -ne 0 ]
 			then
 				show_error_chef
-			fi 
-		fi 
+			fi
+		fi
 	fi
 	echo '== aix_suma "19b. latest SP for TL unknown (ERROR metadata 0500-035)" =='
 	run_test "test_oslevel_error_metadata" 1 0
@@ -297,12 +312,12 @@ then
 		check_no_directory '/tmp/img.source/latest5/7100-02-08-1614-lpp_source'
 		if [ $? -eq 0 ]
 		then
-			check_error_chef_log "Chef::Resource::AixSuma::SumaMetadataError: SUMA-SUMA-SUMA suma metadata returns 1!" 
+			check_error_chef_log "Chef::Resource::AixSuma::SumaMetadataError: SUMA-SUMA-SUMA suma metadata returns 1!"
 			if [ $? -ne 0 ]
 			then
 				show_error_chef
-			fi 
-		fi 
+			fi
+		fi
 	fi
 fi
 
@@ -344,8 +359,8 @@ then
 			if [ $? -ne 0 ]
 			then
 				show_error_chef
-			fi 
-		fi 
+			fi
+		fi
 	fi
 	echo '== aix_suma "28. Provide unknown lpp source as location (ERROR)" =='
 	run_test "test_location_error_unknown_lpp" 1 0
@@ -355,12 +370,12 @@ then
 		if [ $? -ne 0 ]
 		then
 			show_error_chef
-		fi 
+		fi
 	fi
 fi
 
 if [ ! -z "$(echo $run_option | grep 'C')" ]
-then 
+then
 	echo "---- targets tests ----"
 	rm -rf /tmp/img.source
 	run_test "test_targets" 4 1
@@ -396,23 +411,23 @@ then
 			if [ $? -ne 0 ]
 			then
 				show_error_chef
-			fi 
-		fi 
+			fi
+		fi
 	fi
 fi
 
 if [ ! -z "$(echo $run_option | grep 'D')" ]
-then 
+then
 	echo "---- suma tests ----"
 	rm -rf /tmp/img.source
 	mkdir -p /tmp/img.source/46/7100-02-02-lpp_source
 	suma -x -a RqName=7100-02-02 -a RqType=SP -a Action=Download -a DLTarget=/tmp/img.source/46/7100-02-02-lpp_source -a FilterML=7100-02 > /dev/null
-	rm "/tmp/img.source/46/7100-02-02-lpp_source/suma.log"		
+	rm "/tmp/img.source/46/7100-02-02-lpp_source/suma.log"
 	run_test "test_suma" 5 1
 	if [ $? -eq 0 ]
 	then
 		old_failure=$nb_failure
-		
+
 		echo '== aix_suma "45. error no fixes 0500-035 (Preview only)" =='
 		check_directory '/tmp/img.source/45/7100-02-02-lpp_source'
 		if [ $? -eq 0 ]
@@ -420,8 +435,8 @@ then
 	        check_suma /tmp/img.source/45/7100-02-02-lpp_source "error"
 			if [ $? -eq 0 ]
 			then
-		        check_nim /tmp/img.source/45/7100-02-02-lpp_source "" '' 
-			fi 
+		        check_nim /tmp/img.source/45/7100-02-02-lpp_source "" ''
+			fi
 		fi
 
 		echo '== aix_suma "46. nothing to download (Preview only)" =='
@@ -431,8 +446,8 @@ then
 	        check_suma /tmp/img.source/46/7100-02-02-lpp_source "Preview" "SP" "7100-02" "7100-02-02"
 			if [ $? -eq 0 ]
 			then
-		        check_nim /tmp/img.source/46/7100-02-02-lpp_source "" '' 
-			fi 
+		        check_nim /tmp/img.source/46/7100-02-02-lpp_source "" ''
+			fi
 		fi
 
 		echo '== aix_suma "47. failed fixes (Preview + Download)" =='
@@ -442,8 +457,8 @@ then
 	        check_suma /tmp/img.source/47/7100-02-02-lpp_source "Preview Download" "SP SP" "7100-02 7100-02" "7100-02-02 7100-02-02"
 			if [ $? -eq 0 ]
 			then
-		        check_nim /tmp/img.source/47/7100-02-02-lpp_source "" '' 
-			fi 
+		        check_nim /tmp/img.source/47/7100-02-02-lpp_source "" ''
+			fi
 		fi
 
 		echo '== aix_suma "48. lpp source exists (Preview + Download)" =='
@@ -453,8 +468,8 @@ then
 	        check_suma /tmp/img.source/48/7100-02-02-lpp_source "Preview Download" "SP SP" "7100-02 7100-02" "7100-02-02 7100-02-02"
 			if [ $? -eq 0 ]
 			then
-		        check_nim /tmp/img.source/48/7100-02-02-lpp_source "" '' 
-			fi 
+		        check_nim /tmp/img.source/48/7100-02-02-lpp_source "" ''
+			fi
 		fi
 
 		echo '== aix_suma "49. lpp source absent (Preview + Download + Define)" =='
@@ -464,10 +479,10 @@ then
 	        check_suma /tmp/img.source/49/7100-02-02-lpp_source "Preview Download" "SP SP" "7100-02 7100-02" "7100-02-02 7100-02-02"
 			if [ $? -eq 0 ]
 			then
-		        check_nim /tmp/img.source/49/7100-02-02-lpp_source "7100-02-02-lpp_source" 'master' 
-			fi 
+		        check_nim /tmp/img.source/49/7100-02-02-lpp_source "7100-02-02-lpp_source" 'master'
+			fi
 		fi
-		
+
 		if [ $nb_failure -ne $old_failure ]
 		then
 			show_error_chef
@@ -487,9 +502,9 @@ then
 				if [ $? -ne 0 ]
 				then
 					show_error_chef
-				fi 
-			fi 
-		fi 
+				fi
+			fi
+		fi
 	fi
 
 	echo '== aix_suma "42. error network 0500-013 (Preview ERROR)" =='
@@ -503,8 +518,8 @@ then
 			if [ $? -ne 0 ]
 			then
 				show_error_chef
-			fi 
-		fi 
+			fi
+		fi
 	fi
 
 	echo '== aix_suma "43. error entitlement 0500-059 (Preview ERROR)" =='
@@ -518,13 +533,13 @@ then
 			if [ $? -ne 0 ]
 			then
 				show_error_chef
-			fi 
-		fi 
+			fi
+		fi
 	fi
 fi
 
 echo "--------- Result tests ---------"
-if [ $nb_failure -eq 0 ] 
+if [ $nb_failure -eq 0 ]
 then
 	echo "====== SUCCESS ====== "
 else

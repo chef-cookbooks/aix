@@ -1,9 +1,5 @@
 #
-# Author:: Benoit Creau (<benoit.creau@chmod666.org>)
-# Cookbook Name:: aix
-# Provider:: fixes
-#
-# Copyright:: 2015, Benoit Creau
+# Copyright:: 2015-2016, Benoit Creau <benoit.creau@chmod666.org>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-require 'chef/mixin/shell_out'
-
-include Chef::Mixin::ShellOut
+#
 
 use_inline_resources
 
@@ -31,10 +25,7 @@ end
 def load_current_resource
   @current_resource = Chef::Resource::AixFixes.new(@new_resource.name)
 
-  emgr = Mixlib::ShellOut.new('emgr -l')
-  emgr.run_command
-  emgr.error!
-  Chef::Log.fatal('emgr: error while running emgr') unless emgr.exitstatus
+  emgr = shell_out!('emgr -l')
 
   # resource does not exists if there are no efix installed on the system
   if emgr.stdout == 'There is no efix data on this system'
@@ -58,12 +49,7 @@ action :remove do
     if @new_resource.fixes[0] == 'all'
       @current_resource.fixes.each do |fix|
         converge_by("emgr: removing fix #{fix}") do
-          remove_emgr = Mixlib::ShellOut.new("emgr -r -L #{fix}")
-          remove_emgr.run_command
-          remove_emgr.error!
-          unless remove_emgr.exitstatus
-            Chef::Log.fatal("emgr: error while trying to removing fix #{fix}")
-          end
+          shell_out!("emgr -r -L #{fix}")
         end
       end
     else
@@ -73,12 +59,7 @@ action :remove do
           converge = true if i_fix.include? fix
           next unless converge
           converge_by("emgr: removing fix #{fix}") do
-            remove_emgr = Mixlib::ShellOut.new("emgr -r -L #{fix}")
-            remove_emgr.run_command
-            remove_emgr.error!
-            unless remove_emgr.exitstatus
-              Chef::Log.fatal("emgr: error while trying to removing fix #{fix}")
-            end
+            shell_out!("emgr -r -L #{fix}")
           end
         end
       end
@@ -98,12 +79,7 @@ action :install do
     end
     next unless converge
     converge_by("emgr: installing fix #{fix}") do
-      install_emgr = Mixlib::ShellOut.new(emgr_install_string)
-      install_emgr.run_command
-      install_emgr.error!
-      unless install_emgr.exitstatus
-        Chef::Log.fatal("emgr: error while trying to install fix #{fix}")
-      end
+      shell_out!(emgr_install_string)
     end
   end
 end

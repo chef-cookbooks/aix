@@ -1,9 +1,5 @@
 #
-# Author:: Julian Dunn (<jdunn@chef.io>)
-# Cookbook Name:: aix
-# Provider:: subserver
-#
-# Copyright:: 2014, Chef Software, Inc.
+# Copyright:: 2014-2016, Chef Software, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +14,6 @@
 # limitations under the License.
 #
 
-require 'chef/mixin/shell_out'
-
-include Chef::Mixin::ShellOut
 use_inline_resources
 
 # Support whyrun

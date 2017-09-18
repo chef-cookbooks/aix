@@ -1,9 +1,5 @@
 #
-# Author:: Benoit Creau (<benoit.creau@chmod666.org>)
-# Cookbook Name:: aix
-# Provider:: chsec
-#
-# Copyright:: 2015, Benoit Creau
+# Copyright:: 2015-2016, Benoit Creau <benoit.creau@chmod666.org>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-require 'chef/mixin/shell_out'
-
-include Chef::Mixin::ShellOut
+#
 
 use_inline_resources
 
@@ -67,15 +61,14 @@ def load_current_resource
       # if we found the stanza, and we match another stanza found_stanza=0
       found_stanza = false if found_stanza && line =~ /\w:/
       # filling the hash table
-      if found_stanza && line =~ /=/
-        line_attribute = line.split('=')
-        # chomp and strip here
-        key = line_attribute[0].chomp.strip
-        value = line_attribute[1].chomp.strip
-        # to_sym very important
-        current_attributes[key.to_sym] = value
-        Chef::Log.debug("chsec: #{@new_resource.stanza} -> [#{key}],[#{value}])")
-      end
+      next unless found_stanza && line =~ /=/
+      line_attribute = line.split('=')
+      # chomp and strip here
+      key = line_attribute[0].chomp.strip
+      value = line_attribute[1].chomp.strip
+      # to_sym very important
+      current_attributes[key.to_sym] = value
+      Chef::Log.debug("chsec: #{@new_resource.stanza} -> [#{key}],[#{value}])")
     end
     # loading the attributes
     @current_resource.attributes(current_attributes)
@@ -104,11 +97,7 @@ action :update do
       # we converge if the is a change to do
       converge_by("chsec: changing #{@new_resource.name} for stanza #{@new_resource.stanza}") do
         Chef::Log.debug("chsec: command #{chsec_s}")
-        chsec = Mixlib::ShellOut.new(chsec_s)
-        chsec.valid_exit_codes = 0
-        chsec.run_command
-        chsec.error!
-        chsec.error?
+        shell_out!(chsec_s)
       end
     end
   end

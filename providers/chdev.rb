@@ -1,9 +1,5 @@
 #
-# Author:: Benoit Creau (<benoit.creau@chmod666.org>)
-# Cookbook Name:: aix
-# Provider:: chdev
-#
-# Copyright:: 2015, Benoit Creau
+# Copyright:: 2015-2016, Benoit Creau <benoit.creau@chmod666.org>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-require 'chef/mixin/shell_out'
-
-include Chef::Mixin::ShellOut
+#
 
 use_inline_resources
 
@@ -90,7 +84,7 @@ action :update do
     end
     # if both -P and -U will be add raise an error (-P or -U not both)
     if @new_resource.need_reboot && @new_resource.hot_change
-      raise "chdev: conflicting flags: -P -U"
+      raise 'chdev: conflicting flags: -P -U'
     end
     # if attributes needs a reboot add -P (for permanent to the command)
     string_shell_out = string_shell_out << ' -P' if @new_resource.need_reboot
@@ -99,11 +93,7 @@ action :update do
     if set_attr
       converge_by("chdev device #{@new_resource.name} with #{@new_resource.attributes}") do
         Chef::Log.debug("command: #{string_shell_out}")
-        so = shell_out(string_shell_out)
-        # if the command fails raise and exception
-        if so.exitstatus != 0
-          raise "chdev: device #{@current_resource.name} failed"
-        end
+        shell_out!(string_shell_out)
       end
     end
   end

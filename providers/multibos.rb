@@ -1,9 +1,5 @@
 #
-# Author:: Benoit Creau (<benoit.creau@chmod666.org>)
-# Cookbook Name:: aix
-# Provider:: multibos
-#
-# Copyright:: 2015, Benoit Creau
+# Copyright:: 2015-2016, Benoit Creau <benoit.creau@chmod666.org>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-require 'chef/mixin/shell_out'
+#
 
-include Chef::Mixin::ShellOut
 use_inline_resources
 
 # Support whyrun
@@ -58,10 +53,8 @@ action :create do
         string_shell_out = string_shell_out << 'a -l ' << @new_resource.update_device
       end
       Chef::Log.debug("multibos: creating standby bos with command #{string_shell_out}")
-      so = shell_out(string_shell_out, timeout: 7200)
-      if so.exitstatus != 0 || !so.stderr.empty?
-        raise('multibos: error creating standby bos')
-      end
+      so = shell_out!(string_shell_out, timeout: 7200)
+      raise('multibos: error creating standby bos') unless so.stderr.empty?
     end
   end
 end
@@ -72,10 +65,8 @@ action :remove do
   if @current_resource.exists
     converge_by('multibos: removing standby multibos') do
       Chef::Log.debug('multibos: removing standby multibos with command multibos -RX')
-      so = shell_out('multibos -RX')
-      if so.exitstatus != 0 || !so.stderr.empty?
-        raise('multibos: error removing multibos')
-      end
+      so = shell_out!('multibos -RX')
+      raise('multibos: error removing multibos') unless so.stderr.empty?
     end
   end
 end
@@ -87,10 +78,8 @@ action :update do
     converge_by('mutlibos: updating standby multibos') do
       string_shell_out = 'multibos -ac -l ' << @new_resource.update_device
       Chef::Log.debug("multibos: updating standby multibos with command #{string_shell_out}")
-      so = shell_out(string_shell_out, timeout: 7200)
-      if so.exitstatus != 0 || !so.stderr.empty?
-        raise('multibos: error updating multibos')
-      end
+      so = shell_out!(string_shell_out, timeout: 7200)
+      raise('multibos: error updating multibos') unless so.stderr.empty?
     end
   end
 end
@@ -165,11 +154,8 @@ action :umount do
     if mounted
       Chef::Log.debug('multibos: umounting multibos')
       converge_by('multibos: umounting standby bos') do
-        stby_bos = shell_out('multibos -u')
-        if stby_bos.exitstatus != 0 || !stby_bos.stderr.empty?
-          Chef::Log.debug('multibos: error while multibos -m')
-          raise('multibos: error while multibos -u')
-        end
+        stby_bos = shell_out!('multibos -u')
+        raise('multibos: error while multibos -u') unless stby_bos.stderr.empty?
       end
     else
       Chef::Log.debug('multibos: bos already umounted')

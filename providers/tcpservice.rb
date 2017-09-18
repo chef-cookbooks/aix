@@ -1,9 +1,5 @@
 #
-# Author:: Julian Dunn (<jdunn@opscode.com>)
-# Cookbook Name:: aix
-# Provider:: tcpservice
-#
-# Copyright:: 2014, Chef Software, Inc.
+# Copyright:: 2014-2016, Chef Software, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +14,6 @@
 # limitations under the License.
 #
 
-require 'chef/mixin/shell_out'
-
-include Chef::Mixin::ShellOut
 use_inline_resources
 
 # Support whyrun
@@ -30,10 +23,9 @@ end
 
 def load_current_resource
   @current_resource = Chef::Resource::AixTcpservice.new(@new_resource.name)
-  @current_resource.enabled = false
 
   so = shell_out("egrep '^start /usr/(sbin|lib)/#{@new_resource.identifier}' /etc/rc.tcpip")
-  @current_resource.enabled = true if so.exitstatus == 0
+  @current_resource.enabled = so.exitstatus == 0
 end
 
 action :enable do

@@ -1,9 +1,5 @@
 #
-# Author:: Benoit Creau (<benoit.creau@chmod666.org>)
-# Cookbook Name:: aix
-# Provider::  alt_disk
-#
-# Copyright:: 2015, Benoit Creau
+# Copyright:: 2015-2016, Benoit Creau <benoit.creau@chmod666.org>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-require 'chef/mixin/shell_out'
-
-include Chef::Mixin::ShellOut
+#
 
 use_inline_resources
 
@@ -34,17 +28,14 @@ def load_current_resource
 
   # if there is no altdisk_name specified in the recipe the altdisk_name will be the default one
   # (altinst_rootvg)
-  unless @new_resource.altdisk_name.nil?
-    altdisk_name = @new_resource.altdisk_name
-  else
+  if @new_resource.altdisk_name.nil?
     altdisk_name = 'altinst_rootvg'
     @new_resource.altdisk_name('altinst_rootvg')
+  else
+    altdisk_name = @new_resource.altdisk_name
   end
 
-  lspv_altinst_rootvg = Mixlib::ShellOut.new("lspv | awk '$3 == \"#{altdisk_name}\" {print $1}")
-  lspv_altinst_rootvg.run_command
-  lspv_altinst_rootvg.error!
-  Chef::Log.fatal("altdisk: can't run lspv") unless lspv_altinst_rootvg.exitstatus
+  lspv_altinst_rootvg = shell_out!("lspv | awk '$3 == \"#{altdisk_name}\" {print $1}")
 
   # these attribute are useful if we are working on an existing rootvg, so an altdisk exists
   if lspv_altinst_rootvg.stdout.empty?
@@ -81,21 +72,10 @@ action :create do
           alt_disk_copy_str = alt_disk_copy_str << ' -n '
         end
         Chef::Log.debug("alt_disk: running command #{alt_disk_copy_str}")
-        alt_disk_copy = Mixlib::ShellOut.new(alt_disk_copy_str, timeout: 7200)
-        alt_disk_copy.run_command
-        alt_disk_copy.error!
-        unless alt_disk_copy.exitstatus
-          Chef::Log.fatal("alt_disk: can't create alternate disk")
-        end
+        shell_out!(alt_disk_copy_str, timeout: 7200)
         # renaming if needed
         if @new_resource.altdisk_name != 'altinst_rootvg'
-          alt_rootvg_op_str = "alt_rootvg_op -v #{@new_resource.altdisk_name} -d #{disk}"
-          alt_rootvg_op = Mixlib::ShellOut.new(alt_rootvg_op_str)
-          alt_rootvg_op.run_command
-          alt_rootvg_op.error!
-          unless alt_rootvg_op.exitstatus
-            Chef::Log.fatal("alt_disk: can't rename alternate disk")
-          end
+          shell_out!("alt_rootvg_op -v #{@new_resource.altdisk_name} -d #{disk}")
         end
       end
     else
@@ -114,12 +94,7 @@ action :cleanup do
       if @new_resource.altdisk_name != 'altinst_rootvg'
         alt_rootvg_op_str = alt_rootvg_op_str << " #{@new_resource.altdisk_name}"
       end
-      alt_rootvg_op = Mixlib::ShellOut.new(alt_rootvg_op_str)
-      alt_rootvg_op.run_command
-      alt_rootvg_op.error!
-      unless alt_rootvg_op.exitstatus
-        Chef::Log.fatal("alt_disk: can't cleanup alternate rootvg")
-      end
+      shell_out!(alt_rootvg_op_str)
     end
   end
 end
@@ -141,12 +116,7 @@ action :rename do
     end
     converge_by("alt_disk: renaming alternate rootvg #{@new_resource.altdisk_name}") do
       Chef::Log.debug("alt_disk: running command #{alt_rootvg_op_str}")
-      alt_rootvg_op = Mixlib::ShellOut.new(alt_rootvg_op_str)
-      alt_rootvg_op.run_command
-      alt_rootvg_op.error!
-      unless alt_rootvg_op.exitstatus
-        Chef::Log.fatal("alt_disk: can't cleanup alternate rootvg")
-      end
+      shell_out!(alt_rootvg_op_str)
     end
   end
 end
@@ -166,14 +136,8 @@ action :wakeup do
     end
     if disk != 'None' && !wakeup
       converge_by("alt_disk: waking up alternate rootvg on disk #{disk}") do
-        alt_rootvg_op_str = "alt_rootvg_op -W -d #{disk}"
-        alt_rootvg_op = Mixlib::ShellOut.new(alt_rootvg_op_str)
-        alt_rootvg_op.run_command
-        # there are sometimes error when waking up
-        # alt_rootvg_op.error!
-        unless alt_rootvg_op.exitstatus
-          Chef::Log.fatal("alt_disk: can't wakeup alternate rootvg")
-        end
+        # there are sometimes error when waking up so don't use shell_out!
+        shell_out("alt_rootvg_op -W -d #{disk}")
       end
     end
   end
@@ -193,14 +157,8 @@ action :sleep do
     end
     if disk != 'None' && wakeup
       converge_by('alt_disk: putting alternate rootvg in sleep') do
-        alt_rootvg_op_str = 'alt_rootvg_op -S'
-        alt_rootvg_op = Mixlib::ShellOut.new(alt_rootvg_op_str)
-        alt_rootvg_op.run_command
-        # there are sometimes error when waking up
-        # alt_rootvg_op.error!
-        unless alt_rootvg_op.exitstatus
-          Chef::Log.fatal("alt_disk: can't wakeup alternate rootvg")
-        end
+        # there are sometimes error when sleeping so don't use shell_out!
+        shell_out('alt_rootvg_op -S')
       end
     end
   end
@@ -213,23 +171,12 @@ action :customize do
   if @current_resource.exists
     Chef::Log.info('alt_disk: customize')
     disk = get_current_alt
-    customize = false
-    customize = unless defined?(@new_resource.image_location)
-                  false
-                else
-                  true
-                end
+    customize = defined?(@new_resource.image_location)
     if disk != 'None' && customize
       converge_by('alt_disk: customize alt_disk (update)') do
-        Chef::Log.info("!!!!!! Rungging coommand alt_rootvg_op -C -b update_all -l #{@new_resource.image_location}")
-        alt_rootvg_op_str = "alt_rootvg_op -C -b update_all -l #{@new_resource.image_location}"
-        alt_rootvg_op = Mixlib::ShellOut.new(alt_rootvg_op_str, timeout: 15_000)
-        alt_rootvg_op.run_command
-        alt_rootvg_op.error!
-        Chef::Log.info('!!!!!!')
-        unless alt_rootvg_op.exitstatus
-          Chef::Log.fatal("alt_disk: can't customize")
-        end
+        cmd = "alt_rootvg_op -C -b update_all -l #{@new_resource.image_location}"
+        Chef::Log.info("alt_disk: Running command #{cmd}")
+        shell_out!(cmd, timeout: 15_000)
       end
     end
   end
@@ -300,7 +247,7 @@ def find_and_check_disk(type, value)
     if test == 'BIGGER' || test == 'EQUAL'
       Chef::Log.debug('alt_disk: disk is BIGGER or EQUAL')
       return disk
-      elif test == 'LESSER'
+    elsif test == 'LESSER'
       Chef::Log.debug('alt_disk: cannot find any disk usable for alt_disk')
       return 'None'
     end

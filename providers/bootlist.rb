@@ -1,9 +1,5 @@
 #
-# Author:: Alain Dejoux (<adejoux@djouxtech.net>)
-# Cookbook Name:: aix
-# Provider:: bootlist
-#
-# Copyright:: 2015, Alain Dejoux
+# Copyright:: 2015-2016, Alain Dejoux <adejoux@djouxtech.net>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,10 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-require 'chef/mixin/shell_out'
-
-include Chef::Mixin::ShellOut
+#
 
 use_inline_resources
 
@@ -32,8 +25,7 @@ end
 def load_current_resource
   @current_resource = Chef::Resource::AixBootlist.new(@new_resource.name)
 
-  so = shell_out("bootlist -m #{@new_resource.mode} -o")
-  raise("#{cmd}: error running #{cmd} -x") if so.exitstatus != 0
+  so = shell_out!("bootlist -m #{@new_resource.mode} -o")
 
   # initialize variables
   @current_resource.devices([])
@@ -72,9 +64,7 @@ def perform_bootlist
   end
 
   converge_by("bootlist: #{cmd}") do
-    so = shell_out(cmd)
-    # if the command fails raise and exception
-    raise "no: #{cmd} failed" if so.exitstatus != 0
+    shell_out!(cmd)
   end
 end
 
@@ -120,8 +110,6 @@ action :invalidate do
   converge_by("invalidate bootlist in mode #{@new_resource.mode}") do
     cmd = "bootlist -m #{@new_resource.mode} -i "
     Chef::Log.debug("command: #{cmd}")
-    so = shell_out(cmd)
-    # if the command fails raise and exception
-    raise "no: #{cmd} failed" if so.exitstatus != 0
+    shell_out!(cmd)
   end
 end

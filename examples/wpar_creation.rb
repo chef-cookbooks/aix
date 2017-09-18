@@ -1,4 +1,3 @@
-
 aix_etchosts 'testwpar' do
   ip_address '9.128.136.201'
   action :add
@@ -14,17 +13,12 @@ aix_wpar 'create wpar' do
 end
 
 aix_wpar 'stop wpar' do
- action :stop
- name 'testwpar2'
- live_stream true
-end
-
-aix_wpar 'sync wpar' do
- action :sync
- name 'testwpar2'
+  action :stop
+  name 'testwpar'
+  live_stream true
 end
 
 aix_wpar 'delete wpar' do
- action :delete
- name 'testwpar2'
+  action :delete
+  name 'testwpar'
 end
