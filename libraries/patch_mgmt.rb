@@ -132,6 +132,9 @@ module AIX
     class InvalidLocationProperty < StandardError
     end
 
+    class InvalidSumaProperties < StandardError
+    end
+
     class SumaError < StandardError
     end
 
@@ -363,8 +366,8 @@ module AIX
         !shell_out("lsnim | grep #{resource}").error?
       end
 
-      def define_lpp_source(lpp_source, dl_target)
-        nim_s = "/usr/sbin/nim -o define -t lpp_source -a server=master -a location=#{dl_target} -a packages=all #{lpp_source}"
+      def define_lpp_source(lpp_source, dl_target, comments = "build by chef recipe")
+        nim_s = "/usr/sbin/nim -o define -t lpp_source -a server=master -a location=#{dl_target} -a packages=all -a comments='#{comments}' #{lpp_source}"
         log_debug("NIM define operation: #{nim_s}")
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line do |line|
@@ -399,7 +402,7 @@ module AIX
 
       def perform_async_customization(lpp_source, clients)
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all -a accept_licenses=yes -a async=yes #{clients}"
-        log_debug("NIM cust operation: #{nim_s}")
+        log_debug("NIM asynchronus cust operation: #{nim_s}")
         puts "\nStart updating machine(s) '#{clients}' to #{lpp_source}."
         do_not_error = false
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
@@ -415,12 +418,12 @@ module AIX
         end
         puts "\nFinish updating #{clients} asynchronously."
         raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success? || do_not_error
-        log_info("Done nim customize operation \"#{nim_s}\"")
+        log_info("Done NIM customize operation \"#{nim_s}\"")
       end
 
       def perform_sync_customization(lpp_source, clients)
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all -a accept_licenses=yes -a async=no #{clients}"
-        log_debug("NIM cust operation: #{nim_s}")
+        log_debug("NIM synchronous cust operation: #{nim_s}")
         puts "\nStart updating machine(s) '#{clients}' to #{lpp_source}."
         do_not_error = false
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
@@ -443,7 +446,7 @@ module AIX
 
       def perform_efix_customization(lpp_source, client, filesets = 'all')
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a filesets='#{filesets}' #{client}"
-        log_debug("NIM cust operation: #{nim_s}")
+        log_debug("NIM install efixes cust operation: #{nim_s}")
         puts "\nStart patching machine(s) '#{client}'."
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
           thr = Thread.new do
@@ -552,7 +555,7 @@ module AIX
     end
 
     # -----------------------------------------------------------------
-    # Check nim hash info is well configured
+    # Check NIM hash info is well configured
     #
     #    raise NimInfoNotFound in case of error
     # -----------------------------------------------------------------
@@ -566,7 +569,7 @@ module AIX
       all_lpp_sources = hash.fetch('nim', {}).fetch('lpp_sources').keys
       log_debug("lpp source's list is #{all_lpp_sources}")
     rescue KeyError
-      raise NimInfoNotFound, 'Error: cannot find nim info'
+      raise NimInfoNotFound, 'Error: cannot find NIM information'
     end
 
     # -----------------------------------------------------------------
@@ -581,7 +584,7 @@ module AIX
     #    - cannot contact the target machines
     # -----------------------------------------------------------------
     def expand_targets(targets, clients)
-      return ['master'] if targets.nil? || targets.empty?
+      return [] if targets.nil? || targets.empty?
 
       selected_machines = []
       targets.split(/[,\s]/).each do |machine|
@@ -592,7 +595,7 @@ module AIX
           selected_machines.concat(m.split) if m =~ /^#{machine}$/
         end
       end
-      raise InvalidTargetsProperty, "Error: cannot contact any machines in '#{targets}'" if selected_machines.empty?
+      raise InvalidTargetsProperty, "The target patern '#{targets}' does not match any NIM client." if selected_machines.empty?
       selected_machines = selected_machines.uniq
       log_info("List of targets expanded to #{selected_machines}")
       selected_machines
@@ -653,50 +656,63 @@ module AIX
     #    raise InvalidLppSourceProperty in case of error
     # -----------------------------------------------------------------
     def check_lpp_source_name(lpp_source, niminfo)
-      raise InvalidLppSourceProperty, "Error: cannot find lpp_source '#{lpp_source}'" unless LppSource.exist?(lpp_source, niminfo)
+      raise InvalidLppSourceProperty, "lpp_source: '#{lpp_source}' does not exist." unless LppSource.exist?(lpp_source, niminfo)
       log_debug("Found lpp source #{lpp_source}")
     end
 
     # -----------------------------------------------------------------
     # Compute RqType suma parameter
-    #
-    #    raise InvalidOsLevelProperty in case of error
+    #    if oslevel not specified or == latest then return RqType = Latest
+    #    if oslevel is a TL (6 digits) and target list empty then return RqType = Latest
+    #    if oslevel is a TL (6 digits) or SP = 00 ou 00-0000 then return RqType = TL
+    #    if a SP is specified (8 or 12 digits) then return RqType = SP
+    #    raise InvalidOsLevelProperty in others cases
     # -----------------------------------------------------------------
-    def compute_rq_type(oslevel)
+    def compute_rq_type(oslevel, empty_list)
       return 'Latest' if oslevel.nil? || oslevel.empty? || oslevel.casecmp('latest').zero?
+      return 'Latest' if oslevel =~ /^([0-9]{4}-[0-9]{2})$/ && empty_list 
       return 'TL' if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/
       return 'SP' if oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
       # else raise exception
-      raise InvalidOsLevelProperty, 'Error: oslevel is not recognized'
+      raise InvalidOsLevelProperty, 'Invalid Oslevel: "#{oslevel}"'
     end
 
     # -----------------------------------------------------------------
     # Compute RqName suma parameter
     #
+    #   if oslevel is a complete SP (12 digits) then return RqName = oslevel
+    #   if oslevel is an incomplete SP (8 digits) or oslevel=Latest then execute
+    #   a metadata suma request to find the complete SP level (12 digits)
     #    raise InvalidTargetsProperty in case of error
     # -----------------------------------------------------------------
     def compute_rq_name(rq_type, oslevel, targets, niminfo)
       case rq_type
       when 'Latest'
-        # build machine-oslevel hash
-        levels = Hash.new { |h, k| h[k] = k == 'master' ? niminfo['nim']['master'].fetch('oslevel', nil) : niminfo['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
-        targets.each { |k| levels[k] }
-        levels.delete_if { |_k, v| v.nil? || v.empty? }
-        log_debug("Hash table (machine/oslevel) built #{levels}")
+        if targets.empty?
+          metadata_filter_ml = oslevel[0..6]
+          metadata_filter_ml << "-00" if metadata_filter_ml.size == 4
+        else
+          # build machine-oslevel hash
+          levels = Hash.new { |h, k| h[k] = k == 'master' ? niminfo['nim']['master'].fetch('oslevel', nil) : niminfo['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
+          targets.each { |k| levels[k] }
+          levels.delete_if { |_k, v| v.nil? || v.empty? }
+          log_debug("Hash table (machine/oslevel) built #{levels}")
 
-        unless levels.empty?
-          # discover FilterML level
-          ary = levels.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
-          # find highest ML
-          metadata_filter_ml = ary.max
-          # check ml level of machines
-          if ary.min[0..3].to_i < ary.max[0..3].to_i
-            log_warn("Release level mismatch, only AIX #{ary.max[0]}.#{ary.max[1]} SP/TL will be downloaded")
+          unless levels.empty?
+            # discover FilterML level
+            ary = levels.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
+            # find highest ML
+            metadata_filter_ml = ary.max
+            # check ml level of machines
+            if ary.min[0..3].to_i < ary.max[0..3].to_i
+              log_warn("Release level mismatch, only AIX #{ary.max[0]}.#{ary.max[1]} SP/TL will be downloaded")
+            end
           end
+        
+          raise InvalidTargetsProperty, 'There is no target machine matching the requested oslevel.' if metadata_filter_ml.nil?
+          metadata_filter_ml.insert(4, '-')
+          log_info("Found highest ML #{metadata_filter_ml} from client list")
         end
-        raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets' if metadata_filter_ml.nil?
-        metadata_filter_ml.insert(4, '-')
-        log_info("Found highest ML #{metadata_filter_ml} from client list")
 
         # suma metadata
         tmp_dir = ::File.join(Chef::Config[:file_cache_path], 'metadata')
@@ -739,7 +755,7 @@ module AIX
           suma.metadata
 
           # find SP build number
-          file_name = oslevel + '.xml'
+          file_name = oslevel + ".xml"
           ::File.open(::File.join(tmp_dir, 'installp', 'ppc', file_name)) do |f|
             s = f.read
             #### BUG SUMA WORKAROUND ###
@@ -757,25 +773,33 @@ module AIX
     # -----------------------------------------------------------------
     # Compute FilterML suma parameter
     #
+    #    if no taget machine is given then filter_ml = TL part (6 digits) of requested oslevel or rq_name
+    #    else filter_ml = the lowest TL from target machines matching the release of the requested oslevel
     #    raise InvalidTargetsProperty in case of error
     # -----------------------------------------------------------------
     def compute_filter_ml(targets, rq_name, niminfo)
-      # build machine-oslevel hash
-      levels = Hash.new { |h, k| h[k] = k == 'master' ? niminfo['nim']['master'].fetch('oslevel', nil) : niminfo['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
-      targets.each { |k| levels[k] }
-      levels.delete_if { |_k, v| v.nil? || v.empty? || v.to_i != rq_name.to_i }
-      log_debug("Hash table (machine/oslevel) built #{levels}")
+      # If there is no targets then the filter maintenance level = OSLevel part from rq_name
+      if targets.nil? || targets.empty?
+        filter_ml = rq_name[0..6]
+        filter_ml << "-00" if filter_ml.size == 4
+      else
+        # build machine-oslevel hash
+        levels = Hash.new { |h, k| h[k] = k == 'master' ? niminfo['nim']['master'].fetch('oslevel', nil) : niminfo['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
+        targets.each { |k| levels[k] }
+        levels.delete_if { |_k, v| v.nil? || v.empty? || v.to_i != rq_name.to_i }
+        log_debug("Hash table (machine/oslevel) built #{levels}")
 
-      unless levels.empty?
-        # discover FilterML level
-        ary = levels.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
-        # find lowest ML
-        filter_ml = ary.min
+        unless levels.empty?
+          # discover FilterML level
+          ary = levels.values.collect { |v| v.match(/^([0-9]{4}-[0-9]{2})(|-[0-9]{2}|-[0-9]{2}-[0-9]{4})$/)[1].delete('-') }
+          # find lowest ML
+          filter_ml = ary.min
+        end
+        raise InvalidSumaProperties, 'There is no target machine matching the requested oslevel.' if filter_ml.nil?
+        filter_ml.insert(4, '-')
+        log_warn("The oldest machine is at level #{filter_ml}.")
       end
 
-      raise InvalidTargetsProperty, 'Error: cannot discover filter ml based on the list of targets' if filter_ml.nil?
-      filter_ml.insert(4, '-')
-      log_warn("The oldest machine is at level #{filter_ml}.")
       filter_ml
     end
 
@@ -815,7 +839,7 @@ module AIX
           loc = niminfo['nim']['lpp_sources'][lpp_source]['location']
           log_debug("Found lpp source '#{lpp_source}' location: '#{loc}'")
           unless loc =~ /^#{dl_target}/
-            raise InvalidLocationProperty, "Error: lpp source location mismatch, '#{dl_target}' asked but '#{loc}' in existing lpp source"
+            raise InvalidLocationProperty, "Lpp source location mismatch. It already exist a lpp source '#{lpp_source}' with a location different as '#{dl_target}'"
           end
         end
       else # location is a lpp_source
@@ -823,7 +847,7 @@ module AIX
           dl_target = niminfo['nim']['lpp_sources'].fetch(location).fetch('location')
           log_debug("Discover '#{location}' lpp source's location: '#{dl_target}'")
         rescue KeyError
-          raise InvalidLocationProperty, "Error: cannot find lpp_source '#{location}' from nim info"
+          raise InvalidLocationProperty, "lpp_source: '#{location}' does not exist."
         end
       end
       dl_target
@@ -839,11 +863,27 @@ module AIX
       # build list of targets
       target_list = expand_targets(targets, niminfo['nim']['clients'].keys)
       log_debug("target_list=#{target_list}")
-
+      empty_list = target_list.empty?
       params['DisplayName'] = desc
+      oslevel.downcase!
+
+      ############## Filter wrong cases ################
+      if empty_list && (oslevel.nil? || oslevel.empty? || oslevel == 'latest')
+        raise InvalidSumaProperties, "Oslevel target could not be empty or equal 'Latest' when target machine list is empty"
+      end
+      if oslevel =~ /^([0-9]{4})(|-00|-00-00|-00-00-0000)$/ && ( not empty_list )
+        raise InvalidOsLevelProperty, 'Specify a non 0 value for the Technical Level or the Service Pack'
+      end
+      if oslevel =~ /^([0-9]{4}-[0-9]{2})(-00|-00-0000)$/ && empty_list
+        raise InvalidSumaProperties, 'When no Service Pack is provided , a target machine list is required'
+      end
+      if not location.start_with?('/') # location is a lpp_source
+        check_lpp_source_name(location, niminfo)
+      end
+      ##################################################
 
       # compute suma request type based on oslevel property
-      rq_type = compute_rq_type(oslevel)
+      rq_type = compute_rq_type(oslevel, empty_list)
       log_debug("rq_type=#{rq_type}")
       params['RqType'] = rq_type
 
@@ -852,7 +892,7 @@ module AIX
       log_debug("rq_name=#{rq_name}")
       params['RqName'] = rq_name
 
-      # metadata does not match any fixes
+      # metadata does not match any fixe
       return nil if params['RqName'].nil? || params['RqName'].empty?
 
       # compute suma filter ml based on targets property
@@ -877,12 +917,21 @@ module AIX
       dl_target = compute_dl_target(location, lpp_source, niminfo)
       log_debug("dl_target=#{dl_target}")
       params['DLTarget'] = dl_target
+      
+      # display user message
+      log_info("The builded lpp_source will be: #{lpp_source}.")
+      log_info("The lpp_source location will be: #{dl_target}.")
+      log_info("The lpp_source will be available to update machines from #{filter_ml}-00 to #{rq_name}.")
+      if rq_type == 'Latest'
+        log_info("#{rq_name} is the Latest SP of TL #{filter_ml}.")
+      end
+      params['Comments'] = "Packages for updates from #{filter_ml} to #{rq_name}"
 
       params
     end
 
     # -----------------------------------------------------------------
-    # Search for a lpp_source resource into available nim resources
+    # Search for a lpp_source resource into available NIM resources
     #
     #    "type" : 'sp' or 'tl'
     #    "time" : 'latest' or 'next'
@@ -916,9 +965,9 @@ module AIX
       if lppsource.empty?
         # setting lpp_source to current oslevel if not found
         lppsource = oslevel[0] + '-' + oslevel[1] + '-' + oslevel[2] + '-' + oslevel[3] + '-lpp_source'
-        log_debug("nim: server already to the #{time} #{type}, or no lpp_source were found, #{lppsource} will be utilized")
+        log_debug("NIM: server already to the #{time} #{type}, or no lpp_source were found, #{lppsource} will be used")
       else
-        log_debug("nim: we found the #{time} lpp_source, #{lppsource} will be utilized")
+        log_debug("NIM: we found the #{time} lpp_source, #{lppsource} will be used")
       end
       lppsource
     end

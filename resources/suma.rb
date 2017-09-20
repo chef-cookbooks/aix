@@ -79,7 +79,7 @@ action :download do
   # create nim lpp source
   nim = Nim.new
   converge_by("define nim lpp source \'#{params['LppSource']}\'") do
-    nim.define_lpp_source(params['LppSource'], params['DLTarget'])
+    nim.define_lpp_source(params['LppSource'], params['DLTarget'], params['Comments'])
   end
 end
 
