@@ -39,15 +39,15 @@ load_current_value do
   # hash_info = {}
   # so = shell_out!('/usr/sbin/suma -l')
   # so.stdout.each_line do |line|
-    # line.chomp!
-    # if line =~ /^([0-9]+):$/
-      # task_id = Regexp.last_match(1)
-    # elsif line =~ /^\s+(.*?)=(.*?)$/
-      # hash_info[Regexp.last_match(1)] = Regexp.last_match(2)
-    # elsif line.empty?
-      # hash[task_id] = Hash[hash_info]
-      # hash_info.clear
-    # end
+  #   line.chomp!
+  #   if line =~ /^([0-9]+):$/
+  #     task_id = Regexp.last_match(1)
+  #   elsif line =~ /^\s+(.*?)=(.*?)$/
+  #     hash_info[Regexp.last_match(1)] = Regexp.last_match(2)
+  #   elsif line.empty?
+  #     hash[task_id] = Hash[hash_info]
+  #     hash_info.clear
+  #   end
   # end
   # puts hash
 end
@@ -69,7 +69,7 @@ action :download do
   return if preview_only == true
 
   if suma.downloaded?
-     # suma download
+    # suma download
     converge_by("download #{suma.downloaded} fixes to '#{params['DLTarget']}'") do
       suma.download
     end
@@ -107,11 +107,11 @@ action :edit do
     else
       # schedule
       minute, hour, day, month, weekday = sched_time.split(' ')
-      raise SumaError unless minute.eql?('*') || (0 <= minute.to_i && minute.to_i <= 59)
-      raise SumaError unless hour.eql?('*') || (0 <= hour.to_i && hour.to_i <= 23)
-      raise SumaError unless day.eql?('*') || (1 <= day.to_i && day.to_i <= 31)
-      raise SumaError unless month.eql?('*') || (1 <= month.to_i && month.to_i <= 12)
-      raise SumaError unless weekday.eql?('*') || (0 <= weekday.to_i && weekday.to_i <= 6)
+      raise SumaError unless minute.eql?('*') || (minute.to_i >= 0 && minute.to_i <= 59)
+      raise SumaError unless hour.eql?('*') || (hour.to_i >= 0 && hour.to_i <= 23)
+      raise SumaError unless day.eql?('*') || (day.to_i >= 1 && day.to_i <= 31)
+      raise SumaError unless month.eql?('*') || (month.to_i >= 1 && month.to_i <= 12)
+      raise SumaError unless weekday.eql?('*') || (weekday.to_i >= 0 && weekday.to_i <= 6)
       Chef::Log.debug("minute=#{minute}, hour=#{hour}, day=#{day}, month=#{month}, weekday=#{weekday}")
       suma_s << ' -s "' << sched_time << '"'
     end

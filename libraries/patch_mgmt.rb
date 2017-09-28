@@ -366,7 +366,7 @@ module AIX
         !shell_out("lsnim | grep #{resource}").error?
       end
 
-      def define_lpp_source(lpp_source, dl_target, comments = "build by chef recipe")
+      def define_lpp_source(lpp_source, dl_target, comments = 'build by chef recipe')
         nim_s = "/usr/sbin/nim -o define -t lpp_source -a server=master -a location=#{dl_target} -a packages=all -a comments='#{comments}' #{lpp_source}"
         log_debug("NIM define operation: #{nim_s}")
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
@@ -669,8 +669,8 @@ module AIX
     #    raise InvalidOsLevelProperty in others cases
     # -----------------------------------------------------------------
     def compute_rq_type(oslevel, empty_list)
-      return 'Latest' if oslevel.nil? || oslevel.empty? || oslevel.casecmp('latest').zero?
-      return 'Latest' if oslevel =~ /^([0-9]{4}-[0-9]{2})$/ && empty_list 
+      return 'Latest' if oslevel.nil? || oslevel.empty? || oslevel.casecmp('latest') == 0
+      return 'Latest' if oslevel =~ /^([0-9]{4}-[0-9]{2})$/ && empty_list
       return 'TL' if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/
       return 'SP' if oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
       # else raise exception
@@ -690,7 +690,7 @@ module AIX
       when 'Latest'
         if targets.empty?
           metadata_filter_ml = oslevel[0..6]
-          metadata_filter_ml << "-00" if metadata_filter_ml.size == 4
+          metadata_filter_ml << '-00' if metadata_filter_ml.size == 4
         else
           # build machine-oslevel hash
           levels = Hash.new { |h, k| h[k] = k == 'master' ? niminfo['nim']['master'].fetch('oslevel', nil) : niminfo['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
@@ -708,7 +708,7 @@ module AIX
               log_warn("Release level mismatch, only AIX #{ary.max[0]}.#{ary.max[1]} SP/TL will be downloaded")
             end
           end
-        
+
           raise InvalidTargetsProperty, 'There is no target machine matching the requested oslevel.' if metadata_filter_ml.nil?
           metadata_filter_ml.insert(4, '-')
           log_info("Found highest ML #{metadata_filter_ml} from client list")
@@ -742,7 +742,7 @@ module AIX
 
       when 'TL'
         # pad with 0
-        rq_name = "#{oslevel.match(/^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/)[1]}"
+        rq_name = oslevel.match(/^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/)[1].to_s
 
       when 'SP'
         if oslevel =~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}$/
@@ -755,7 +755,7 @@ module AIX
           suma.metadata
 
           # find SP build number
-          file_name = oslevel + ".xml"
+          file_name = oslevel + '.xml'
           ::File.open(::File.join(tmp_dir, 'installp', 'ppc', file_name)) do |f|
             s = f.read
             #### BUG SUMA WORKAROUND ###
@@ -781,7 +781,7 @@ module AIX
       # If there is no targets then the filter maintenance level = OSLevel part from rq_name
       if targets.nil? || targets.empty?
         filter_ml = rq_name[0..6]
-        filter_ml << "-00" if filter_ml.size == 4
+        filter_ml << '-00' if filter_ml.size == 4
       else
         # build machine-oslevel hash
         levels = Hash.new { |h, k| h[k] = k == 'master' ? niminfo['nim']['master'].fetch('oslevel', nil) : niminfo['nim']['clients'].fetch(k, {}).fetch('oslevel', nil) }
@@ -812,15 +812,13 @@ module AIX
       oslevel = rq_name
 
       if location.nil? || location.empty? || location.start_with?('/')
-        if oslevel =~ /^([0-9]{4}-[0-9]{2})$/
-          oslevel += '-00-0000'
-        end
+        oslevel += '-00-0000' if oslevel =~ /^([0-9]{4}-[0-9]{2})$/
         lpp_src = "#{oslevel}-lpp_source"
       else
         lpp_src = location.chomp('\/')
       end
 
-      return lpp_src
+      lpp_src
     end
 
     # -----------------------------------------------------------------
@@ -871,15 +869,14 @@ module AIX
       if empty_list && (oslevel.nil? || oslevel.empty? || oslevel == 'latest')
         raise InvalidSumaProperties, "Oslevel target could not be empty or equal 'Latest' when target machine list is empty"
       end
-      if oslevel =~ /^([0-9]{4})(|-00|-00-00|-00-00-0000)$/ && ( not empty_list )
+      if oslevel =~ /^([0-9]{4})(|-00|-00-00|-00-00-0000)$/ && (!empty_list)
         raise InvalidOsLevelProperty, 'Specify a non 0 value for the Technical Level or the Service Pack'
       end
       if oslevel =~ /^([0-9]{4}-[0-9]{2})(-00|-00-0000)$/ && empty_list
         raise InvalidSumaProperties, 'When no Service Pack is provided , a target machine list is required'
       end
-      if not location.start_with?('/') # location is a lpp_source
-        check_lpp_source_name(location, niminfo)
-      end
+      # check "location" is a lpp_source
+      check_lpp_source_name(location, niminfo) unless location.start_with?('/')
       ##################################################
 
       # compute suma request type based on oslevel property
@@ -917,7 +914,7 @@ module AIX
       dl_target = compute_dl_target(location, lpp_source, niminfo)
       log_debug("dl_target=#{dl_target}")
       params['DLTarget'] = dl_target
-      
+
       # display user message
       log_info("The builded lpp_source will be: #{lpp_source}.")
       log_info("The lpp_source location will be: #{dl_target}.")

@@ -48,11 +48,11 @@ end
 
 action :remove do
   if @current_resource.exists
-    if @new_resource.fixes[0].downcase == 'all'
-      fixes_to_remove = @current_resource.fixes
-    else
-      fixes_to_remove = @new_resource.fixes
-    end
+    fixes_to_remove = if @new_resource.fixes[0].downcase == 'all'
+                        @current_resource.fixes
+                      else
+                        @new_resource.fixes
+                      end
     Chef::Log.info("efixes requested to be removed: #{fixes_to_remove}")
     fixes_to_remove.each do |fix|
       converge = false
@@ -82,12 +82,12 @@ action :install do
   fix_directory = @new_resource.directory
   if Dir.exist?(fix_directory)
     Dir.chdir(fix_directory)
-    if @new_resource.fixes[0].downcase == 'all'
-      packages = Dir.glob("*.epkg.Z")
-    else
-      packages = @new_resource.fixes
-    end
-    packages.sort! {|x, y| y <=> x}
+    packages = if @new_resource.fixes[0].downcase == 'all'
+                 Dir.glob('*.epkg.Z')
+               else
+                 @new_resource.fixes
+               end
+    packages.sort! { |x, y| y <=> x }
 
     packages.each do |fix|
       emgr_install_string = '/usr/sbin/emgr -p -e ' << fix_directory << '/' << fix

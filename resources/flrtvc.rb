@@ -342,7 +342,6 @@ rescue StandardError => e
 end
 
 def check_level_prereq?(machine, src)
-  res = true
   # get min/max level
   so = shell_out!("/usr/sbin/emgr -dXv3 -e #{src} | /bin/grep -p \\\"PREREQ", environment: { 'LANG' => 'C' }).stdout
   so.lines[3..-2].each do |line|
@@ -497,7 +496,7 @@ action :patch do
       end
     end
     # sort the efix basenames array
-    efixes_basenames.sort! {|x, y| y <=> x}
+    efixes_basenames.sort! { |x, y| y <=> x }
 
     if m == 'master'
       # install package
