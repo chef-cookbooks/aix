@@ -869,7 +869,7 @@ module AIX
       if empty_list && (oslevel.nil? || oslevel.empty? || oslevel == 'latest')
         raise InvalidSumaProperties, "Oslevel target could not be empty or equal 'Latest' when target machine list is empty"
       end
-      if oslevel =~ /^([0-9]{4})(|-00|-00-00|-00-00-0000)$/ && (!empty_list)
+      if oslevel =~ /^([0-9]{4})(|-00|-00-00|-00-00-0000)$/ && !empty_list
         raise InvalidOsLevelProperty, 'Specify a non 0 value for the Technical Level or the Service Pack'
       end
       if oslevel =~ /^([0-9]{4}-[0-9]{2})(-00|-00-0000)$/ && empty_list
