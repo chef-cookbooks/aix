@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-actions :install, :remove
-
 property :identifier, name_property: true, kind_of: String
 property :runlevel, kind_of: String, required: true
 property :processaction, kind_of: String, required: true, equal_to: %w(respawn wait once boot bootwait powerfail off hold ondemand initdefault sysinit)
