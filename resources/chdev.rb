@@ -14,9 +14,6 @@
 # limitations under the License.
 #
 
-resource_name :aix_chdev
-
-property :name, String, name_property: true, identity: true
 property :attributes, Hash
 # If both of these are specified, the resulting shellout command fails
 property :need_reboot, [true, false], default: false
