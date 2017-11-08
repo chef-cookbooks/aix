@@ -19,8 +19,6 @@ property :attributes, Hash
 property :need_reboot, [true, false], default: false
 property :hot_change, [true, false], default: false
 
-default_action :update
-
 load_current_value do |desired|
   # does the device exists
   so = shell_out("lsattr -El #{desired.name}")
