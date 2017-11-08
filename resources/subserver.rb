@@ -24,8 +24,6 @@ property :args, String
 property :enabled, [true, false]
 property :running, [true, false]
 
-default_action :enable
-
 load_current_value do |desired|
   valid_protocols = %w(tcp udp tcp6 udp6)
   begin
