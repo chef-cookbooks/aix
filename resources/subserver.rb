@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-resource_name :aix_subserver
-
 property :servicename, String, name_property: true, identity: true
 property :type, String, equal_to: %w[dgram stream sunrpc_udp sunrpc_tcp]
 property :protocol, String, required: true, equal_to: %w[tcp udp tcp6 udp6], identity: true
