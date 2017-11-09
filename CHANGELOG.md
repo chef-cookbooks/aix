@@ -2,6 +2,18 @@
 
 This file is used to list changes made in each version of the aix cookbook.
 
+## 2.0.0 (2017-11-08)
+
+- chdev, chsec, no, subserver, tcpservice, and tunables converted to custom resources. This increases the minimum required chef-client version to 12.7. Thanks Mike Sgarbossa
+- Chef 13 compatibility fixes. Thanks Mike Sgarbossa
+- Added new suma, nim and flrtvc resources. Thanks V. Robin
+- Add Availability to download updates for a specific Service Pack without giving a list of NIM client machines. Thanks ponceta-jm
+- inittab converted to a custom resource. Thanks lamont
+- Fixed license string to be a SPDX standard license string
+- Fixes and improved logging in the fixes resource
+- Added a nim_master_setup recipe
+- Added a nim_master_setup_standalone recipe
+
 ## 1.2.1 (2017-03-02)
 
 - Fix missing attributes for aix_altdisk
