@@ -1,7 +1,6 @@
 # AIX Cookbook
 
-[![Build Status](https://travis-ci.org/chef-cookbooks/aix.svg?branch=master)](https://travis-ci.org/chef-cookbooks/aix)
-[![Cookbook Version](https://img.shields.io/cookbook/v/aix.svg)](https://supermarket.chef.io/cookbooks/aix)
+[![Build Status](https://travis-ci.org/chef-cookbooks/aix.svg?branch=master)](https://travis-ci.org/chef-cookbooks/aix) [![Cookbook Version](https://img.shields.io/cookbook/v/aix.svg)](https://supermarket.chef.io/cookbooks/aix)
 
 This cookbook contains useful resources for using Chef with AIX systems.
 
@@ -22,13 +21,106 @@ This cookbook contains useful resources for using Chef with AIX systems.
 
 ## Usage
 
-This cookbook has no recipes.
+This cookbook ships multiple resources for writing cookbooks to manage AIX hosts. See the resources below:
 
 ## Resources
+
+### altdisk
+
+Create an alternate disk on a free disk Update an existing alternate disk
+
+#### Actions
+
+- `create` - create an alternate rootvg disk
+- `cleanup` - cleanup an alternate rootvg disk
+- `wakeup` - wakeup an alternate rootvg disk
+- `rename` - rename an alternate rootvg disk
+- `sleep` - put an alternate rootvg in sleep
+- `customize` - customize an alternate rootvg (update)
+
+#### Properties
+
+- `type` (optional) - size (choose the disk on which creating the alternate disk by it's size in MB)
+- `type` (optional) - name (choose the disk on which creating the alternate disk by it's name)
+- `type` (optional) - auto (automatically choose the disk on which creating the rootvg)
+- `value` (optional) - bigger (if type is auto choose a disk bigger than the current rootvg size)
+- `value` (optional) - equal (if type is auto choose a disk with the exact same size of the rootvg size)
+- `value` (optional) - size or name (if type is size or name it's the size or the exact name of the disk)
+- `altdisk_name` (optional) - name of the alternate disk to create
+- `change_bootlist` (optional) (default false) - change the bootlist to boot to the new alternate disk
+- `image_location` (optional) - directory containing filesets used for the cust operation
+- `new_altdisk_name` (optional) - new name use for rename action
+- `reset_devices`, (optional) kind_of: [true, false], default: false - Performs a device reset on the target. This causes the alternate disk install to not retain any user-defined device configurations.
+- `remain_nimclient`, (optional) kind_of: [true, false], default: false - `/.rhosts` and `/etc/niminfo` files are copied to the file system
+
+#### Examples
+
+```ruby
+aix_altdisk "cloning rootvg by name hdisk3" do
+  type :name
+  value "hdisk3"
+end
+
+aix_altdisk "cloning rootvg by size 66560" do
+  type :size
+  value "66560"
+end
+
+aix_altdisk "cloning rootvg by size 66561" do
+  type :size
+  value "66561"
+end
+
+aix_altdisk "cloning rootvg by auto" do
+  type :auto
+  value "bigger"
+  action :create
+  altdisk_name "myvg"
+end
+
+aix_altdisk "cleanup alternate rootvg" do
+  action :cleanup
+  altdisk_name "rootvg_alt"
+end
+
+aix_altdisk "altdisk_by_auto" do
+  type :auto
+  value "bigger"
+  change_bootlist true
+  action :create
+end
+
+aix_altdisk "altdisk_wake_up" do
+  action :wakeup
+end
+
+aix_altdisk "altdisk_update" do
+  image_location "/mnt/7100-03-05-1524"
+  action :customize
+end
+
+aix_altdisk "altdisk_sleep" do
+  action :sleep
+end
+
+aix_altdisk "rename altdisk" do
+  new_altdisk_name "altdisk_vg"
+  action :rename
+end
+```
 
 ### inittab
 
 Manage the inittab entries. Example:
+
+#### Properties
+
+- `runlevel` - the runlevel of the inittab entry
+- `processaction` - the action of the process (e.g. "once", "boot", etc.)
+- `command` - the command to run
+- `follows` - add the entry after this one
+
+#### Examples
 
 ```ruby
 aix_inittab 'my-awesome-aix-daemon' do
@@ -39,16 +131,21 @@ aix_inittab 'my-awesome-aix-daemon' do
 end
 ```
 
-Parameters:
-
-* `runlevel` - the runlevel of the inittab entry
-* `processaction` - the action of the process (e.g. "once", "boot", etc.)
-* `command` - the command to run
-* `follows` - add the entry after this one
-
 ### subserver
 
-Manage the services started by `inetd` by editing `/etc/inetd.conf`. Example:
+Manage the services started by `inetd` by editing `/etc/inetd.conf`.
+
+#### Properties
+
+- `servicename` - name of the service as it appears in the first field of `/etc/inetd.conf`
+- `type` - type of service. Valid values: `dgram stream sunrpc_udp sunrpc_tcp`
+- `protocol` - protocol of service. Valid values: `tcp udp tcp6 udp6`
+- `wait` - blocking, nonblocking, or SRC. Valid values: `wait nowait SRC`
+- `user` - user to the run the service under. Default: `root`
+- `program` - program to run (typically specified by full path)
+- `args` - program, with arguments
+
+#### Examples
 
 ```ruby
 aix_subserver 'tftp' do
@@ -57,19 +154,15 @@ aix_subserver 'tftp' do
 end
 ```
 
-Parameters:
-
-* `servicename` - name of the service as it appears in the first field of `/etc/inetd.conf`
-* `type` - type of service. Valid values: `dgram stream sunrpc_udp sunrpc_tcp`
-* `protocol` - protocol of service. Valid values: `tcp udp tcp6 udp6`
-* `wait` - blocking, nonblocking, or SRC. Valid values: `wait nowait SRC`
-* `user` - user to the run the service under. Default: `root`
-* `program` - program to run (typically specified by full path)
-* `args` - program, with arguments
-
 ### tcpservice
 
-Manage the services started by `/etc/rc.tcpip`. Example:
+Manage the services started by `/etc/rc.tcpip`.
+
+#### Properties
+
+- `immediate` (optional) - whether to start/stop the TCP/IP service immediately by contacting the SRC. It's much better to declaratively specify this separately using the built-in `service` resource in Chef.
+
+#### Examples
 
 ```ruby
 aix_tcpservice 'xntpd' do
@@ -77,17 +170,15 @@ aix_tcpservice 'xntpd' do
 end
 ```
 
-Parameters:
-
-* `immediate` (optional) - whether to start/stop the TCP/IP service
-  immediately by contacting the SRC. It's much better to declaratively
-  specify this separately using the built-in `service` resource in
-  Chef.
-
 ### toolboxpackage
 
-To install packages from the IBM AIX Toolbox for Linux off the IBM FTP
-site. Example:
+To install packages from the IBM AIX Toolbox for Linux off the IBM FTP site.
+
+#### Properties
+
+- `base_url` (optional) - the base URL to use to retrieve the package. If you are behind a firewall or your AIX system doesn't have access to the Internet, you can override this to an HTTP/FTP server where you have stored the RPMs.
+
+#### Examples
 
 ```ruby
 aix_toolboxpackage "a2ps" do
@@ -95,16 +186,16 @@ aix_toolboxpackage "a2ps" do
 end
 ```
 
-Parameters:
-
-* `base_url` (optional) - the base URL to use to retrieve the package.
-  If you are behind a firewall or your AIX system doesn't have access
-  to the Internet, you can override this to an HTTP/FTP server where
-  you have stored the RPMs.
-
 ### chdev
 
-Change any AIX device attribute. Example:
+Change any AIX device attribute.
+
+#### Properties
+
+- `need_reboot` (optional) - Add -P to the chdev command if device is busy (this parameter cannot be used with hot_change)
+- `hot_change` (optional) - Add -U to the chdev command for attribute with True+ (this parameter cannot be used with need_reboot)
+
+#### Examples
 
 ```ruby
 aix_chdev 'sys0' do
@@ -125,21 +216,32 @@ aix_chdev 'ent0' do
   action :update
 end
 
-aix_chdev 'hdisk1" do
+aix_chdev 'hdisk1' do
   attributes(reserve_policy: 'no_reserve')
   hot_change true
   action:update
 end
 ```
 
-Parameters:
-
-* `need_reboot` (optional) - Add -P to the chdev command if device is busy (this parameter cannot be used with hot_change)
-* `hot_change` (optional) - Add -U to the chdev command for attribute with True+ (this parameter cannot be used with need_reboot)
-
 ### pagingspace
 
-Create, remove, modify AIX paging space. Example:
+Create, remove, modify AIX paging space.
+
+#### Properties
+
+- `name` - Name of the paging space
+- `size` - Size of the paging space in MB
+- `auto` - Active paging space on reboot (True,False)
+- `active` - Active/Desactive paging space (True,False)
+- `vgname` - Volume group name where the paging space should be created
+
+#### Actions
+
+- `change` - Modify the paging space
+- `remove` - Remove the paging space
+- `create` - Create the paging space
+
+#### Examples
 
 ```ruby
 aix_pagingspace "Changing paging space" do
@@ -178,23 +280,23 @@ aix_pagingspace "Creating paging space 2" do
 end
 ```
 
-Parameters:
-
-* `name` - Name of the paging space
-* `size` - Size of the paging space in MB
-* `auto` - Active paging space on reboot (True,False)
-* `active` - Active/Desactive paging space  (True,False)
-* `vgname` - Volume group name where the paging space should be created
-
-Actions:
-
-* `change` - Modify the paging space
-* `remove` - Remove the paging space
-* `create` - Create the paging space
-
 ### no
 
-Change any AIX no (network) tunables. Example:
+Change any AIX no (network) tunables.
+
+#### Properties
+
+- `set_default` (optional) (default true) - All change are persistent to reboot (/etc/tunables/nextboot)
+- `bootlist` (optional) (default false) - If set to true, the bootlist is not changed
+
+#### Actions
+
+- `update` - update a list of tunables
+- `reset` - reset a list of tunabes
+- `reset_all` - reset all tunables to default
+- `reset_all_with_reboot` - reset all tunables to default even if the ones that need a reboot
+
+#### Examples
 
 ```ruby
 aix_no "changing no tunables" do
@@ -218,21 +320,23 @@ aix_no "reseting all no tunables reboot needed" do
 end
 ```
 
-Parameters:
-
-* `set_default` (optional) (default true) - All change are persistant to reboot (/etc/tunables/nextboot)
-* `bootlist` (optional) (default false) - If set to true, the bootlist is not changed
-
-Actions:
-
-* `update` - update a list of tunables
-* `reset` - reset a list of tunabes
-* `reset_all` - reset all tunables to default
-* `reset_all_with_reboot` - reset all tunables to default even if the ones that need a reboot
-
 ### tunables
 
-Change any AIX unrestricted tunables(vmo, ioo, schedo). Example:
+Change any AIX unrestricted tunables(vmo, ioo, schedo).
+
+#### Properties
+
+- `mode` (mandatory) (no default) - must be :ioo, :vmo or :schedo
+- `permament` (optional) (default false) - All changes are persistent
+- `nextboot` (optional) (default false) - All changes applied on next boot only
+
+#### Actions
+
+- `update` - update a list of tunables
+- `reset` - reset a list of tunabes
+- `reset_all` - reset all tunables to default
+
+#### Examples
 
 ```ruby
 aix_tunables "reset schedo values" do
@@ -265,21 +369,23 @@ aix_tunables "tune tcp buffers" do
 end
 ```
 
-Parameters:
-
-* `mode` (mandatory) (no default) - must be :ioo, :vmo or :schedo
-* `permament` (optional) (default false) - All changes are persistent
-* `nextboot` (optional) (default false) - All changes applied on next boot only
-
-Actions:
-
-* `update` - update a list of tunables
-* `reset` - reset a list of tunabes
-* `reset_all` - reset all tunables to default
-
 ### multibos
 
-Create, remove or update multibos on AIX. Example:
+Create, remove or update multibos on AIX.
+
+#### Properties
+
+- `update_device` (optional) - mount point used for update
+
+#### Actions
+
+- `create` - create (and update if needed) a bos instance
+- `remove` - remove a standby bos
+- `update` - update all already create bos
+- `mount` - mount a standby bos
+- `umount` - umount a standby bos
+
+#### Examples
 
 ```ruby
 aix_multibos "create a multibos no bootlist" do
@@ -310,20 +416,17 @@ aix_multibos "mount a bos" do
 end
 ```
 
-Parameters:
-
-*  `update_device` (optional) - mount point used for update
-
-Actions:
-
-* `create` - create (and update if needed) a bos instance
-* `remove` - remove a standby bos
-* `update` - update all already create bos
-* `mount` - mount a standby bos
-* `umount` - umount a standby bos
-
 ### chsec
+
 Changes the attributes in the security stanza files.
+
+#### Properties
+
+- `file_name` (name_attribute) - security file to change
+- `attribute` - array of attribute to change
+- `stanza` - stanza to change
+
+#### Examples
 
 ```ruby
 aix_chsec '/etc/security/login.cfg' do
@@ -333,15 +436,25 @@ aix_chsec '/etc/security/login.cfg' do
 end
 ```
 
-Parameters:
-
-* `file_name` (name_attribute) - security file to change
-* `attribute` - array of attribut to change
-* `stanza` - stanza to change
-
 ### etchosts
 
 Add, change or remove entries in the /etc/hosts file.
+
+#### Properties
+
+- `name` - name of the host to change/add/delete
+- `ip_address` - ip address
+- `new_hostname` - new_hostame (use with change action)
+- `aliases` - aliases
+
+#### Actions
+
+- `add` - add an entry in /etc/hosts
+- `delete` - remove an entry in /etc/hosts
+- `delete_all` - remove all entries in /etc/hosts
+- `change` - change an entry in /etc/hosts
+
+#### Examples
 
 ```ruby
 aix_etchosts "test" do
@@ -374,54 +487,41 @@ aix_etchosts "delete all entries" do
 end
 ```
 
-Parameters:
-
-* `name` - name of the host to change/add/delete
-* `ip_address` - ip address
-* `new_hostname` - new_hostame (use with change action)
-* `aliases` - aliases
-
-Actions:
-* `add`  - add an entry in /etc/hosts
-* `delete` - remove an entry in /etc/hosts
-* `delete_all` - remove all entries in /etc/hosts
-* `change` - change an entry in /etc/hosts
-
 ### suma
 
-Use suma to download fixes on a NIM server.
-You can download service pack, or technology level.
-You can also download latest service pack of latest technology level for the HIGHEST release in the client list.
-It means if you provide AIX 7.1 and 7.2 clients, only last 7.2 TL or SP is downloaded.
+Use suma to download fixes on a NIM server. You can download service pack, or technology level. You can also download latest service pack of latest technology level for the HIGHEST release in the client list. It means if you provide AIX 7.1 and 7.2 clients, only last 7.2 TL or SP is downloaded.
 
 In some cases a metadata operation is performed to discover the oslevel build number or the latest service pack level.
 
 The location directory is automatically created if it does not exist.
 
-The NIM lpp_source resource is automatically created if needed. It meets the following requirement.
-Name contains build number and ends with the type of resource:
- * 7100-04-00-0000-lpp_source
- * 7100-03-01-1341-lpp_source
- * 7100-03-02-1412-lpp_source
+The NIM lpp_source resource is automatically created if needed. It meets the following requirement. Name contains build number and ends with the type of resource:
+
+- 7100-04-00-0000-lpp_source
+- 7100-03-01-1341-lpp_source
+- 7100-03-02-1412-lpp_source
 
 You can provide a NIM lpp_source as oslevel property.
 
-Suma resource uses Ohai to discover nim environment.
-You may want to reload Ohai info after a successfull download by adding:
- * the following resource to your recipe:
-```ruby
-ohai 'reload_nim' do
+Suma resource uses Ohai to discover nim environment. You may want to reload Ohai info after a successful download by adding:
+
+- the following resource to your recipe:
+
+  ```ruby
+  ohai 'reload_nim' do
   action :nothing
   plugin 'nim'
-end
-```
- * the following notifies property to your resource:
-```ruby
-aix_suma
+  end
+  ```
+
+- the following notifies property to your resource:
+
+  ```ruby
+  aix_suma
   [...]
   notifies :reload, 'ohai[reload_nim]', :immediately
-end
-```
+  end
+  ```
 
 ```ruby
 aix_suma "download needed fixes to update client list to 7.1 TL3 SP1" do
@@ -458,25 +558,45 @@ aix_suma "update nim lpp_source with needed fixes" do
   targets "client1,client2,client3"
   action :download
 end
-
 ```
-Parameters:
 
-* `oslevel` - service pack, technology level or 'latest' (with or without build number) (default: Latest)
-* `location` - directory to store downloaded fixes (default: /usr/sys/inst.images)
-* `targets` - space or comma separated list of clients to consider for update process (star wildcard accepted)
-* `preview_only` - preview only, no packages are downloaded
+#### Properties
 
-Actions:
-* `download` - preview and download fixes
+- `oslevel` - service pack, technology level or 'latest' (with or without build number) (default: Latest)
+- `location` - directory to store downloaded fixes (default: /usr/sys/inst.images)
+- `targets` - space or comma separated list of clients to consider for update process (star wildcard accepted)
+- `preview_only` - preview only, no packages are downloaded
+
+#### Actions
+
+- `download` - preview and download fixes
 
 ### nim
 
-Use nim to setup a NIM server or install packages, update service pack, or technology level.
-Your NIM lpp_source must match the exact oslevel output. For example:
- * 7100-04-00-0000-lpp_source
- * 7100-03-01-1341-lpp_source
- * 7100-03-02-1412-lpp_source
+Use nim to setup a NIM server or install packages, update service pack, or technology level. Your NIM lpp_source must match the exact oslevel output.
+
+#### Properties
+
+- `device` - NFS mount directory containing bos.sysmgt.nim.master package
+- `lpp_source` - name of NIM lpp_source resource to install or latest_sp or latest_tl
+- `targets` - comma or space separated list of clients to update (star wildcard accepted)
+- `force` - if true, installed interim fixes will be automatically removed (default: false)
+- `async` - if true, customization is performed asynchronously (default: false) (cannot be used for latest_sp or latest_tl customization)
+
+#### Actions
+
+- `master_setup` - setup the NIM server
+- `update` - install downloaded fixes
+
+#### Examples
+
+To install the following updates:
+
+- 7100-04-00-0000-lpp_source
+- 7100-03-01-1341-lpp_source
+- 7100-03-02-1412-lpp_source
+
+Use:
 
 ```ruby
 aix_nim "setup nim server" do
@@ -487,7 +607,7 @@ end
 aix_nim "asynchronously updating clients" do
   lpp_source "7100-03-01-1341-lpp_source"
   targets "client1,client2,client3"
-  async	true
+  async    true
   action :update
 end
 
@@ -502,19 +622,7 @@ aix_nim "updating clients to latest TL (forced synchronous)" do
   targets "client1,client2,client3"
   action :update
 end
-
 ```
-Parameters:
-
-* `device` - NFS mount directory containing bos.sysmgt.nim.master package
-* `lpp_source` - name of NIM lpp_source resource to install or latest_sp or latest_tl
-* `targets` - comma or space separated list of clients to update (star wildcard accepted)
-* `force` - if true, installed interim fixes will be automatically removed (default: false)
-* `async` - if true, customization is performed asynchronously (default: false) (cannot be used for latest_sp or latest_tl customization)
-
-Actions:
-* `master_setup` - setup the NIM server
-* `update` - install downloaded fixes
 
 ### flrtvc
 
@@ -523,6 +631,25 @@ Use flrtvc tool to generate flrtvc report, download recommended efix, and instal
 A nim lpp_source resource is automatically created for fixes to be installed. It is removed at the end of the installation.
 
 If space is needed, filesystem is automatically extended by increment of 100MB.
+
+#### Properties
+
+- `targets` - comma or space separated list of clients to check (star wildcard accepted) (default: master)
+- `apar` - security or hiper data (default: both)
+- `filesets` - filter on fileset name
+- `csv` - custom apar csv file
+- `path` - directory where the report is saved
+- `clean` - clean temporary files and remove nim lpp_source resource (default: true)
+- `verbose` - save and display the report in verbose mode (default: false)
+- `check_only` - generate report only, no fixes are downloaded nor installed (default: false)
+- `download_only` - generate report and download fixes, do not install them (default: false)
+
+#### Actions
+
+- `install` - install flrtvc tool
+- `patch` - generate report, download recommended fixes and patch the machine(s)
+
+#### Examples
 
 ```ruby
 aix_flrtvc "install flrtvc tool (download unzip if needed)" do
@@ -568,29 +695,25 @@ aix_flrtvc "download recommended efixes only" do
   download_only true
   action :patch
 end
-
 ```
-Parameters:
-
-* `targets` - comma or space separated list of clients to check (star wildcard accepted) (default: master)
-* `apar` - security or hiper data (default: both)
-* `filesets` - filter on fileset name
-* `csv` - custom apar csv file
-* `path` - directory where the report is saved
-* `clean` - clean temporary files and remove nim lpp_source resource (default: true)
-* `verbose` - save and display the report in verbose mode (default: false)
-* `check_only` - generate report only, no fixes are downloaded nor installed  (default: false)
-* `download_only` - generate report and download fixes, do not install them  (default: false)
-
-Actions:
-* `install` - install flrtvc tool
-* `patch` - generate report, download recommended fixes and patch the machine(s)
 
 ### niminit
 
-Use niminit to configure the nimclient package.
-This will look if /etc/niminfo exists and create it if it does not exist.
-You can the use nimclient provider after niminiting the client.
+Use niminit to configure the nimclient package. This will look if /etc/niminfo exists and create it if it does not exist. You can the use nimclient provider after niminiting the client.
+
+#### Properties
+
+- `name` - hostname of the nimclient
+- `master` - hostname of the nim master
+- `pif_name` - interface name
+- `connect` - nimsh or shell
+
+#### Actions
+
+- `setup` - setup the nimclient
+- `remove` - remove nimclient configuration
+
+#### Examples
 
 ```ruby
 aix_niminit node[:hostname] do
@@ -611,36 +734,29 @@ aix_niminit node[:hostname] do
   action :setup
 end
 ```
-Parameters:
-
-* `name` - hostname of the nimclient
-* `master` - hostname of the nim master
-* `pif_name` - interface name
-* `connect` - nimsh or shell
-
-Actions:
-* `setup` - setup the nimclient
-* `remove` - remove nimclient configuration
 
 ### nimclient
 
-Use nimclient to install packages, update service pack, or technology level.
-Your NIM server should meet these requirements to work with the nimclient provider:
-* All resources name must end with the type of the resource (check example below):
- * 7100-03-05-1514-lpp_source
- * 7100-03-05-1514-spot
- * myinstallpbundle-installp_bundle
-* All spot and lpp_source must match the exact oslevel output. To find the next available lpp_source or spot the provider is checking for your oslevel and comparing it with the lpp_source name
- * 7100-03-01-1341-lpp_source
- * 7100-03-02-1412-lpp_source
- * 7100-03-03-1415-lpp_source
- * 7100-03-04-1441-lpp_source
- * 7100-03-05-1524-lpp_source
- * 7100-03-01-1341-spot
- * 7100-03-02-1412-spot
- * 7100-03-03-1415-spot
- * 7100-03-04-1441-spot
- * 7100-03-05-1524-spot
+Use nimclient to install packages, update service pack, or technology level. Your NIM server should meet these requirements to work with the nimclient provider:
+
+- All resources name must end with the type of the resource (check example below):
+
+  - 7100-03-05-1514-lpp_source
+  - 7100-03-05-1514-spot
+  - myinstallpbundle-installp_bundle
+
+- All spot and lpp_source must match the exact oslevel output. To find the next available lpp_source or spot the provider is checking for your oslevel and comparing it with the lpp_source name
+
+  - 7100-03-01-1341-lpp_source
+  - 7100-03-02-1412-lpp_source
+  - 7100-03-03-1415-lpp_source
+  - 7100-03-04-1441-lpp_source
+  - 7100-03-05-1524-lpp_source
+  - 7100-03-01-1341-spot
+  - 7100-03-02-1412-spot
+  - 7100-03-03-1415-spot
+  - 7100-03-04-1441-spot
+  - 7100-03-05-1524-spot
 
 Recommendation: create all the lpp_source with the simage attribute to avoid ambiguity.
 
@@ -728,32 +844,45 @@ aix_nimclient "allocating resources" do
 end
 ```
 
-Parameters:
+#### Properties
 
-* `spot` (optional) - name of the spot
-* `lpp_source` (optional) - name of the lpp_source
-* `installp_bundle` (optional) - name of the installp_bundle
-* `filesets` - list of filesets to install
-* `fixes` - fixe to install
-* `installp_flags` - flags used for installp
+- `spot` (optional) - name of the spot
+- `lpp_source` (optional) - name of the lpp_source
+- `installp_bundle` (optional) - name of the installp_bundle
+- `filesets` - list of filesets to install
+- `fixes` - fixe to install
+- `installp_flags` - flags used for installp
 
-Actions:
+#### Actions
 
-* `allocate` - create (and update if needed) a bos instance
-* `deallocate` - remove a standby bos
-* `cust` - update all already create bos
-* `enable_push` - allow push operation from client
-* `disable_push` -  disable push operation from client
-* `set_date` - set date to that of the nim master
-* `enable_crypto` - enable secure nimsh
-* `disable_crypto` - disable secure nimsh
-* `reset` - reset the client
-* `bos_inst` - enable bos_install installation (you need to reboot the virtual machine after that)
-* `maint_boot` - ennable maintenance boot (you need to reboot the virtual machine after that)
+- `allocate` - create (and update if needed) a bos instance
+- `deallocate` - remove a standby bos
+- `cust` - update all already create bos
+- `enable_push` - allow push operation from client
+- `disable_push` - disable push operation from client
+- `set_date` - set date to that of the nim master
+- `enable_crypto` - enable secure nimsh
+- `disable_crypto` - disable secure nimsh
+- `reset` - reset the client
+- `bos_inst` - enable bos_install installation (you need to reboot the virtual machine after that)
+- `maint_boot` - ennable maintenance boot (you need to reboot the virtual machine after that)
 
 ### bootlist
 
-Change AIX bootlist. Example:
+Change AIX bootlist.
+
+#### Properties
+
+- `mode` (mandatory) (no default) - must be :both, :normal or :service
+- `devices` (no default) - List boot devices to setup
+- `device_options` (optional) (default false) - Specify boot options for specific device
+
+#### Actions
+
+- `update` - update bootlist
+- `invalidate` - invalidate the bootlist
+
+#### Examples
 
 ```ruby
 aix_bootlist 'invalidate normal mode bootlist' do
@@ -773,104 +902,21 @@ aix_bootlist 'set bootlist for normal mode' do
 end
 ```
 
-Parameters:
-
-* `mode` (mandatory) (no default) - must be :both, :normal or :service
-* `devices` (no default) - List boot devices to setup
-* `device_options` (optional) (default false) - Specify boot options for specific device
-
-Actions:
-
-* `update` - update bootlist
-* `invalidate` - invalidate the bootlist
-
-### altdisk
-
-Create an alternate disk on a free disk
-Update an existing alternate disk
-
-```ruby
-aix_altdisk "cloning rootvg by name hdisk3" do
-  type :name
-  value "hdisk3"
-end
-
-aix_altdisk "cloning rootvg by size 66560" do
-  type :size
-  value "66560"
-end
-
-aix_altdisk "cloning rootvg by size 66561" do
-  type :size
-  value "66561"
-end
-
-aix_altdisk "cloning rootvg by auto" do
-  type :auto
-  value "bigger"
-  action :create
-  altdisk_name "myvg"
-end
-
-aix_altdisk "cleanup alternate rootvg" do
-  action :cleanup
-  altdisk_name "rootvg_alt"
-end
-
-aix_altdisk "altdisk_by_auto" do
-  type :auto
-  value "bigger"
-  change_bootlist true
-  action :create
-end
-
-aix_altdisk "altdisk_wake_up" do
-  action :wakeup
-end
-
-aix_altdisk "altdisk_update" do
-  image_location "/mnt/7100-03-05-1524"
-  action :customize
-end
-
-aix_altdisk "altdisk_sleep" do
-  action :sleep
-end
-
-aix_altdisk "rename altdisk" do
-  new_altdisk_name "altdisk_vg"
-  action :rename
-end
-```
-
-Parameters:
-
-* `type` (optional) - size (choose the disk on which creating the alternate disk by it's size in MB)
-* `type` (optional) - name (choose the disk on which creating the alternate disk by it's name)
-* `type` (optional) - auto (automatically choose the disk on which creating the rootvg)
-* `value` (optional) - bigger (if type is auto choose a disk bigger than the current rootvg size)
-* `value` (optional) - equal (if type is auto choose a disk with the exact same size of the rootvg size)
-* `value` (optional) - size or name (if type is size or name it's the size or the exact name of the disk)
-* `altdisk_name` (optional) - name of the alternate disk to create
-* `change_bootlist` (optional) (default false) - change the bootlist to boot to the new alternate disk
-* `image_location` (optional) - directory containing filesets used for the cust operation
-* `new_altdisk_name` (optional) - new name use for rename action
-* `reset_devices`, (optional) kind_of: [TrueClass, FalseClass], default: false - Performs a device reset on the target. This causes the alternate disk install to not retain any user-defined device configurations. 
-* `remain_nimclient`, (optional) kind_of: [TrueClass, FalseClass], default: false -  `/.rhosts` and `/etc/niminfo` files are copied to the file system
-
-Actions:
-
-* `create` - create an alternate rootvg disk
-* `cleanup` - cleanup an alternate rootvg disk
-* `wakeup` - wakeup an alternate rootvg disk
-* `rename` - rename an alterante rootvg disk
-* `sleep` - put an alternate rootvg in sleep
-* `customize` - customiz an alternate rootvg (update)
-
 ### fixes
 
 Install and remove fixes
-Example:
+
+#### Properties
+
+- `fixes` (mandatory) - Array of fixes to install or remove
+- `directory` (optional) - Directory where stands the fixes to install
+
+#### Actions
+
+- `install` - install fixes
+- `remove` - remove fixes
+
+#### Examples
 
 ```ruby
 aix_fixes "removing all fixes" do
@@ -890,19 +936,22 @@ aix_fixes "removing fix IV75031s5a" do
 end
 ```
 
-Parameters:
-
-* `fixes` (mandatory) - Array of fixes to install or remove
-* `directory` (optional) - Directory where stands the fixes to install
-
-Actions:
-
-* `install` - install fixes
-* `remove` - remove fixes
-
 ### volume_group
 
 Create or modify a LVM volume group
+
+#### Properties
+
+- `name`: Name of the volume group
+- `physical_volumes`: The device or list of devices to use as physical volumes (if they haven't already been initialized as * physical volumes, they will be initialized automatically)
+- `use_as_hot_spare`: (optional) Sets the sparing characteristics of the physical volume such that it can be used as a hot spare. Legal values are "y" or "n". "y" marks the disk as a hot spare within the volume group it belongs to. "n" removes the disk from the hot spare pool for the volume group.
+- `mirror_pool_name`: (optional) Assigns or reassigns the disk to the named mirror pool. The mirror pool is created if it does not exist already Mirror pool names can only contain alphanumeric characters, may not be longer than 15 characters, must be unique in the volume group.
+
+#### Actions
+
+- `create` - (default) Creates or modify a volume group
+
+#### Examples
 
 ```ruby
 # Create volume groupe 'datavg1' with 2 disks
@@ -932,18 +981,22 @@ aix_volume_group 'datavg3' do
 end
 ```
 
-Parameters:
-* `name`: Name of the volume group
-* `physical_volumes`: The device or list of devices to use as physical volumes (if they haven't already been initialized as * `physical volumes, they will be initialized automatically)
-* `use_as_hot_spare`: (optional) Sets the sparing characteristics of the physical volume such that it can be used as a hot spare. Legal values are "y" or "n". "y" marks the disk as a hot spare within the volume group it belongs to. "n" removes the disk from the hot spare pool for the volume group.
-* `mirror_pool_name`:	(optional) Assigns or reassigns the disk to the named mirror pool. The mirror pool is created if it does not exist already Mirror pool names can only contain alphanumeric characters, may not be longer than 15 characters, must be unique in the volume group.
-
-Actions:
-* `create` - (default) Creates or modify a volume group
-
 ### logical_volume
 
 Create or modify a LVM logical volume
+
+#### Properties
+
+- `name`: Name of the logical volume
+- `volume_group`: Volume group in which to create the new logical volume (not required if the volume is declared inside of an `lvm_volume_group` block)
+- `size`: Minimum size of the logical volume in MB. The actual size allocated my be slightly greater.
+- `copies`: (optional) Number of copies of each logical partition. Legal values are 1, 2, 3
+
+#### Actions
+
+- `create` - (default) Creates or modifies an AIX JFS2 logical volume
+
+#### Examples
 
 ```ruby
 # create logical volume 'home' of 512MB with 2 copies in volume group 'datavg'
@@ -955,18 +1008,24 @@ aix_logical_volume 'home' do
 end
 ```
 
-Parameters:
-* `name`: Name of the logical volume
-* `volume_group`: Volume group in which to create the new logical volume (not required if the volume is declared inside of an `lvm_volume_group` block)
-* `size`: Minimum size of the logical volume in MB. The actual size allocated my be slightly greater.
-* `copies`: (optional) Number of copies of each logical partition. Legal values are 1, 2, 3
-
-Actions:
-* `create` -	(default) Creates or modifies an AIX JFS2 logical volume
-
 ### filesystem
 
 Create, modify, mount or defrag a LVM filesystem
+
+#### Properties
+
+- `name`: Mount point of the filesystem
+- `logical`: Specifies an existing logical volume on which to make the filesystem
+- `size`: Size of the filesystem. It's can be a set of 512k blocks, a size in M or a size in G
+
+#### Actions
+
+- `create`: (default) Creates or modifies a filesystem
+- `mount`: Mount a filesystem
+- `umount`: Unmount a filesystem
+- `defragfs`: Defrag a filesystem
+
+#### Examples
 
 ```ruby
 # create filesystem of 256Mb in '/lvm/folder1' on logical volume 'part1'
@@ -992,17 +1051,6 @@ aix_filesystem '/lvm/folder1' do
 end
 ```
 
-Parameters:
-* `name`: Mount point of the filesystem
-* `logical`: Specifies an existing logical volume on which to make the filesystem
-* `size`: Size of the filesystem. It's can be a set of 512k blocks, a size in M or a size in G
-
-Actions:
-* `create`: (default) Creates or modifies a filesystem
-* `mount`: Mount a filesystem
-* `umount`: Unmount a filesystem
-* `defragfs`: Defrag a filesystem
-
 ### wpar
 
 Manage wpar
@@ -1011,13 +1059,38 @@ Manage wpar
 
 The cookbook itself will install the **aix-wpar** gem if the system as internet access.
 
-Else you need to download the gem file [here](https://github.com/adejoux/aix-wpar/releases/tag/v0.1.0).
-And install the package on the AIX system:
+Else you need to download the gem file [here](https://github.com/adejoux/aix-wpar/releases/tag/v0.1.0). And install the package on the AIX system:
+
 ```bash
 /opt/chef/embedded/bin/gem install /tmp/aix-wpar-0.1.0.gem
 ```
 
-#### recipe example
+#### Properties
+
+- `name`: WPAR name
+- `hostname`: specify wpar hostname(can be different of wpar name)
+- `address`: ip address to use if no entry in /etc/hosts or DNS.
+- `interface`: network interface to use
+- `rootvg`: to build a rootvg wpar
+- `rootvg_disk`: hdisk to use for rootvg wpar
+- `wparvg`: volume group to use for system wpar. Default: **rootvg**
+- `backupimage`: backup image to restore when building wpar
+- `cpu`: resource control CPU. Example: **10%-50%,100%**
+- `memory`: resource control memory.
+- `autostart`: auto start wpar at boot.
+- `live_stream`: live stream wpar commands output
+
+#### Actions
+
+- `create` - create a wpar
+- `delete` - delete a wpar
+- `start` - start a wpar
+- `stop`- stop a wpar
+- `sync`- synchronize software between system and wpar
+- `reset_all` - reset all tunables to default
+
+#### Examples
+
 ```ruby
 aix_wpar 'create wpar' do
   action :create
@@ -1045,44 +1118,17 @@ aix_wpar 'delete wpar' do
 end
 ```
 
-Parameters:
-
-* `name`: WPAR name
-* `hostname`: specify wpar hostname(can be different of wpar name)
-* `address`: ip address to use if no entry in /etc/hosts or DNS.
-* `interface`: network interface to use
-* `rootvg`: to build a rootvg wpar
-* `rootvg_disk`: hdisk to use for rootvg wpar
-* `wparvg`: volume group to use for system wpar. Default: **rootvg**
-* `backupimage`: backup image to restore when building wpar
-* `cpu`: resource control CPU. Example: **10%-50%,100%**
-* `memory`: resource control memory.
-* `autostart`: auto start wpar at boot.
-* `live_stream`: live stream wpar commands output
-
-
-Actions:
-
-* `create` - create a wpar
-* `delete` - delete a wpar
-* `start` - start a wpar
-* `stop`- stop a wpar
-* `sync`- synchronize software between system and wpar
-
-* `reset_all` - reset all tunables to default
-
-
 ## License and Authors
 
-* Author:: Julian C. Dunn (<jdunn@chef.io>)
-* Author:: Christoph Hartmann (<chris@lollyrock.com>)
-* Author:: Benoit Creau (<benoit.creau@chmod666.org>)
-* Author:: Alain Dejoux (<adejoux@djouxtech.net>)
-* Author:: Alan Thatcher (<alanwthatcher@gmail.com>)
-* Author:: Laurent GAY for IBM (<lgay@us.ibm.com>)
+- Author:: Julian C. Dunn ([jdunn@chef.io](mailto:jdunn@chef.io))
+- Author:: Christoph Hartmann ([chris@lollyrock.com](mailto:chris@lollyrock.com))
+- Author:: Benoit Creau ([benoit.creau@chmod666.org](mailto:benoit.creau@chmod666.org))
+- Author:: Alain Dejoux ([adejoux@djouxtech.net](mailto:adejoux@djouxtech.net))
+- Author:: Alan Thatcher ([alanwthatcher@gmail.com](mailto:alanwthatcher@gmail.com))
+- Author:: Laurent GAY for IBM ([lgay@us.ibm.com](mailto:lgay@us.ibm.com))
 
 ```text
-Copyright 2008-2016, Chef Software, Inc.
+Copyright 2008-2017, Chef Software, Inc.
 Copyright 2015-2016, Alain Dejoux <adejoux@djouxtech.net>
 Copyright 2015-2016, Benoit Creau <benoit.creau@chmod666.org>
 Copyright 2015-2016, Bloomberg Finance L.P.
