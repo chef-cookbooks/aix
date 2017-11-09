@@ -26,4 +26,4 @@ issues_url       'https://github.com/chef-cookbooks/aix/issues'
 
 supports 'aix', '>= 6.1'
 
-chef_version '>= 12.5'
+chef_version '>= 12.7'
