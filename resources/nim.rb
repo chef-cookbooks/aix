@@ -30,14 +30,6 @@ property :location, String
 property :group, String
 property :force, [true, false], default: false
 
-default_action :update
-
-##############################
-# load_current_value
-##############################
-load_current_value do
-end
-
 ##############################
 # ACTION: update
 ##############################
