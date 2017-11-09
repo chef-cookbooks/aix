@@ -2,6 +2,13 @@
 
 This file is used to list changes made in each version of the aix cookbook.
 
+## 2.0.1 (2017-11-08)
+
+- Adds support for Chef 13 in the wpar resource by changing the state property to wpar_state
+- Removing duplicate xpm package for library/helpers.rb, keeping aix6.1 version
+- Removing extra line before rescue, to satisfy tests
+- Fixing foodcritic error FC092 by removing 'actions' line
+
 ## 2.0.0 (2017-11-08)
 
 - chdev, chsec, no, subserver, tcpservice, and tunables converted to custom resources. This increases the minimum required chef-client version to 12.7. Thanks Mike Sgarbossa
