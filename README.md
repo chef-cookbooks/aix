@@ -1,7 +1,6 @@
 # AIX Cookbook
 
-[![Build Status](https://travis-ci.org/chef-cookbooks/aix.svg?branch=master)](https://travis-ci.org/chef-cookbooks/aix)
-[![Cookbook Version](https://img.shields.io/cookbook/v/aix.svg)](https://supermarket.chef.io/cookbooks/aix)
+[![Build Status](https://travis-ci.org/chef-cookbooks/aix.svg?branch=master)](https://travis-ci.org/chef-cookbooks/aix) [![Cookbook Version](https://img.shields.io/cookbook/v/aix.svg)](https://supermarket.chef.io/cookbooks/aix)
 
 This cookbook contains useful resources for using Chef with AIX systems.
 
@@ -123,7 +122,7 @@ aix_inittab 'my-awesome-aix-daemon' do
 end
 ```
 
-Properties:
+#### Properties
 
 - `runlevel` - the runlevel of the inittab entry
 - `processaction` - the action of the process (e.g. "once", "boot", etc.)
@@ -141,7 +140,7 @@ aix_subserver 'tftp' do
 end
 ```
 
-Properties:
+#### Properties
 
 - `servicename` - name of the service as it appears in the first field of `/etc/inetd.conf`
 - `type` - type of service. Valid values: `dgram stream sunrpc_udp sunrpc_tcp`
@@ -161,7 +160,7 @@ aix_tcpservice 'xntpd' do
 end
 ```
 
-Properties:
+#### Properties
 
 - `immediate` (optional) - whether to start/stop the TCP/IP service immediately by contacting the SRC. It's much better to declaratively specify this separately using the built-in `service` resource in Chef.
 
@@ -175,7 +174,7 @@ aix_toolboxpackage "a2ps" do
 end
 ```
 
-Properties:
+#### Properties
 
 - `base_url` (optional) - the base URL to use to retrieve the package. If you are behind a firewall or your AIX system doesn't have access to the Internet, you can override this to an HTTP/FTP server where you have stored the RPMs.
 
@@ -209,7 +208,7 @@ aix_chdev 'hdisk1" do
 end
 ```
 
-Properties:
+#### Properties
 
 - `need_reboot` (optional) - Add -P to the chdev command if device is busy (this parameter cannot be used with hot_change)
 - `hot_change` (optional) - Add -U to the chdev command for attribute with True+ (this parameter cannot be used with need_reboot)
@@ -255,7 +254,7 @@ aix_pagingspace "Creating paging space 2" do
 end
 ```
 
-Properties:
+#### Properties
 
 - `name` - Name of the paging space
 - `size` - Size of the paging space in MB
@@ -263,7 +262,7 @@ Properties:
 - `active` - Active/Desactive paging space (True,False)
 - `vgname` - Volume group name where the paging space should be created
 
-Actions:
+#### Actions
 
 - `change` - Modify the paging space
 - `remove` - Remove the paging space
@@ -271,7 +270,21 @@ Actions:
 
 ### no
 
-Change any AIX no (network) tunables. Example:
+Change any AIX no (network) tunables.
+
+#### Properties
+
+- `set_default` (optional) (default true) - All change are persistant to reboot (/etc/tunables/nextboot)
+- `bootlist` (optional) (default false) - If set to true, the bootlist is not changed
+
+#### Actions
+
+- `update` - update a list of tunables
+- `reset` - reset a list of tunabes
+- `reset_all` - reset all tunables to default
+- `reset_all_with_reboot` - reset all tunables to default even if the ones that need a reboot
+
+#### Examples
 
 ```ruby
 aix_no "changing no tunables" do
@@ -295,21 +308,23 @@ aix_no "reseting all no tunables reboot needed" do
 end
 ```
 
-Properties:
+### tunables
 
-- `set_default` (optional) (default true) - All change are persistant to reboot (/etc/tunables/nextboot)
-- `bootlist` (optional) (default false) - If set to true, the bootlist is not changed
+Change any AIX unrestricted tunables(vmo, ioo, schedo).
 
-Actions:
+#### Properties
+
+- `mode` (mandatory) (no default) - must be :ioo, :vmo or :schedo
+- `permament` (optional) (default false) - All changes are persistent
+- `nextboot` (optional) (default false) - All changes applied on next boot only
+
+#### Actions
 
 - `update` - update a list of tunables
 - `reset` - reset a list of tunabes
 - `reset_all` - reset all tunables to default
-- `reset_all_with_reboot` - reset all tunables to default even if the ones that need a reboot
 
-### tunables
-
-Change any AIX unrestricted tunables(vmo, ioo, schedo). Example:
+#### Examples
 
 ```ruby
 aix_tunables "reset schedo values" do
@@ -342,21 +357,23 @@ aix_tunables "tune tcp buffers" do
 end
 ```
 
-Properties:
-
-- `mode` (mandatory) (no default) - must be :ioo, :vmo or :schedo
-- `permament` (optional) (default false) - All changes are persistent
-- `nextboot` (optional) (default false) - All changes applied on next boot only
-
-Actions:
-
-- `update` - update a list of tunables
-- `reset` - reset a list of tunabes
-- `reset_all` - reset all tunables to default
-
 ### multibos
 
-Create, remove or update multibos on AIX. Example:
+Create, remove or update multibos on AIX.
+
+#### Properties
+
+- `update_device` (optional) - mount point used for update
+
+#### Actions
+
+- `create` - create (and update if needed) a bos instance
+- `remove` - remove a standby bos
+- `update` - update all already create bos
+- `mount` - mount a standby bos
+- `umount` - umount a standby bos
+
+#### Examples
 
 ```ruby
 aix_multibos "create a multibos no bootlist" do
@@ -387,21 +404,17 @@ aix_multibos "mount a bos" do
 end
 ```
 
-Properties:
-
-- `update_device` (optional) - mount point used for update
-
-Actions:
-
-- `create` - create (and update if needed) a bos instance
-- `remove` - remove a standby bos
-- `update` - update all already create bos
-- `mount` - mount a standby bos
-- `umount` - umount a standby bos
-
 ### chsec
 
 Changes the attributes in the security stanza files.
+
+#### Properties
+
+- `file_name` (name_attribute) - security file to change
+- `attribute` - array of attribute to change
+- `stanza` - stanza to change
+
+#### Examples
 
 ```ruby
 aix_chsec '/etc/security/login.cfg' do
@@ -411,15 +424,25 @@ aix_chsec '/etc/security/login.cfg' do
 end
 ```
 
-Properties:
-
-- `file_name` (name_attribute) - security file to change
-- `attribute` - array of attribut to change
-- `stanza` - stanza to change
-
 ### etchosts
 
 Add, change or remove entries in the /etc/hosts file.
+
+#### Properties
+
+- `name` - name of the host to change/add/delete
+- `ip_address` - ip address
+- `new_hostname` - new_hostame (use with change action)
+- `aliases` - aliases
+
+#### Actions
+
+- `add` - add an entry in /etc/hosts
+- `delete` - remove an entry in /etc/hosts
+- `delete_all` - remove all entries in /etc/hosts
+- `change` - change an entry in /etc/hosts
+
+#### Examples
 
 ```ruby
 aix_etchosts "test" do
@@ -451,20 +474,6 @@ aix_etchosts "delete all entries" do
   action :delete_all
 end
 ```
-
-Properties:
-
-- `name` - name of the host to change/add/delete
-- `ip_address` - ip address
-- `new_hostname` - new_hostame (use with change action)
-- `aliases` - aliases
-
-Actions:
-
-- `add` - add an entry in /etc/hosts
-- `delete` - remove an entry in /etc/hosts
-- `delete_all` - remove all entries in /etc/hosts
-- `change` - change an entry in /etc/hosts
 
 ### suma
 
@@ -539,14 +548,14 @@ aix_suma "update nim lpp_source with needed fixes" do
 end
 ```
 
-Properties:
+#### Properties
 
 - `oslevel` - service pack, technology level or 'latest' (with or without build number) (default: Latest)
 - `location` - directory to store downloaded fixes (default: /usr/sys/inst.images)
 - `targets` - space or comma separated list of clients to consider for update process (star wildcard accepted)
 - `preview_only` - preview only, no packages are downloaded
 
-Actions:
+#### Actions
 
 - `download` - preview and download fixes
 
@@ -582,19 +591,20 @@ aix_nim "updating clients to latest TL (forced synchronous)" do
   targets "client1,client2,client3"
   action :update
 end
-
 ```
-Properties:
 
-* `device` - NFS mount directory containing bos.sysmgt.nim.master package
-* `lpp_source` - name of NIM lpp_source resource to install or latest_sp or latest_tl
-* `targets` - comma or space separated list of clients to update (star wildcard accepted)
-* `force` - if true, installed interim fixes will be automatically removed (default: false)
-* `async` - if true, customization is performed asynchronously (default: false) (cannot be used for latest_sp or latest_tl customization)
+#### Properties
 
-Actions:
-* `master_setup` - setup the NIM server
-* `update` - install downloaded fixes
+- `device` - NFS mount directory containing bos.sysmgt.nim.master package
+- `lpp_source` - name of NIM lpp_source resource to install or latest_sp or latest_tl
+- `targets` - comma or space separated list of clients to update (star wildcard accepted)
+- `force` - if true, installed interim fixes will be automatically removed (default: false)
+- `async` - if true, customization is performed asynchronously (default: false) (cannot be used for latest_sp or latest_tl customization)
+
+#### Actions
+
+- `master_setup` - setup the NIM server
+- `update` - install downloaded fixes
 
 ### flrtvc
 
@@ -650,7 +660,7 @@ aix_flrtvc "download recommended efixes only" do
 end
 ```
 
-Properties:
+#### Properties
 
 - `targets` - comma or space separated list of clients to check (star wildcard accepted) (default: master)
 - `apar` - security or hiper data (default: both)
@@ -662,7 +672,7 @@ Properties:
 - `check_only` - generate report only, no fixes are downloaded nor installed (default: false)
 - `download_only` - generate report and download fixes, do not install them (default: false)
 
-Actions:
+#### Actions
 
 - `install` - install flrtvc tool
 - `patch` - generate report, download recommended fixes and patch the machine(s)
@@ -693,14 +703,14 @@ aix_niminit node[:hostname] do
 end
 ```
 
-Properties:
+#### Properties
 
 - `name` - hostname of the nimclient
 - `master` - hostname of the nim master
 - `pif_name` - interface name
 - `connect` - nimsh or shell
 
-Actions:
+#### Actions
 
 - `setup` - setup the nimclient
 - `remove` - remove nimclient configuration
@@ -811,7 +821,7 @@ aix_nimclient "allocating resources" do
 end
 ```
 
-Properties:
+#### Properties
 
 - `spot` (optional) - name of the spot
 - `lpp_source` (optional) - name of the lpp_source
@@ -820,7 +830,7 @@ Properties:
 - `fixes` - fixe to install
 - `installp_flags` - flags used for installp
 
-Actions:
+#### Actions
 
 - `allocate` - create (and update if needed) a bos instance
 - `deallocate` - remove a standby bos
@@ -856,13 +866,13 @@ aix_bootlist 'set bootlist for normal mode' do
 end
 ```
 
-Properties:
+#### Properties
 
 - `mode` (mandatory) (no default) - must be :both, :normal or :service
 - `devices` (no default) - List boot devices to setup
 - `device_options` (optional) (default false) - Specify boot options for specific device
 
-Actions:
+#### Actions
 
 - `update` - update bootlist
 - `invalidate` - invalidate the bootlist
@@ -889,12 +899,12 @@ aix_fixes "removing fix IV75031s5a" do
 end
 ```
 
-Properties:
+#### Properties
 
 - `fixes` (mandatory) - Array of fixes to install or remove
 - `directory` (optional) - Directory where stands the fixes to install
 
-Actions:
+#### Actions
 
 - `install` - install fixes
 - `remove` - remove fixes
@@ -931,14 +941,14 @@ aix_volume_group 'datavg3' do
 end
 ```
 
-Properties:
+#### Properties
 
 - `name`: Name of the volume group
 - `physical_volumes`: The device or list of devices to use as physical volumes (if they haven't already been initialized as * `physical volumes, they will be initialized automatically)
 - `use_as_hot_spare`: (optional) Sets the sparing characteristics of the physical volume such that it can be used as a hot spare. Legal values are "y" or "n". "y" marks the disk as a hot spare within the volume group it belongs to. "n" removes the disk from the hot spare pool for the volume group.
 - `mirror_pool_name`: (optional) Assigns or reassigns the disk to the named mirror pool. The mirror pool is created if it does not exist already Mirror pool names can only contain alphanumeric characters, may not be longer than 15 characters, must be unique in the volume group.
 
-Actions:
+#### Actions
 
 - `create` - (default) Creates or modify a volume group
 
@@ -956,14 +966,14 @@ aix_logical_volume 'home' do
 end
 ```
 
-Properties:
+#### Properties
 
 - `name`: Name of the logical volume
 - `volume_group`: Volume group in which to create the new logical volume (not required if the volume is declared inside of an `lvm_volume_group` block)
 - `size`: Minimum size of the logical volume in MB. The actual size allocated my be slightly greater.
 - `copies`: (optional) Number of copies of each logical partition. Legal values are 1, 2, 3
 
-Actions:
+#### Actions
 
 - `create` - (default) Creates or modifies an AIX JFS2 logical volume
 
@@ -995,13 +1005,13 @@ aix_filesystem '/lvm/folder1' do
 end
 ```
 
-Properties:
+#### Properties
 
 - `name`: Mount point of the filesystem
 - `logical`: Specifies an existing logical volume on which to make the filesystem
 - `size`: Size of the filesystem. It's can be a set of 512k blocks, a size in M or a size in G
 
-Actions:
+#### Actions
 
 - `create`: (default) Creates or modifies a filesystem
 - `mount`: Mount a filesystem
@@ -1051,7 +1061,7 @@ aix_wpar 'delete wpar' do
 end
 ```
 
-Properties:
+#### Properties
 
 - `name`: WPAR name
 - `hostname`: specify wpar hostname(can be different of wpar name)
@@ -1066,7 +1076,7 @@ Properties:
 - `autostart`: auto start wpar at boot.
 - `live_stream`: live stream wpar commands output
 
-Actions:
+#### Actions
 
 - `create` - create a wpar
 - `delete` - delete a wpar
