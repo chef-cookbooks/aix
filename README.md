@@ -39,7 +39,7 @@ aix_inittab 'my-awesome-aix-daemon' do
 end
 ```
 
-Parameters:
+Properties:
 
 * `runlevel` - the runlevel of the inittab entry
 * `processaction` - the action of the process (e.g. "once", "boot", etc.)
@@ -57,7 +57,7 @@ aix_subserver 'tftp' do
 end
 ```
 
-Parameters:
+Properties:
 
 * `servicename` - name of the service as it appears in the first field of `/etc/inetd.conf`
 * `type` - type of service. Valid values: `dgram stream sunrpc_udp sunrpc_tcp`
@@ -77,7 +77,7 @@ aix_tcpservice 'xntpd' do
 end
 ```
 
-Parameters:
+Properties:
 
 * `immediate` (optional) - whether to start/stop the TCP/IP service
   immediately by contacting the SRC. It's much better to declaratively
@@ -95,7 +95,7 @@ aix_toolboxpackage "a2ps" do
 end
 ```
 
-Parameters:
+Properties:
 
 * `base_url` (optional) - the base URL to use to retrieve the package.
   If you are behind a firewall or your AIX system doesn't have access
@@ -132,7 +132,7 @@ aix_chdev 'hdisk1" do
 end
 ```
 
-Parameters:
+Properties:
 
 * `need_reboot` (optional) - Add -P to the chdev command if device is busy (this parameter cannot be used with hot_change)
 * `hot_change` (optional) - Add -U to the chdev command for attribute with True+ (this parameter cannot be used with need_reboot)
@@ -178,7 +178,7 @@ aix_pagingspace "Creating paging space 2" do
 end
 ```
 
-Parameters:
+Properties:
 
 * `name` - Name of the paging space
 * `size` - Size of the paging space in MB
@@ -218,7 +218,7 @@ aix_no "reseting all no tunables reboot needed" do
 end
 ```
 
-Parameters:
+Properties:
 
 * `set_default` (optional) (default true) - All change are persistant to reboot (/etc/tunables/nextboot)
 * `bootlist` (optional) (default false) - If set to true, the bootlist is not changed
@@ -265,7 +265,7 @@ aix_tunables "tune tcp buffers" do
 end
 ```
 
-Parameters:
+Properties:
 
 * `mode` (mandatory) (no default) - must be :ioo, :vmo or :schedo
 * `permament` (optional) (default false) - All changes are persistent
@@ -310,7 +310,7 @@ aix_multibos "mount a bos" do
 end
 ```
 
-Parameters:
+Properties:
 
 *  `update_device` (optional) - mount point used for update
 
@@ -333,7 +333,7 @@ aix_chsec '/etc/security/login.cfg' do
 end
 ```
 
-Parameters:
+Properties:
 
 * `file_name` (name_attribute) - security file to change
 * `attribute` - array of attribut to change
@@ -374,7 +374,7 @@ aix_etchosts "delete all entries" do
 end
 ```
 
-Parameters:
+Properties:
 
 * `name` - name of the host to change/add/delete
 * `ip_address` - ip address
@@ -460,7 +460,7 @@ aix_suma "update nim lpp_source with needed fixes" do
 end
 
 ```
-Parameters:
+Properties:
 
 * `oslevel` - service pack, technology level or 'latest' (with or without build number) (default: Latest)
 * `location` - directory to store downloaded fixes (default: /usr/sys/inst.images)
@@ -504,7 +504,7 @@ aix_nim "updating clients to latest TL (forced synchronous)" do
 end
 
 ```
-Parameters:
+Properties:
 
 * `device` - NFS mount directory containing bos.sysmgt.nim.master package
 * `lpp_source` - name of NIM lpp_source resource to install or latest_sp or latest_tl
@@ -570,7 +570,7 @@ aix_flrtvc "download recommended efixes only" do
 end
 
 ```
-Parameters:
+Properties:
 
 * `targets` - comma or space separated list of clients to check (star wildcard accepted) (default: master)
 * `apar` - security or hiper data (default: both)
@@ -611,7 +611,7 @@ aix_niminit node[:hostname] do
   action :setup
 end
 ```
-Parameters:
+Properties:
 
 * `name` - hostname of the nimclient
 * `master` - hostname of the nim master
@@ -728,7 +728,7 @@ aix_nimclient "allocating resources" do
 end
 ```
 
-Parameters:
+Properties:
 
 * `spot` (optional) - name of the spot
 * `lpp_source` (optional) - name of the lpp_source
@@ -773,7 +773,7 @@ aix_bootlist 'set bootlist for normal mode' do
 end
 ```
 
-Parameters:
+Properties:
 
 * `mode` (mandatory) (no default) - must be :both, :normal or :service
 * `devices` (no default) - List boot devices to setup
@@ -843,7 +843,7 @@ aix_altdisk "rename altdisk" do
 end
 ```
 
-Parameters:
+Properties:
 
 * `type` (optional) - size (choose the disk on which creating the alternate disk by it's size in MB)
 * `type` (optional) - name (choose the disk on which creating the alternate disk by it's name)
@@ -890,7 +890,7 @@ aix_fixes "removing fix IV75031s5a" do
 end
 ```
 
-Parameters:
+Properties:
 
 * `fixes` (mandatory) - Array of fixes to install or remove
 * `directory` (optional) - Directory where stands the fixes to install
@@ -932,7 +932,7 @@ aix_volume_group 'datavg3' do
 end
 ```
 
-Parameters:
+Properties:
 * `name`: Name of the volume group
 * `physical_volumes`: The device or list of devices to use as physical volumes (if they haven't already been initialized as * `physical volumes, they will be initialized automatically)
 * `use_as_hot_spare`: (optional) Sets the sparing characteristics of the physical volume such that it can be used as a hot spare. Legal values are "y" or "n". "y" marks the disk as a hot spare within the volume group it belongs to. "n" removes the disk from the hot spare pool for the volume group.
@@ -955,7 +955,7 @@ aix_logical_volume 'home' do
 end
 ```
 
-Parameters:
+Properties:
 * `name`: Name of the logical volume
 * `volume_group`: Volume group in which to create the new logical volume (not required if the volume is declared inside of an `lvm_volume_group` block)
 * `size`: Minimum size of the logical volume in MB. The actual size allocated my be slightly greater.
@@ -992,7 +992,7 @@ aix_filesystem '/lvm/folder1' do
 end
 ```
 
-Parameters:
+Properties:
 * `name`: Mount point of the filesystem
 * `logical`: Specifies an existing logical volume on which to make the filesystem
 * `size`: Size of the filesystem. It's can be a set of 512k blocks, a size in M or a size in G
@@ -1045,7 +1045,7 @@ aix_wpar 'delete wpar' do
 end
 ```
 
-Parameters:
+Properties:
 
 * `name`: WPAR name
 * `hostname`: specify wpar hostname(can be different of wpar name)
