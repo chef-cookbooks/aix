@@ -1,9 +1,5 @@
 # Note: If you want to tackle fixing some of these it would be greatly appreciated
 
-Lint/DuplicatedKey:
-  Exclude:
-    - 'libraries/helpers.rb'
-
 Lint/FormatParameterMismatch:
   Exclude:
     - 'test/lvm/unittests/mock.rb'
