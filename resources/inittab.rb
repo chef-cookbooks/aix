@@ -14,15 +14,13 @@
 # limitations under the License.
 #
 
-property :identifier, name_property: true, kind_of: String
-property :runlevel, kind_of: String, required: true
-property :processaction, kind_of: String, required: true, equal_to: %w(respawn wait once boot bootwait powerfail off hold ondemand initdefault sysinit)
-property :command, kind_of: String, required: true
+property :identifier, String, name_property: true
+property :runlevel, String, required: true
+property :processaction, String, required: true, equal_to: %w(respawn wait once boot bootwait powerfail off hold ondemand initdefault sysinit)
+property :command, String, required: true
 
-property :follows, kind_of: String
-property :exists, [TrueClass, FalseClass], desired_state: false
-
-default_action :install
+property :follows, String
+property :exists, [true, false], desired_state: false
 
 load_current_value do |new_resource|
   exists false
