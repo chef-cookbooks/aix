@@ -34,7 +34,7 @@ module AIXLVM
 
     def check_to_change
       @changed = true
-      if !@mirror_pool_name.nil? && !(@mirror_pool_name =~ /^[0-9a-zA-Z]{1,15}$/)
+      if !@mirror_pool_name.nil? && @mirror_pool_name !~ /^[0-9a-zA-Z]{1,15}$/
         raise AIXLVM::LVMException, 'illegal_mirror_pool_name!'
       end
       for current_pv in @physical_volumes
