@@ -22,12 +22,12 @@ module AIXLVM
     end
 
     def exist?
-      out = @system.run('lspv | grep "%s "' % @name)
+      out = @system.run(format('lspv | grep "%s "', @name))
       !out.nil?
     end
 
     def get_vgname
-      out = @system.run("lspv %s | grep 'VOLUME GROUP:'" % @name)
+      out = @system.run(format("lspv %s | grep 'VOLUME GROUP:'", @name))
       if !out.nil?
         return out[/VOLUME GROUP:\s*(.*)/, 1]
       else
@@ -36,7 +36,7 @@ module AIXLVM
     end
 
     def get_size
-      out = @system.run('bootinfo -s %s' % @name)
+      out = @system.run(format('bootinfo -s %s', @name))
       if !out.nil?
         return out.to_i
       else
@@ -53,7 +53,7 @@ module AIXLVM
     end
 
     def read
-      @descript = @system.run('lsvg %s' % @name) if @descript == 0
+      @descript = @system.run(format('lsvg %s', @name)) if @descript == 0
     end
 
     def exist?
@@ -63,7 +63,7 @@ module AIXLVM
 
     def get_pv_list
       pv_list = []
-      out = @system.run('lsvg -p %s' % @name)
+      out = @system.run(format('lsvg -p %s', @name))
       unless out.nil?
         header = true
         out.split("\n").each do |line|
@@ -114,7 +114,7 @@ module AIXLVM
     end
 
     def get_mirrorpool
-      out = @system.run("lspv -P | grep '%s'" % @name)
+      out = @system.run(format("lspv -P | grep '%s'", @name))
       if !out.nil?
         mirror_pool = nil
         reg_exp = /^.*#{@name}\s+([^\s]*)$/
@@ -144,47 +144,47 @@ module AIXLVM
 
     def create(pvname, mirrorpool)
       cmd = if mirrorpool.nil?
-              'mkvg -y %s -S -f %s' % [@name, pvname]
+              format('mkvg -y %s -S -f %s', @name, pvname)
             else
-              'mkvg -y %s -S -p %s -f %s' % [@name, mirrorpool, pvname]
+              format('mkvg -y %s -S -p %s -f %s', @name, mirrorpool, pvname)
             end
       out = @system.run(cmd)
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
+        raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
     end
 
     def modify(hot_spot)
-      out = @system.run('chvg -h %s %s' % [hot_spot, @name])
+      out = @system.run(format('chvg -h %s %s', hot_spot, @name))
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
+        raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
     end
 
     def add_pv(pvname, mirrorpool)
       cmd = if mirrorpool.nil?
-              'extendvg -f %s %s' % [@name, pvname]
+              format('extendvg -f %s %s', @name, pvname)
             else
-              'extendvg -p %s -f %s %s' % [mirrorpool, @name, pvname]
+              format('extendvg -p %s -f %s %s', mirrorpool, @name, pvname)
             end
       out = @system.run(cmd)
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
+        raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
     end
 
     def delete_pv(pvname)
-      out = @system.run('reducevg -d %s %s' % [@name, pvname])
+      out = @system.run(format('reducevg -d %s %s', @name, pvname))
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
+        raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
     end
   end
@@ -197,7 +197,7 @@ module AIXLVM
     end
 
     def read
-      @descript = @system.run('lslv %s' % @name) if @descript == 0
+      @descript = @system.run(format('lslv %s', @name)) if @descript == 0
     end
 
     def exist?
@@ -256,33 +256,33 @@ module AIXLVM
     end
 
     def create(vgname, nb_pp, copies)
-      out = @system.run('mklv -c %d -t jfs2 -y %s %s %d' % [copies, @name, vgname, nb_pp])
+      out = @system.run(format('mklv -c %d -t jfs2 -y %s %s %d', copies, @name, vgname, nb_pp))
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
+        raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
     end
 
     def increase(diff_pp)
-      out = @system.run('extendlv %s %d' % [@name, diff_pp])
+      out = @system.run(format('extendlv %s %d', @name, diff_pp))
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
+        raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
     end
 
     def change_copies(copies)
       out = if copies > 0
-              @system.run('mklvcopy %s %d' % [@name, copies])
+              @system.run(format('mklvcopy %s %d', @name, copies))
             else
-              @system.run('rmlvcopy %s %d' % [@name, -1 * copies])
+              @system.run(format('rmlvcopy %s %d', @name, -1 * copies))
             end
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
+        raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
     end
   end
@@ -295,7 +295,7 @@ module AIXLVM
     end
 
     def read
-      @descript = @system.run('lsfs -c %s' % @name) if @descript == 0
+      @descript = @system.run(format('lsfs -c %s', @name)) if @descript == 0
     end
 
     def exist?
@@ -337,52 +337,52 @@ module AIXLVM
     end
 
     def create(lvname)
-      out = @system.run('crfs -v jfs2 -d %s -m %s -A yes' % [lvname, @name])
+      out = @system.run(format('crfs -v jfs2 -d %s -m %s -A yes', lvname, @name))
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
+        raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
     end
 
     def modify(size)
-      out = @system.run('chfs -a size=%dM %s' % [size, @name])
+      out = @system.run(format('chfs -a size=%dM %s', size, @name))
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
+        raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
     end
 
     def mounted?
-      out = @system.run('mount | grep %s' % [@name])
+      out = @system.run(format('mount | grep %s', @name))
       !out.nil?
     end
 
     def mount
-      out = @system.run('mount %s' % [@name])
+      out = @system.run(format('mount %s', @name))
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
+        raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
     end
 
     def umount
-      out = @system.run('umount %s' % [@name])
+      out = @system.run(format('umount %s', @name))
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
+        raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
     end
 
     def defragfs
-      out = @system.run('defragfs %s' % [@name])
+      out = @system.run(format('defragfs %s', @name))
       if !out.nil?
         return out
       else
-        raise AIXLVM::LVMException, 'system error:%s' % @system.last_error
+        raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
     end
   end

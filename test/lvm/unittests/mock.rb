@@ -33,7 +33,7 @@ class MockSystem < AIXLVM::BaseSystem
   def residual
     res = ''
     for val in @out_retrun
-      res += "%s => %s\n" % val
+      res += format("%s => %s\n", val)
     end
     res
   end
@@ -42,7 +42,7 @@ class MockSystem < AIXLVM::BaseSystem
     @cmd_add.push(cmd)
     expected_cmd, retvalue = @out_retrun.shift
     if expected_cmd != cmd
-      raise AIXLVM::LVMException, "System command error:'%s' expected, '%s' return!" % [expected_cmd, cmd]
+      raise AIXLVM::LVMException, format("System command error:'%s' expected, '%s' return!", expected_cmd, cmd)
     end
     @last_error = cmd if retvalue.nil?
     retvalue
