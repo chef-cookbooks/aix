@@ -48,11 +48,11 @@ module AIXLVM
       end
       lv_obj = StObjLV.new(@system, @logical_volume)
       unless lv_obj.exist?
-        raise AIXLVM::LVMException, 'logical volume "%s" does not exist!' % @logical_volume
+        raise AIXLVM::LVMException, format('logical volume "%s" does not exist!', @logical_volume)
       end
       current_mount = lv_obj.get_mount
       if !current_mount.nil? && (current_mount != '') && (current_mount != @name)
-        raise AIXLVM::LVMException, 'logical volume "%s" has already another file system!' % @logical_volume
+        raise AIXLVM::LVMException, format('logical volume "%s" has already another file system!', @logical_volume)
       end
       fs_obj = StObjFS.new(@system, @name)
       if fs_obj.exist?
@@ -71,11 +71,11 @@ module AIXLVM
         fs_obj = StObjFS.new(@system, @name)
         if @current_size != 0
           fs_obj.modify(@complet_size)
-          ret.push("Modify file system '%s'" % @name)
+          ret.push(format("Modify file system '%s'", @name))
         else
           fs_obj.create(@logical_volume)
           fs_obj.modify(@complet_size)
-          ret.push("Create file system '%s' on logical volume '%s'" % [@name, @logical_volume])
+          ret.push(format("Create file system '%s' on logical volume '%s'", @name, @logical_volume))
         end
       end
       ret
@@ -97,7 +97,7 @@ module AIXLVM
       ret = []
       fs_obj = StObjFS.new(@system, @name)
       fs_obj.mount
-      ret.push("File system '%s' mounted" % [@name])
+      ret.push(format("File system '%s' mounted", @name))
       ret
     end
 
@@ -105,7 +105,7 @@ module AIXLVM
       ret = []
       fs_obj = StObjFS.new(@system, @name)
       fs_obj.umount
-      ret.push("File system '%s' umounted" % [@name])
+      ret.push(format("File system '%s' umounted", @name))
       ret
     end
 
@@ -128,7 +128,7 @@ module AIXLVM
       ret = []
       fs_obj = StObjFS.new(@system, @name)
       fs_obj.defragfs
-      ret.push("File system '%s' defraged" % [@name])
+      ret.push(format("File system '%s' defraged", @name))
       ret
     end
   end

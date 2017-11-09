@@ -1,62 +1,48 @@
-###########
-# variables
-###########
+# recipe example update using suma and nim
+# This recipe is interactive and allows upgrade of AIX 7.1 and 7.2 machines
 
-target_lvl_sp = '7100-03-04-1441'
-target_lvl_tl = '7100-04-00'
-target_lvl_latest = 'laTEst'
-package_dir = '/export/extra/lpp_source'
-suma_client_list = 'quimby*'
-nim_client_list = 'quimby07,quimby08,quimby09,quimby10,quimby11,quimby12'
+Chef::Recipe.send(:include, AIX::PatchMgmt)
 
-# Initial conditions
-# ------------------
-# quimby07 => 7100-01-04-1216
-# quimby08 => 7100-03-01-1341
-# quimby09 => 7100-03-04-1441 (ref)
-# quimby10 => 7100-03-05-1524
-# quimby11 => 7100-04-00-0000
-# quimby12 => 7200-00-02-1614
+puts '#########################################################'
+puts 'Available machines and their corresponding oslevel are:'
+puts clients(node)
+puts 'Choose one or more (comma or space separated) to update?'
+client = STDIN.readline.chomp
+
+puts '#########################################################'
+puts 'Available SP/TL levels are:'
+puts levels(node)
+puts 'Choose one to download and install?'
+level = STDIN.readline.chomp
+
+puts '#########################################################'
+puts 'Where to download? (default to /usr/sys/inst.images)'
+directory = STDIN.readline.chomp
+directory = '/usr/sys/inst.images' if directory.empty?
 
 ohai 'reload_nim' do
   action :nothing
   plugin 'nim'
 end
 
-#################
-# SUMA
-# Download specific SP/TL or latest installation images.
-# And define NIM lpp_source object.
-#################
-# aix_suma "Downloading SP images" do
-# 	oslevel		"#{target_lvl_sp}"		# Name of the oslevel to download (if empty, assume latest)
-# 	location	"#{package_dir}"		# Directory where the lpp will be stored and (if empty, assume /usr/sys/inst.images). If the directory does not exist, it will be created.
-# 	targets		"#{suma_client_list}"	# Mandatory list of standalone or master NIM 'machines' resources
-# 	action 		:download
-# end
-#
-# aix_suma "Downloading TL images" do
-# 	oslevel		"#{target_lvl_tl}"		# Name of the oslevel to download (if empty, assume latest)
-# 	location	"#{package_dir}"		# Directory where the lpp will be stored and (if empty, assume /usr/sys/inst.images). If the directory does not exist, it will be created.
-# 	targets		"#{suma_client_list}"	# Mandatory list of standalone or master NIM 'machines' resources
-# 	action 		:download
-# end
-#
-# aix_suma "Downloading LATEST images" do
-# 	oslevel		"#{target_lvl_latest}"	# Name of the oslevel to download (if empty, assume latest)
-# 	location	"#{package_dir}"		# Directory where the lpp will be stored and (if empty, assume /usr/sys/inst.images). If the directory does not exist, it will be created.
-# 	targets		"#{suma_client_list}"	# Mandatory list of standalone or master NIM 'machines' resources
-# 	action 		:download
-# end
+aix_suma "Downloading '#{level}' installation images to '#{directory}'" do
+  oslevel level
+  location directory
+  targets client
+  action :download
+  notifies :reload, 'ohai[reload_nim]', :immediately
+end
 
-#################
-# NIM
-# Perfom nim cust operation on each targets based on their oslevel.
-#################
+aix_nim "Updating machine(s) '#{client}'" do
+  lpp_source "#{level}-lpp_source"
+  targets client
+  async false
+  action [:update, :reboot]
+  only_if "lsnim -t lpp_source #{level}-lpp_source"
+  notifies :reload, 'ohai[reload_nim]', :immediately
+  ignore_failure true
+end
 
-aix_nim 'Updating machines' do
-  lpp_source	"#{target_lvl_sp}-lpp_source"
-  targets	nim_client_list.to_s
-  action	:update
-  # notifies	:reload, 'ohai[reload_nim]', :before
+aix_nim 'Check update status' do
+  action :check
 end

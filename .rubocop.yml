@@ -1,21 +1,16 @@
-# rubocop todo
+# Note: If you want to tackle fixing some of these it would be greatly appreciated
 
 Lint/DuplicatedKey:
   Exclude:
     - 'libraries/helpers.rb'
 
-Lint/RescueException:
+Lint/FormatParameterMismatch:
   Exclude:
-    - 'resources/nim.rb'
-    - 'resources/suma.rb'
+    - 'test/lvm/unittests/mock.rb'
 
 Lint/UselessAssignment:
   Exclude:
-    - 'examples/update_by_suma.rb'
-    - 'providers/chsec.rb'
     - 'providers/nimclient.rb'
-    - 'resources/nim.rb'
-    - 'resources/suma.rb'
 
 Metrics/BlockNesting:
   Max: 5
@@ -31,45 +26,23 @@ Style/ClassAndModuleCamelCase:
     - 'test/lvm/unittests/tc_aix_storage_objects.rb'
     - 'test/lvm/unittests/tc_storage_objects.rb'
 
-# Cop supports --auto-correct.
-# Configuration parameters: Keywords.
-# Keywords: TODO, FIXME, OPTIMIZE, HACK, REVIEW
-Style/CommentAnnotation:
-  Exclude:
-    - 'resources/subserver.rb'
-
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: for, each
 Style/For:
   Exclude:
     - 'libraries/lvmobj_vg.rb'
     - 'libraries/storage_objects.rb'
     - 'test/lvm/unittests/mock.rb'
 
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: format, sprintf, percent
-Style/FormatString:
-  Exclude:
-    - 'libraries/lvmobj_fs.rb'
-    - 'libraries/lvmobj_lv.rb'
-    - 'libraries/lvmobj_vg.rb'
-    - 'libraries/storage_objects.rb'
-    - 'test/lvm/unittests/mock.rb'
-
-# Configuration parameters: MinBodyLength.
 Style/GuardClause:
   Exclude:
     - 'libraries/lvmobj_fs.rb'
     - 'libraries/storage_objects.rb'
     - 'libraries/tools.rb'
     - 'providers/altdisk.rb'
-    - 'providers/chdev.rb'
-    - 'providers/chsec.rb'
     - 'providers/etchosts.rb'
-    - 'providers/inittab.rb'
     - 'providers/nimclient.rb'
-    - 'providers/no.rb'
-    - 'resources/suma.rb'
+    - 'resources/chdev.rb'
+    - 'resources/chsec.rb'
+    - 'resources/no.rb'
 
 Style/IdenticalConditionalBranches:
   Exclude:
@@ -79,16 +52,10 @@ Style/IfInsideElse:
   Exclude:
     - 'libraries/storage_objects.rb'
 
-# Cop supports --auto-correct.
-# Configuration parameters: IncludeSemanticChanges.
 Style/NonNilCheck:
   Exclude:
     - 'test/lvm/unittests/ts_all.rb'
 
-# Configuration parameters: NamePrefix, NamePrefixBlacklist, NameWhitelist.
-# NamePrefix: is_, has_, have_
-# NamePrefixBlacklist: is_, has_, have_
-# NameWhitelist: is_a?
 Style/PredicateName:
   Exclude:
     - 'spec/**/*'

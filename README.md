@@ -14,7 +14,7 @@ This cookbook contains useful resources for using Chef with AIX systems.
 
 ### Chef
 
-- Chef 12.1+
+- Chef 12.7+
 
 ### Cookbooks
 
@@ -386,6 +386,205 @@ Actions:
 * `delete` - remove an entry in /etc/hosts
 * `delete_all` - remove all entries in /etc/hosts
 * `change` - change an entry in /etc/hosts
+
+### suma
+
+Use suma to download fixes on a NIM server.
+You can download service pack, or technology level.
+You can also download latest service pack of latest technology level for the HIGHEST release in the client list.
+It means if you provide AIX 7.1 and 7.2 clients, only last 7.2 TL or SP is downloaded.
+
+In some cases a metadata operation is performed to discover the oslevel build number or the latest service pack level.
+
+The location directory is automatically created if it does not exist.
+
+The NIM lpp_source resource is automatically created if needed. It meets the following requirement.
+Name contains build number and ends with the type of resource:
+ * 7100-04-00-0000-lpp_source
+ * 7100-03-01-1341-lpp_source
+ * 7100-03-02-1412-lpp_source
+
+You can provide a NIM lpp_source as oslevel property.
+
+Suma resource uses Ohai to discover nim environment.
+You may want to reload Ohai info after a successfull download by adding:
+ * the following resource to your recipe:
+```ruby
+ohai 'reload_nim' do
+  action :nothing
+  plugin 'nim'
+end
+```
+ * the following notifies property to your resource:
+```ruby
+aix_suma
+  [...]
+  notifies :reload, 'ohai[reload_nim]', :immediately
+end
+```
+
+```ruby
+aix_suma "download needed fixes to update client list to 7.1 TL3 SP1" do
+  oslevel "7100-03-01-1341"
+  location "/export/extra/nim"
+  targets "client1,client2,client3"
+  action :download
+end
+
+aix_suma "... perform suma metadata operation to discover build number" do
+  oslevel "7100-03-01"
+  location "/export/extra/nim"
+  targets "client1,client2,client3"
+  action :download
+end
+
+aix_suma "download needed fixes to update client list to 7.1 TL4" do
+  oslevel "7100-04"
+  location "/export/extra/nim"
+  targets "client1,client2,client3"
+  action :download
+end
+
+aix_suma "download needed fixes to update client list to last TL and last SP" do
+  oslevel "latest"
+  location "/export/extra/nim"
+  targets "client1,client2,client3"
+  action :download
+end
+
+aix_suma "update nim lpp_source with needed fixes" do
+  oslevel "7100-03-01-1341-lpp_source"
+  location "/export/extra/nim"
+  targets "client1,client2,client3"
+  action :download
+end
+
+```
+Parameters:
+
+* `oslevel` - service pack, technology level or 'latest' (with or without build number) (default: Latest)
+* `location` - directory to store downloaded fixes (default: /usr/sys/inst.images)
+* `targets` - space or comma separated list of clients to consider for update process (star wildcard accepted)
+* `preview_only` - preview only, no packages are downloaded
+
+Actions:
+* `download` - preview and download fixes
+
+### nim
+
+Use nim to setup a NIM server or install packages, update service pack, or technology level.
+Your NIM lpp_source must match the exact oslevel output. For example:
+ * 7100-04-00-0000-lpp_source
+ * 7100-03-01-1341-lpp_source
+ * 7100-03-02-1412-lpp_source
+
+```ruby
+aix_nim "setup nim server" do
+  device "/mnt"
+  action :master_setup
+end
+
+aix_nim "asynchronously updating clients" do
+  lpp_source "7100-03-01-1341-lpp_source"
+  targets "client1,client2,client3"
+  async	true
+  action :update
+end
+
+aix_nim "updating clients to latest SP (forced synchronous)" do
+  lpp_source "latest_sp"
+  targets "client1,client2,client3"
+  action :update
+end
+
+aix_nim "updating clients to latest TL (forced synchronous)" do
+  lpp_source "latest_tl"
+  targets "client1,client2,client3"
+  action :update
+end
+
+```
+Parameters:
+
+* `device` - NFS mount directory containing bos.sysmgt.nim.master package
+* `lpp_source` - name of NIM lpp_source resource to install or latest_sp or latest_tl
+* `targets` - comma or space separated list of clients to update (star wildcard accepted)
+* `force` - if true, installed interim fixes will be automatically removed (default: false)
+* `async` - if true, customization is performed asynchronously (default: false) (cannot be used for latest_sp or latest_tl customization)
+
+Actions:
+* `master_setup` - setup the NIM server
+* `update` - install downloaded fixes
+
+### flrtvc
+
+Use flrtvc tool to generate flrtvc report, download recommended efix, and install them to patch security and/or hiper vulnerabilities.
+
+A nim lpp_source resource is automatically created for fixes to be installed. It is removed at the end of the installation.
+
+If space is needed, filesystem is automatically extended by increment of 100MB.
+
+```ruby
+aix_flrtvc "install flrtvc tool (download unzip if needed)" do
+  action :install
+end
+
+aix_flrtvc "download and install recommended efixes locally" do
+  action :patch
+end
+
+aix_flrtvc "download and install security vulnerabilities on the remote targets" do
+  apar "security"
+  targets "client1,client2,client3"
+  action :patch
+end
+
+aix_flrtvc "download and install hiper issues" do
+  apar "hiper"
+  targets "client1,client2,client3"
+  action :patch
+end
+
+aix_flrtvc "download and install efix for printers fileset(s)" do
+  filesets "printers"
+  targets "client1,client2,client3"
+  action :patch
+end
+
+aix_flrtvc "use custom csv file" do
+  csv "/tmp/apar.csv"
+  targets "client1,client2,client3"
+  action :patch
+end
+
+aix_flrtvc "generate flrtvc report only" do
+  path '/tmp/flrtvc'
+  check_only true
+  action :patch
+end
+
+aix_flrtvc "download recommended efixes only" do
+  path '/tmp/flrtvc'
+  download_only true
+  action :patch
+end
+
+```
+Parameters:
+
+* `targets` - comma or space separated list of clients to check (star wildcard accepted) (default: master)
+* `apar` - security or hiper data (default: both)
+* `filesets` - filter on fileset name
+* `csv` - custom apar csv file
+* `path` - directory where the report is saved
+* `clean` - clean temporary files and remove nim lpp_source resource (default: true)
+* `verbose` - save and display the report in verbose mode (default: false)
+* `check_only` - generate report only, no fixes are downloaded nor installed  (default: false)
+* `download_only` - generate report and download fixes, do not install them  (default: false)
+
+Actions:
+* `install` - install flrtvc tool
+* `patch` - generate report, download recommended fixes and patch the machine(s)
 
 ### niminit
 

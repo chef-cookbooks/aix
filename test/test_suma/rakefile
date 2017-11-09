@@ -1,0 +1,303 @@
+require 'fileutils'
+
+task :default => [ :clean_all, :copy_recipes, :install_fake, :run_ohai, :run_location, :run_oslevel, :run_suma, :run_targets, :report, :deinstall_fake ]
+task :ohai => [ :clean_all, :copy_recipes, :install_fake, :run_ohai, :report, :deinstall_fake ]
+task :location => [ :clean_all, :copy_recipes, :install_fake, :run_location, :report, :deinstall_fake ]
+task :oslevel => [ :clean_all, :copy_recipes, :install_fake, :run_oslevel, :report, :deinstall_fake ]
+task :suma => [ :clean_all, :copy_recipes, :install_fake, :run_suma, :report, :deinstall_fake ]
+task :targets => [ :clean_all, :copy_recipes, :install_fake, :run_targets, :report, :deinstall_fake ]
+task :error => [ :clean_all, :copy_recipes, :install_fake, :run_error, :report, :deinstall_fake ]
+
+# %n returns the file name without the extension and directory portions !
+test_ohai_list     = FileList.new('../test_suma/recipes/test_ohai*.rb').pathmap("%n")
+test_location_list = FileList.new('../test_suma/recipes/test_location*.rb').pathmap("%n")
+test_oslevel_list  = FileList.new('../test_suma/recipes/test_oslevel*.rb').pathmap("%n")
+test_suma_list     = FileList.new('../test_suma/recipes/test_suma*.rb').pathmap("%n")
+test_targets_list  = FileList.new('../test_suma/recipes/test_targets*.rb').pathmap("%n")
+test_error_list    = FileList.new('../test_suma/recipes/test*error*.rb').pathmap("%n")
+
+##########################################################
+## Variable definition
+##########################################################
+
+LOG_DIR      = Time.new.strftime("%F_%H%M%S")
+COOKBOOK_DIR = Dir.pwd + '/../../..'
+
+$success = 0
+$failure = 0
+$total = 0
+
+##########################################################
+## Function definition
+##########################################################
+
+desc 'Build client.rb file which is used to specify the configuration details for the chef-client.'
+def build_config_file(config)
+    ## Create LOGS Directory
+    FileUtils.mkdir_p(Dir.pwd + '/LOGS/log_' + LOG_DIR )
+
+    ## Fill in client.rb
+    File.open("client.rb", "w") do |file|
+        file.puts 'cookbook_path "' + Dir.pwd + '/../../.."'
+        file.puts 'log_level :info'
+        file.puts 'log_location "' + Dir.pwd + '/LOGS/log_' + LOG_DIR + '/'+ config.to_s + '.log"'
+        file.puts 'verbose_logging true'
+    end
+    return 'client.rb'
+end
+
+desc 'Parse recipe file to extract expected values'
+def parse_expected_values(file)
+  puts 'Expected values:'
+  expected_values = Hash.new
+  File.open(Dir.pwd + '/recipes/' + file + '.rb', "r") do |f|
+    f.each_line do |line|
+      line.chomp!
+      if line =~ /^# (.*?) : (.*?)$/
+        key, value = Regexp.last_match(1), Regexp.last_match(2)
+        expected_values[key] = value
+        puts "\t#{key} = #{value}"
+      end
+    end
+  end
+  expected_values
+end
+
+desc 'Parse log file to check expected values'
+def check_expected_values(rc, file, expected)
+  result = true
+  log_file = Dir.pwd + '/LOGS/log_' + LOG_DIR + '/' + file + '.log'
+  puts "Logs saved in file #{log_file}"
+
+  if rc.to_i != expected['return code'].to_s.to_i
+    result = false
+    puts "\033[31mExpected return code #{expected['return code'].to_s} but has #{rc}"
+  end
+
+  unless expected['exception'].to_s == 'nil'
+    found = false
+    File.open(log_file, "r") do |f|
+      f.each_line do |line|
+        found = true if line =~ /#{expected['exception'].to_s}/
+      end
+    end
+    unless found
+      result = false
+      puts "\033[31mExpected exception #{expected['exception'].to_s} but did not found in #{log_file}"
+    end
+  end
+
+  unless expected['suma directory'].to_s == ''
+    sh "ls #{expected['suma directory'].to_s} >/dev/null", verbose: false do |ok,res|
+	  unless ok
+        result = false
+        puts "\033[31mExpected directory #{expected['suma directory'].to_s} to be created"
+      end
+    end
+  end
+
+  ['suma log info', 'suma log warn', 'suma metadata', 'suma preview', 'suma download', 'nim define'].each do |key|
+    unless expected[key].to_s == ''
+      found = false
+      File.open(log_file, "r") do |f|
+        f.each_line do |line|
+          found = true if line =~ /#{Regexp.escape(expected[key].to_s)}/
+        end
+      end
+      unless found
+        result = false
+        puts "\033[31mExpected trace #{expected[key].to_s} but did not found in #{log_file}"
+      end
+    end
+  end
+
+  result
+end
+
+def print_success
+  $success += 1
+  $total += 1
+  puts "\033[32;1mSUCCESS\033[0m"
+end
+
+def print_failure
+  $failure += 1
+  $total += 1
+  puts "\033[31;1mFAILURE\033[0m"
+end
+
+##########################################################
+## Task definition
+##########################################################
+
+desc 'Copy Test recipes to Cookbook recipes'
+task :copy_recipes do
+  puts '/////////////////////////////////////////////////////////////////////'
+  puts 'Copy Test recipes to Cookbook recipes'
+  FileUtils.cp_r Dir.pwd + '/recipes/.', COOKBOOK_DIR + '/aix/recipes', verbose: true
+end
+
+desc 'Clean SUMA tests directory'
+task :clean_all do
+  puts '/////////////////////////////////////////////////////////////////////'
+  puts 'Clean SUMA tests directory'
+  if File.exists? '/sumatest'
+    puts 'Deleting /sumatest'
+    FileUtils.rm_rf('/sumatest', secure: true)
+  end
+
+  if File.exists? '/usr/sys/inst.images/'
+    puts 'Deleting /usr/sys/inst.images/'
+    FileUtils.rm_rf('/usr/sys/inst.images/', secure: true)
+  end
+end
+
+desc 'Result Reporting'
+task :report do
+  puts "\033[44m" + '--------------------------' + "\033[0m"
+  puts "\033[44m" + '--------  Report  --------' + "\033[0m"
+  puts "\033[44m" + '--------------------------' + "\033[0m"
+  percent = 100 * $success.to_f / $total
+  puts "\033[44mSuccess = #{$success}/#{$total} (#{percent.round(2)}%)\033[0m"
+end
+
+desc 'Set up fake nim & suma'
+task :install_fake do
+  FileUtils.cp '/usr/sbin/nim', '/usr/sbin/nim.old', verbose: true
+  FileUtils.cp Dir.pwd + '/../aix_fake/nim', '/usr/sbin/nim', verbose: true
+  FileUtils.cp '/usr/sbin/suma', '/usr/sbin/suma.old', verbose: true
+  FileUtils.cp Dir.pwd + '/../aix_fake/suma', '/usr/sbin/suma', verbose: true
+end
+
+desc 'Remove fake from machine'
+task :deinstall_fake do
+  FileUtils.cp '/usr/sbin/nim.old', '/usr/sbin/nim', verbose: true
+  FileUtils.cp '/usr/sbin/suma.old', '/usr/sbin/suma', verbose: true
+end
+
+desc 'Run all OHAI tests'
+task :run_ohai do
+  puts '/////////////////////////////////////////////////////////////////////'
+  puts '                    Running OHAI tests'
+  puts '/////////////////////////////////////////////////////////////////////'
+  test_ohai_list.each do |fl|
+    build_config_file(fl)
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    puts "\033[45m" + '----- Running recipe: ' + fl + ' -----' + "\033[0m"
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    expected_values = parse_expected_values(fl)
+    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |ok, res|
+      if check_expected_values(res.exitstatus, fl, expected_values)
+        print_success
+      else
+        print_failure
+      end
+    end
+  end
+end
+
+desc 'Run all LOCATION tests'
+task :run_location do
+  puts '/////////////////////////////////////////////////////////////////////'
+  puts '                    Running LOCATION tests'
+  puts '/////////////////////////////////////////////////////////////////////'
+  test_location_list.each do |fl|
+    build_config_file(fl)
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    puts "\033[45m" + '----- Running recipe: ' + fl + ' -----' + "\033[0m"
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    expected_values = parse_expected_values(fl)
+    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |ok, res|
+      if check_expected_values(res.exitstatus, fl, expected_values)
+        print_success
+      else
+        print_failure
+      end
+    end
+  end
+end
+
+
+desc 'Run all OSLEVEL tests'
+task :run_oslevel do
+  puts '/////////////////////////////////////////////////////////////////////'
+  puts '                    Running OSLEVEL tests'
+  puts '/////////////////////////////////////////////////////////////////////'
+  test_oslevel_list.each do |fl|
+    build_config_file(fl)
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    puts "\033[45m" + '----- Running recipe: ' + fl + ' -----' + "\033[0m"
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    expected_values = parse_expected_values(fl)
+    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |ok, res|
+      if check_expected_values(res.exitstatus, fl, expected_values)
+        print_success
+      else
+        print_failure
+      end
+    end
+  end
+end
+
+desc 'Run all SUMA tests'
+task :run_suma do
+  puts '/////////////////////////////////////////////////////////////////////'
+  puts '                    Running SUMA tests'
+  puts '/////////////////////////////////////////////////////////////////////'
+  test_suma_list.each do |fl|
+    build_config_file(fl)
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    puts "\033[45m" + '----- Running recipe: ' + fl + ' -----' + "\033[0m"
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    expected_values = parse_expected_values(fl)
+    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |ok, res|
+      if check_expected_values(res.exitstatus, fl, expected_values)
+        print_success
+      else
+        print_failure
+      end
+    end
+  end
+end
+
+desc 'Run all TARGETS tests'
+task :run_targets do
+  puts '/////////////////////////////////////////////////////////////////////'
+  puts '                    Running TARGETS tests'
+  puts '/////////////////////////////////////////////////////////////////////'
+  test_targets_list.each do |fl|
+    build_config_file(fl)
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    puts "\033[45m" + '----- Running recipe: ' + fl + ' -----' + "\033[0m"
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    expected_values = parse_expected_values(fl)
+    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |ok, res|
+      if check_expected_values(res.exitstatus, fl, expected_values)
+        print_success
+      else
+        print_failure
+      end
+    end
+  end
+end
+
+desc 'Run all ERROR tests'
+task :run_error do
+  puts '/////////////////////////////////////////////////////////////////////'
+  puts '                    Running ERROR tests'
+  puts '/////////////////////////////////////////////////////////////////////'
+  test_error_list.each do |fl|
+    build_config_file(fl)
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    puts "\033[45m" + '----- Running recipe: ' + fl + ' -----' + "\033[0m"
+    puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
+    expected_values = parse_expected_values(fl)
+    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |ok, res|
+      if check_expected_values(res.exitstatus, fl, expected_values)
+        print_success
+      else
+        print_failure
+      end
+    end
+  end
+end
