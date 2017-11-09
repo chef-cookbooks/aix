@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-property :name, String, name_property: true
 property :mode, Symbol, equal_to: %i[ioo vmo schedo no], identity: true, required: true
 property :tunables, Hash
 property :permanent, [true, false], default: false
