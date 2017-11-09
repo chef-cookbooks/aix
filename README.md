@@ -26,6 +26,90 @@ This cookbook ships multiple resources for writing cookbooks to manage AIX hosts
 
 ## Resources
 
+### altdisk
+
+Create an alternate disk on a free disk Update an existing alternate disk
+
+#### Actions
+
+- `create` - create an alternate rootvg disk
+- `cleanup` - cleanup an alternate rootvg disk
+- `wakeup` - wakeup an alternate rootvg disk
+- `rename` - rename an alternate rootvg disk
+- `sleep` - put an alternate rootvg in sleep
+- `customize` - customize an alternate rootvg (update)
+
+#### Properties
+
+- `type` (optional) - size (choose the disk on which creating the alternate disk by it's size in MB)
+- `type` (optional) - name (choose the disk on which creating the alternate disk by it's name)
+- `type` (optional) - auto (automatically choose the disk on which creating the rootvg)
+- `value` (optional) - bigger (if type is auto choose a disk bigger than the current rootvg size)
+- `value` (optional) - equal (if type is auto choose a disk with the exact same size of the rootvg size)
+- `value` (optional) - size or name (if type is size or name it's the size or the exact name of the disk)
+- `altdisk_name` (optional) - name of the alternate disk to create
+- `change_bootlist` (optional) (default false) - change the bootlist to boot to the new alternate disk
+- `image_location` (optional) - directory containing filesets used for the cust operation
+- `new_altdisk_name` (optional) - new name use for rename action
+- `reset_devices`, (optional) kind_of: [true, false], default: false - Performs a device reset on the target. This causes the alternate disk install to not retain any user-defined device configurations.
+- `remain_nimclient`, (optional) kind_of: [true, false], default: false - `/.rhosts` and `/etc/niminfo` files are copied to the file system
+
+#### Examples
+
+```ruby
+aix_altdisk "cloning rootvg by name hdisk3" do
+  type :name
+  value "hdisk3"
+end
+
+aix_altdisk "cloning rootvg by size 66560" do
+  type :size
+  value "66560"
+end
+
+aix_altdisk "cloning rootvg by size 66561" do
+  type :size
+  value "66561"
+end
+
+aix_altdisk "cloning rootvg by auto" do
+  type :auto
+  value "bigger"
+  action :create
+  altdisk_name "myvg"
+end
+
+aix_altdisk "cleanup alternate rootvg" do
+  action :cleanup
+  altdisk_name "rootvg_alt"
+end
+
+aix_altdisk "altdisk_by_auto" do
+  type :auto
+  value "bigger"
+  change_bootlist true
+  action :create
+end
+
+aix_altdisk "altdisk_wake_up" do
+  action :wakeup
+end
+
+aix_altdisk "altdisk_update" do
+  image_location "/mnt/7100-03-05-1524"
+  action :customize
+end
+
+aix_altdisk "altdisk_sleep" do
+  action :sleep
+end
+
+aix_altdisk "rename altdisk" do
+  new_altdisk_name "altdisk_vg"
+  action :rename
+end
+```
+
 ### inittab
 
 Manage the inittab entries. Example:
@@ -783,93 +867,9 @@ Actions:
 - `update` - update bootlist
 - `invalidate` - invalidate the bootlist
 
-### altdisk
-
-Create an alternate disk on a free disk
-Update an existing alternate disk
-
-```ruby
-aix_altdisk "cloning rootvg by name hdisk3" do
-  type :name
-  value "hdisk3"
-end
-
-aix_altdisk "cloning rootvg by size 66560" do
-  type :size
-  value "66560"
-end
-
-aix_altdisk "cloning rootvg by size 66561" do
-  type :size
-  value "66561"
-end
-
-aix_altdisk "cloning rootvg by auto" do
-  type :auto
-  value "bigger"
-  action :create
-  altdisk_name "myvg"
-end
-
-aix_altdisk "cleanup alternate rootvg" do
-  action :cleanup
-  altdisk_name "rootvg_alt"
-end
-
-aix_altdisk "altdisk_by_auto" do
-  type :auto
-  value "bigger"
-  change_bootlist true
-  action :create
-end
-
-aix_altdisk "altdisk_wake_up" do
-  action :wakeup
-end
-
-aix_altdisk "altdisk_update" do
-  image_location "/mnt/7100-03-05-1524"
-  action :customize
-end
-
-aix_altdisk "altdisk_sleep" do
-  action :sleep
-end
-
-aix_altdisk "rename altdisk" do
-  new_altdisk_name "altdisk_vg"
-  action :rename
-end
-```
-
-Properties:
-
-- `type` (optional) - size (choose the disk on which creating the alternate disk by it's size in MB)
-- `type` (optional) - name (choose the disk on which creating the alternate disk by it's name)
-- `type` (optional) - auto (automatically choose the disk on which creating the rootvg)
-- `value` (optional) - bigger (if type is auto choose a disk bigger than the current rootvg size)
-- `value` (optional) - equal (if type is auto choose a disk with the exact same size of the rootvg size)
-- `value` (optional) - size or name (if type is size or name it's the size or the exact name of the disk)
-- `altdisk_name` (optional) - name of the alternate disk to create
-- `change_bootlist` (optional) (default false) - change the bootlist to boot to the new alternate disk
-- `image_location` (optional) - directory containing filesets used for the cust operation
-- `new_altdisk_name` (optional) - new name use for rename action
-- `reset_devices`, (optional) kind_of: [TrueClass, FalseClass], default: false - Performs a device reset on the target. This causes the alternate disk install to not retain any user-defined device configurations.
-- `remain_nimclient`, (optional) kind_of: [TrueClass, FalseClass], default: false - `/.rhosts` and `/etc/niminfo` files are copied to the file system
-
-Actions:
-
-- `create` - create an alternate rootvg disk
-- `cleanup` - cleanup an alternate rootvg disk
-- `wakeup` - wakeup an alternate rootvg disk
-- `rename` - rename an alterante rootvg disk
-- `sleep` - put an alternate rootvg in sleep
-- `customize` - customiz an alternate rootvg (update)
-
 ### fixes
 
-Install and remove fixes
-Example:
+Install and remove fixes Example:
 
 ```ruby
 aix_fixes "removing all fixes" do
