@@ -43,7 +43,7 @@ module AIXLVM
       end
       vg_obj = StObjVG.new(@system, @group)
       unless vg_obj.exist?
-        raise AIXLVM::LVMException, 'volume group "%s" does not exist!' % @group
+        raise AIXLVM::LVMException, format('volume group "%s" does not exist!', @group)
       end
       if vg_obj.get_nbpv < @copies
         raise AIXLVM::LVMException, 'Illegal number of copies!'
@@ -57,7 +57,7 @@ module AIXLVM
       current_volgroup = lv_obj.get_vg
       if !current_volgroup.nil?
         if current_volgroup != @group
-          raise AIXLVM::LVMException, 'logical volume "%s" exist with other volume group!' % @name
+          raise AIXLVM::LVMException, format('logical volume "%s" exist with other volume group!', @name)
         end
         current_size = lv_obj.get_nbpp
         @diff_pp = @nb_pp - current_size
@@ -87,11 +87,11 @@ module AIXLVM
         lv_obj = StObjLV.new(@system, @name)
         if @diff_pp == -1
           lv_obj.create(@group, @nb_pp, @copies)
-          ret.push("Create logical volume '%s' on volume groupe '%s'" % [@name, @group])
+          ret.push(format("Create logical volume '%s' on volume groupe '%s'", @name, @group))
         else
           lv_obj.increase(@diff_pp) if @diff_pp > 0
           lv_obj.change_copies(@copies) if @copies != @current_copies
-          ret.push("Modify logical volume '%s'" % @name)
+          ret.push(format("Modify logical volume '%s'", @name))
         end
       end
       ret

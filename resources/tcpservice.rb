@@ -60,4 +60,3 @@ action :restart do
   sleep 2
   action_start
 end
-
