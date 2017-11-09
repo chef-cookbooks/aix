@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-property :name, String, name_property: true
 property :tunables, Hash
 property :set_default, [true, false], default: false
 
