@@ -22,7 +22,7 @@ This cookbook contains useful resources for using Chef with AIX systems.
 
 ## Usage
 
-This cookbook has no recipes.
+This cookbook ships multiple resources for writing cookbooks to manage AIX hosts. See the resources below:
 
 ## Resources
 
