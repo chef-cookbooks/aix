@@ -14,13 +14,9 @@
 # limitations under the License.
 #
 
-resource_name :aix_chsec
-
 property :file_name, String, name_property: true, identity: true
 property :attributes, Hash
 property :stanza, String, identity: true
-
-default_action :update
 
 load_current_value do |desired|
   # Check if file exists

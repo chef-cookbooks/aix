@@ -14,13 +14,9 @@
 # limitations under the License.
 #
 
-resource_name :aix_no
-
 property :name, String, name_property: true
 property :tunables, Hash
 property :set_default, [true, false], default: false
-
-default_action :update
 
 load_current_value do
   so = shell_out!('no -x')

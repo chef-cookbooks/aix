@@ -14,12 +14,8 @@
 # limitations under the License.
 #
 
-resource_name :aix_tcpservice
-
 property :identifier, String, name_property: true
 property :immediate, [true, false], default: false
-
-default_action :enable
 
 action :enable do
   so = shell_out("egrep '^start /usr/(sbin|lib)/#{@new_resource.identifier}' /etc/rc.tcpip")
