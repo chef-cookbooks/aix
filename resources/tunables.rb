@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-property :mode, Symbol, equal_to: %i[ioo vmo schedo no], identity: true, required: true
+property :mode, Symbol, equal_to: %i[ioo vmo schedo no], identity: true, required: true, desired_state: false
 property :tunables, Hash
 property :permanent, [true, false], default: false
 property :nextboot, [true, false], default: false
