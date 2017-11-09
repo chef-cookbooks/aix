@@ -1,5 +1,5 @@
 #
-# Copyright:: 2014-2016, Chef Software, Inc.
+# Copyright:: 2015-2016, Benoit Creau <benoit.creau@chmod666.org>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
