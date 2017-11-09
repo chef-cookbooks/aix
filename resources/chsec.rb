@@ -23,7 +23,6 @@ load_current_value do |desired|
   if ::File.exist?(desired.file_name)
     # check if the stanza exists
     # if the stanza does not exists the resource does not exists
-    stanza_to_check = desired.stanza
     unless ::File.readlines(desired.file_name).grep(/#{desired.stanza}:/)
       Chef::Log.debug("chsec: no stanza found (#{desired.stanza})")
       current_value_does_not_exist!
@@ -73,8 +72,6 @@ action :update do
   # iterating trough the hash table of sec attributes
   new_resource.attributes.each do |key, value|
     # checking if value has to be changed
-    current_attr = current_value.attributes[key]
-    new_attr = new_resource.attributes[key]
     if new_resource.attributes[key] == current_value.attributes[key]
       Chef::Log.debug("chsec: value of #{key} already set to #{value} for stanza #{new_resource.stanza}")
     else
