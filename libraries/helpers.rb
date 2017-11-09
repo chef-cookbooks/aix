@@ -354,7 +354,6 @@ module Opscode
           'xft' => { version: '2.1.6-5', rpm: 'xft/xft-2.1.6-5.aix5.1.ppc.rpm' },
           'xpdf' => { version: '1.00-1', rpm: 'xpdf/xpdf-1.00-1.aix4.3.ppc.rpm' },
           'xpm-devel' => { version: '3.4k-8', rpm: 'xpm/xpm-devel-3.4k-8.aix6.1.ppc.rpm' },
-          'xpm' => { version: '3.4k-8', rpm: 'xpm/xpm-3.4k-8.aix5.2.ppc.rpm' },
           'xpm' => { version: '3.4k-8', rpm: 'xpm/xpm-3.4k-8.aix6.1.ppc.rpm' },
           'xrender' => { version: '0.9.1-3', rpm: 'xrender/xrender-0.9.1-3.aix5.2.ppc.rpm' },
           'xscreensaver' => { version: '4.06-2', rpm: 'xscreensaver/xscreensaver-4.06-2.aix5.1.ppc.rpm' },
