@@ -16,7 +16,7 @@
 
 property :file_name, String, name_property: true, identity: true
 property :attributes, Hash
-property :stanza, String, identity: true
+property :stanza, String, desired_state: false
 
 load_current_value do |desired|
   # Check if file exists
