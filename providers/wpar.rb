@@ -41,7 +41,7 @@ def load_current_resource
 
   if @current_resource.exists
     @wpar.live_stream = STDOUT if @new_resource.live_stream
-    @current_resource.state = @wpar.general.state
+    @current_resource.wpar_state = @wpar.general.state
     @current_resource.cpu = @wpar.resource_control.cpu
     unless @wpar.networks.first.nil?
       @current_resource.address = @wpar.networks.first.address
@@ -63,7 +63,7 @@ end
 # create action
 action :create do
   options = {}
-  Chef::Log.debug("wpar #{@current_resource.state} ")
+  Chef::Log.debug("wpar #{@current_resource.wpar_state} ")
   if @current_resource.exists
     Chef::Log.info("wpar #{@new_resource.name} already exist")
   else
@@ -94,7 +94,7 @@ end
 
 # start action
 action :start do
-  if @current_resource.exists && @current_resource.state == 'D'
+  if @current_resource.exists && @current_resource.wpar_state == 'D'
     converge_by("Start wpar #{@current_resource.name}") do
       @wpar.start
     end
@@ -105,7 +105,7 @@ end
 
 # stop action
 action :stop do
-  if @current_resource.exists && @current_resource.state == 'A'
+  if @current_resource.exists && @current_resource.wpar_state == 'A'
     converge_by("Stop wpar #{@current_resource.name}") do
       @wpar.stop
     end
