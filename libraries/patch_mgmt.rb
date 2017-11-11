@@ -106,12 +106,12 @@ module AIX
 
     def log_info(message)
       Chef::Log.info(message)
-      # puts('INFO : ' + message)
+      # STOUT.puts('INFO : ' + message)
     end
 
     def log_warn(message)
       Chef::Log.warn(message)
-      # puts('WARN : ' + message)
+      # STDOUT.puts('WARN : ' + message)
     end
 
     #############################
@@ -157,6 +157,27 @@ module AIX
     end
 
     class NimRemoveError < NimError
+    end
+
+    class NimHmcInfoError < StandardError
+    end
+
+    class NimLparInfoError < StandardError
+    end
+
+    class NimAltDiskInstallError < StandardError
+    end
+
+    class NimAltDiskInstallTimedOut < StandardError
+    end
+
+    class ViosCmdError < StandardError
+    end
+
+    class AltDiskFindError < StandardError
+    end
+
+    class AltDiskCleanError < StandardError
     end
 
     class SpLevel
@@ -319,7 +340,7 @@ module AIX
         download_downloaded = 0
         download_failed = 0
         download_skipped = 0
-        puts "\nStart downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to '#{@dl_target}' directory."
+        puts "Start downloading #{@downloaded} fixes (~ #{@dl.to_f.round(2)} GB) to '#{@dl_target}' directory."
         exit_status = Open3.popen3({ 'LANG' => 'C' }, suma_s) do |_stdin, stdout, stderr, wait_thr|
           thr = Thread.new do
             start = Time.now
@@ -346,7 +367,7 @@ module AIX
           thr.exit
           wait_thr.value # Process::Status object returned.
         end
-        puts "\nFinish downloading #{succeeded} fixes (~ #{download_dl.to_f.round(2)} GB)."
+        puts "Finish downloading #{succeeded} fixes (~ #{download_dl.to_f.round(2)} GB)."
         log_info("Done suma download operation \"#{suma_s}\"")
         raise SumaDownloadError, "Error: Command \"#{suma_s}\" returns above error!" unless exit_status.success?
         @dl = download_dl
@@ -354,7 +375,7 @@ module AIX
         @failed = download_failed
         @skipped = download_skipped
       end
-    end
+    end  # Suma
 
     #################
     #     N I M     #
@@ -416,7 +437,7 @@ module AIX
           end
           wait_thr.value # Process::Status object returned.
         end
-        puts "\nFinish updating #{clients} asynchronously."
+        puts "Finish updating #{clients} asynchronously."
         raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success? || do_not_error
         log_info("Done NIM customize operation \"#{nim_s}\"")
       end
@@ -424,7 +445,7 @@ module AIX
       def perform_sync_customization(lpp_source, clients)
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a fixes=update_all -a accept_licenses=yes -a async=no #{clients}"
         log_debug("NIM synchronous cust operation: #{nim_s}")
-        puts "\nStart updating machine(s) '#{clients}' to #{lpp_source}."
+        puts "Start updating machine(s) '#{clients}' to #{lpp_source}."
         do_not_error = false
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line do |line|
@@ -439,7 +460,7 @@ module AIX
           end
           wait_thr.value # Process::Status object returned.
         end
-        puts "\nFinish updating #{clients} synchronously."
+        puts "Finish updating #{clients} synchronously."
         raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success? || do_not_error
         log_info("Done nim customize operation \"#{nim_s}\"")
       end
@@ -447,7 +468,7 @@ module AIX
       def perform_efix_customization(lpp_source, client, filesets = 'all')
         nim_s = "/usr/sbin/nim -o cust -a lpp_source=#{lpp_source} -a filesets='#{filesets}' #{client}"
         log_debug("NIM install efixes cust operation: #{nim_s}")
-        puts "\nStart patching machine(s) '#{client}'."
+        puts "Start patching machine(s) '#{client}'."
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
           thr = Thread.new do
             loop do
@@ -472,14 +493,14 @@ module AIX
           thr.exit
           wait_thr.value # Process::Status object returned.
         end
-        puts "\nFinish patching #{client}."
+        puts "Finish patching #{client}."
         raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success?
       end
 
       def perform_efix_vios_customization(lpp_source, vios, _filesets = 'all')
         nim_s = "/usr/sbin/nim -o updateios -a preview=no -a lpp_source=#{lpp_source} #{vios}"
         log_debug("NIM updateios operation: #{nim_s}")
-        puts "\nStart patching machine(s) '#{vios}'."
+        puts "Start patching machine(s) '#{vios}'."
         exit_status = Open3.popen3({ 'LANG' => 'C' }, nim_s) do |_stdin, stdout, stderr, wait_thr|
           thr = Thread.new do
             loop do
@@ -504,10 +525,564 @@ module AIX
           thr.exit
           wait_thr.value # Process::Status object returned.
         end
-        puts "\nFinish patching #{vios}."
+        puts "Finish patching #{vios}."
         raise NimCustError, "Error: Command \"#{nim_s}\" returns above error!" unless exit_status.success?
       end
-    end
+
+      # -----------------------------------------------------------------
+      # Get the hmc info on the nim master
+      #
+      #    return a dic with hmc info
+      #    raise NimHmcInfoError in case of error
+      # -----------------------------------------------------------------
+      def get_hmc_info()
+        info_hash = {}
+        obj_key = ''
+        cmd_s = "/usr/sbin/lsnim -t hmc -l"
+        log_debug("get_hmc_info: #{cmd_s}")
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+          stderr.each_line do |line|
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          unless wait_thr.value.success?
+            stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+            raise NimHmcInfoError, "Error: Command \"#{cmd_s}\" returns above error!"
+          end
+
+          stdout.each_line do |line|
+            log_info("[STDOUT] #{line.chomp}")
+            # HMC name
+            if line =~ /^(\S+):/
+              obj_key = Regexp.last_match(1)
+              info_hash[obj_key] = {}
+              next
+            end
+            # Cstate
+            if line =~ /^\s+Cstate\s+=\s+(.*)$/
+                cstate = Regexp.last_match(1)
+                info_hash[obj_key]['cstate'] = cstate
+                next
+            end
+            # passwd_file
+            if line =~ /^\s+passwd_file\s+=\s+(.*)$/
+                passwd_file = Regexp.last_match(1)
+                info_hash[obj_key]['passwd_file'] = passwd_file
+                next
+            end
+            # login
+            if line =~ /^\s+login\s+=\s+(.*)$/
+                login = Regexp.last_match(1)
+                info_hash[obj_key]['login'] = login
+                next
+            end
+            # ip
+            if line =~ /^\s+if1\s*=\s*\S+\s*(\S*)\s*.*$/
+                ip = Regexp.last_match(1)
+                info_hash[obj_key]['ip'] = ip
+                next
+            end
+          end
+        end
+
+        log_info("HMC information:")
+        info_hash.keys.each do |obj_key|
+            log_info("#{obj_key}")
+            info_hash[obj_key].keys.each do |k|
+                log_info("  #{k}: #{info_hash[obj_key][k]}")
+            end
+        end
+        info_hash
+      end
+
+      # -----------------------------------------------------------------
+      # Get the list of the lpar (standalones or vios) defined on the nim
+      #   master, and get their cstate.
+      #
+      #    return a dic with lpar info
+      #    raise NimLparInfoError in case of error
+      # -----------------------------------------------------------------
+      def get_nim_clients_info(lpar_type)
+        info_hash = {}
+        obj_key = ''
+        cmd_s = "/usr/sbin/lsnim -t #{lpar_type} -l"
+        log_debug("get_nim_clients_info: '#{cmd_s}'")
+        Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+          stderr.each_line do |line|
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          unless wait_thr.value.success?
+            stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+            raise NimLparInfoError, "Error: Command \"#{cmd_s}\" returns above error!"
+          end
+
+          stdout.each_line do |line|
+            log_info("[STDOUT] #{line.chomp}")
+            # lpar object name
+            if line =~ /^(\S+):/
+              obj_key = Regexp.last_match(1)
+              info_hash[obj_key] = {}
+              next
+            end
+            # Cstate
+            if line =~ /^\s+Cstate\s+=\s+(.*)$/
+              cstate = Regexp.last_match(1)
+              info_hash[obj_key]['cstate'] = cstate
+              next
+            end
+
+            # For VIOS store the management profile
+            if lpar_type == 'vios'
+              if line =~ /^\s+mgmt_profile1\s+=\s+(.*)$/
+                match_mgmtprof = Regexp.last_match(1)
+                mgmt_elts = match_mgmtprof.split
+                if mgmt_elts.size == 3
+                  info_hash[obj_key]['mgmt_hmc_id'] = mgmt_elts[0]
+                  info_hash[obj_key]['mgmt_vios_id'] = mgmt_elts[1]
+                  info_hash[obj_key]['mgmt_cec_serial'] = mgmt_elts[2]
+                end
+              end
+              if line =~ /^\s+if1\s+=\s+\S+\s+(\S+)\s+.*$/
+                info_hash[obj_key]['vios_ip'] = Regexp.last_match(1)
+              end
+            end
+          end
+        end
+
+        log_info("NIM Clients for type: '#{lpar_type}'")
+        info_hash.keys.each do |obj_key|
+            log_info("#{obj_key}")
+            info_hash[obj_key].keys.each do |k|
+                log_info("  #{k}: #{info_hash[obj_key][k]}")
+            end
+        end
+        info_hash
+      end
+
+      # -----------------------------------------------------------------
+      # Run the NIM alt_disk_install command to launch
+      # the alternate copy operation on specified vios
+      #
+      #    raise NimAltDiskInstallError in case of error
+      # -----------------------------------------------------------------
+      def perform_altdisk_install(vios, source, disk, set_bootlist='no', boot_client='no')
+        cmd_s = "/usr/sbin/nim -o alt_disk_install -a source=rootvg -a disk=#{disk} -a set_bootlist=#{set_bootlist} -a boot_client=#{boot_client} #{vios}"
+        log_info("perform_altdisk_install: '#{cmd_s}'")
+        # TBC - For testing, will be remove after test !!!
+        # cmd_s = "/usr/sbin/lsnim -Z -a Cstate -a info -a Cstate_result #{vios}"
+        # log_info("perform_altdisk_install: overwrite cmd_s:'#{cmd_s}'")
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+          stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+          stderr.each_line do |line|
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          wait_thr.value # Process::Status object returned.
+        end
+
+        raise NimAltDiskInstallError, "Error: Command \"#{cmd_s}\" returns above error!" unless exit_status.success?
+      end
+
+      # -----------------------------------------------------------------
+      # Wait for the alternate disk copy operation to finish
+      #
+      # when alt_disk_install operation ends the NIM object state changes
+      # from "a client is being prepared for alt_disk_install" or
+      #      "alt_disk_install operation is being performed"
+      # to   "ready for NIM operation"
+      #
+      # You migh want a timeout of 30 minutes (count=180, sleep=10s), if
+      # there is no progress in NIM operation "info" attribute for this
+      # duration, it can be considered as an error.
+      #
+      #    Return
+      #    0   if the alt_disk_install operation ends with success
+      #
+      #    raise NimAltDiskInstallError in case of error
+      #    raise NimAltDiskInstallTimedOut in case of time out
+      # -----------------------------------------------------------------
+      def wait_alt_disk_install(vios, check_count=180, sleep_time=10)
+        nim_info_prev = "___"   # this info should not appears in nim info attribute
+        nim_info = ""
+        count = 0
+        wait_time = 0
+        cmd_s = "/usr/sbin/lsnim -Z -a Cstate -a info -a Cstate_result #{vios}"
+        log_info("wait_alt_disk_install: '#{cmd_s}'")
+
+        while count <= check_count do
+          sleep(sleep_time)
+          wait_time += 10
+          nim_Cstate = ""
+          nim_result = ""
+          nim_info = ""
+
+          Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+            stderr.each_line do |line|
+              STDERR.puts line
+              log_info("[STDERR] #{line.chomp}")
+            end
+            unless wait_thr.value.success?
+              stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+              raise NimLparInfoError, "Failed to get the NIM state for vios '#{vios}', see above error!"
+            end
+
+            stdout.each_line do |line|
+              log_debug("[STDOUT] #{line.chomp}")
+
+              # info attribute (that appears in 3rd possition) can be empty. So stdout looks like:
+              # #name:Cstate:info:Cstate_result:
+              # <viosName>:ready for a NIM operation:success:  -> len=3
+              # <viosName>:alt_disk_install operation is being performed:Creating logical volume alt_hd2.:success:  -> len=4
+              # <viosName>:ready for a NIM operation:0505-126 alt_disk_install- target disk hdisk2 has a volume group assigned to it.:failure:  -> len=4
+              nim_status = line.strip.split(':')
+              log_info("nim_status:#{nim_status}")
+              next if nim_status[0] == "#name"
+
+              nim_Cstate = nim_status[1]
+              if nim_status.length == 3 && (nim_status[2].downcase == "success" || nim_status[2].downcase == "failure")
+                nim_result = nim_status[2].downcase
+              elsif nim_status.length > 3
+                nim_info = nim_status[2]
+                nim_result = nim_status[3].downcase
+              else
+                log_warn("[#{vios}] Unexpected output #{nim_status} for command '#{cmd_s}'")
+              end
+
+              if nim_Cstate.downcase == "ready for a nim operation"
+                log_info("NIM alt_disk_install operation on #{vios} ended with #{nim_result}")
+                unless nim_result == "success"
+                  msg = "Failed to perform NIM alt_disk_install operation: #{nim_info}"
+                  log_warn("[#{vios}] #{msg}")
+                  raise NimAltDiskInstallError, msg
+                end
+                return 0    # here the operation succeeded
+              else
+                if nim_info_prev == nim_info
+                  count += 1
+                else
+                  nim_info_prev = nim_info unless nim_info.empty?
+                  count = 0
+                end
+              end
+              if wait_time.modulo(60) == 0
+                msg = "Waiting completion of NIM alt_disk_install operation on #{vios}... #{wait_time / 60} minute(s)"
+                STDOUT.puts msg
+                log_info(msg)
+              end
+            end
+          end
+        end    # while count
+
+        # timed out before the end of alt_disk_install
+        raise NimAltDiskInstallTimedOut, "NIM alt_disk_install operation for #{vios} shows no progress in #{count * sleep_time / 60} minute(s): #{nim_info}"
+      end
+
+    end  # Nim
+
+    #################
+    #   VioServer   #
+    #################
+    class VioServer
+      include AIX::PatchMgmt
+
+      # -----------------------------------------------------------------
+      # Get the list of PVs using 'lspv' command on a vios
+      # and build a hash in nim_vios[vios]['pvs'][pv_name]
+      # with PV info.
+      # It uses c_rsh to connect the vios and ioscli to run the command.
+      #
+      #    Raise ViosCmdError in case of error
+      # -----------------------------------------------------------------
+      def get_pvs(nim_vios, vios)
+        nim_vios[vios]['pvs'] = {}
+        cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{nim_vios[vios]['vios_ip']} \"/usr/ios/cli/ioscli lspv\""
+
+        log_debug("get_pvs: '#{cmd_s}'")
+        Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+          stderr.each_line do |line|
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          unless wait_thr.value.success?
+            stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+            msg = "Failed to get Physical Volume list"
+            log_warn("[#{vios}] #{msg}")
+            raise ViosCmdError, "Error: #{msg} on #{vios}, command \"#{cmd_s}\" returns above error!"
+          end
+
+          # stdout is like:
+          # NAME             PVID                                 VG               STATUS
+          # hdisk0           000018fa3b12f5cb                     rootvg           active
+          stdout.each_line do |line|
+            log_debug("[STDOUT] #{line.chomp}")
+
+            next if line.start_with?('NAME') # skip header
+            line.chomp!
+            if line =~ /^(hdisk\S+)\s+(\S+)\s+(\S+)\s*(\S*)/
+              pv_name = Regexp.last_match(1)
+              nim_vios[vios]['pvs'][pv_name] = {}
+              nim_vios[vios]['pvs'][pv_name]['pvid'] = Regexp.last_match(2)
+              nim_vios[vios]['pvs'][pv_name]['vg'] = Regexp.last_match(3)
+              nim_vios[vios]['pvs'][pv_name]['status'] = Regexp.last_match(4)
+            end
+          end
+        end
+
+        log_info('List of PVs:')
+        nim_vios[vios]['pvs'].keys.each do |k|
+          log_info("  #{vios}['pvs'][#{k}] = #{nim_vios[vios]['pvs'][k]}")
+        end
+      end
+
+      # -----------------------------------------------------------------
+      # Get the list of free PVs using 'lspv -free' command on a vios
+      # and build a hash in nim_vios[vios]['free_pvs'][pv_name]
+      # with PV info.
+      # It uses c_rsh to connect the vios and ioscli to run the command.
+      #
+      #    Raise ViosCmdError in case of error
+      # -----------------------------------------------------------------
+      def get_free_pvs(nim_vios, vios)
+        nim_vios[vios]['free_pvs'] = {}
+        cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{nim_vios[vios]['vios_ip']} \"/usr/ios/cli/ioscli lspv -free\""
+
+        log_debug("get_free_pvs: '#{cmd_s}'")
+        Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+          stderr.each_line do |line|
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          unless wait_thr.value.success?
+            stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+            msg = "Failed to get free Physical Volume list"
+            log_warn("[#{vios}] #{msg}")
+            raise ViosCmdError, "Error: #{msg} on #{vios}, command \"#{cmd_s}\" returns above error!"
+          end
+
+          # stdout is like:
+          # NAME            PVID                                SIZE(megabytes)
+          # hdiskX          none                                572325
+          stdout.each_line do |line|
+            log_debug("[STDOUT] #{line.chomp}")
+
+            next if line.start_with?('NAME') # skip header
+            line.chomp!
+            if line =~ /^(hdisk\S+)\s+(\S+)\s+([0-9]+)/
+              pv_name = Regexp.last_match(1)
+              nim_vios[vios]['free_pvs'][pv_name] = {}
+              nim_vios[vios]['free_pvs'][pv_name]['pvid'] = Regexp.last_match(2)
+              nim_vios[vios]['free_pvs'][pv_name]['size'] = Regexp.last_match(3).to_i
+              log_debug("got free PV #{pv_name} of #{nim_vios[vios]['free_pvs'][pv_name]['size']} MB with PVID: #{nim_vios[vios]['free_pvs'][pv_name]['pvid']}")
+            end
+          end
+        end
+
+        log_info('List of free PVs:')
+        nim_vios[vios]['free_pvs'].keys.each do |k|
+          log_info("  #{vios}['free_pvs'][#{k}] = #{nim_vios[vios]['free_pvs'][k]}")
+        end
+      end
+
+      # -----------------------------------------------------------------
+      # Return the total and used vg sizes in megabytes
+      #
+      #    Raise ViosCmdError in case of error
+      # -----------------------------------------------------------------
+      def get_vg_size(nim_vios, vios, vg_name)
+        vg_size = [0, 0]
+        cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{nim_vios[vios]['vios_ip']} \"/usr/ios/cli/ioscli lsvg #{vg_name}\""
+
+        log_info("get_vg_size: '#{cmd_s}'")
+        Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+          stderr.each_line do |line|
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          unless wait_thr.value.success?
+            stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+            msg = "Failed to get Volume Group '#{vg_name}' size"
+            log_warn("[#{vios}] #{msg}")
+            raise ViosCmdError, "Error: #{msg} on #{vios}, command \"#{cmd_s}\" returns above error!"
+          end
+
+          # stdout is like:
+          # parse lsvg outpout to get the size in megabytes:
+          # VG STATE:           active                   PP SIZE:        512 megabyte(s)
+          # VG PERMISSION:      read/write               TOTAL PPs:      558 (285696 megabytes)
+          # MAX LVs:            256                      FREE PPs:       495 (253440 megabytes)
+          # LVs:                14                       USED PPs:       63 (32256 megabytes)
+          stdout.each_line do |line|
+            log_debug("[STDOUT] #{line.chomp}")
+            line.chomp!
+            if line =~ /.*TOTAL PPs:\s+\d+\s+\((\d+)\s+megabytes\).*/
+              vg_size[0] = Regexp.last_match(1).to_i
+            elsif line =~ /.*USED PPs:\s+\d+\s+\((\d+)\s+megabytes\).*/
+              vg_size[1] += Regexp.last_match(1).to_i
+            elsif line =~ /.*PP SIZE:\s+(\d+)\s+megabyte\(s\).*/
+              vg_size[1] += Regexp.last_match(1).to_i
+            end
+          end
+        end
+        if vg_size[0] == 0 || vg_size[1] == 0
+            msg = "Failed to get Volume Group '#{vg_name}' size: TOTAL PPs=#{vg_size[0]}, USED PPs+1=#{vg_size[1]}"
+            log_warn("[#{vios}] #{msg}")
+            raise ViosCmdError, "Error: #{msg} on #{vios}"
+          end
+
+        log_info("VG '#{vg_name}' TOTAL PPs=#{vg_size[0]} MB, USED PPs+1=#{vg_size[1]} MB")
+        vg_size
+      end
+
+      # -----------------------------------------------------------------
+      # Find a valid alternate disk that
+      # - exists,
+      # - is not part of a VG
+      # - as enough space to copy the rootvg
+      # and so can be used for the alternate disk copy.
+      #
+      # Fill altdisk_hash[vios] with the selected hdisk
+      #
+      #    Return the altdisk_hash[vios] for success
+      #    Raise AltDiskFindError in case of error
+      # -----------------------------------------------------------------
+      def get_disk_for_altdisk_copy(nim_vios, vios, altdisk_hash)
+        rootvg_size = [0 , 0]
+        msg = "Failed to find a disk for alternate disk copy"
+
+        begin
+          get_free_pvs(nim_vios, vios)
+        rescue ViosCmdError => e
+          STDERR.puts e.message
+          log_warn("[#{vios}] #{msg}")
+          raise AltDiskFindError, "Error: #{msg} on #{vios}, see above error!"
+        end
+
+        begin
+          rootvg_size = get_vg_size(nim_vios, vios, "rootvg")
+        rescue ViosCmdError => e
+          STDERR.puts e.message
+          log_warn("[#{vios}] #{msg}")
+          raise AltDiskFindError, "Error: #{msg} on #{vios}, see above error!"
+        end
+
+        if altdisk_hash[vios].empty?
+          # in auto mode, find the first alternate disk available
+          nim_vios[vios]['free_pvs'].keys.each do |hdisk|
+            if nim_vios[vios]['free_pvs'][hdisk]['size'] >= rootvg_size[1]
+              altdisk_hash[vios] = hdisk
+              return altdisk_hash[vios]
+            end
+          end
+          msg = "No available alternate disk with size greater than #{rootvg_size[1]} MB found"
+          log_warn("[#{vios}] #{msg}")
+          raise AltDiskFindError, "Error: #{msg} on #{vios}"
+        end
+
+        # check the specified hdisk is large enough
+        if !nim_vios[vios]['free_pvs'].has_key?(altdisk_hash[vios])
+          msg = "Alternate disk #{altdisk_hash[vios]} is either not found or not available"
+          log_warn("[#{vios}] #{msg}")
+          raise AltDiskFindError, "Error: #{msg} on #{vios}"
+        end
+
+        if nim_vios[vios]['free_pvs'][altdisk_hash[vios]]['size'] < rootvg_size[1]
+          msg = "Alternate disk #{altdisk_hash[vios]} too small (#{nim_vios[vios]['free_pvs'][altdisk_hash[vios]]['size']} < #{rootvg_size})"
+          log_warn("[#{vios}] #{msg}")
+          raise AltDiskFindError, "Error: #{msg} on #{vios}"
+        end
+
+        log_info("Taking '#{altdisk_hash[vios]}' alternate disk for altdisk_copy on '#{vios}'")
+        altdisk_hash[vios]
+      end
+
+      # -----------------------------------------------------------------
+      # Find the existing altinst rootvg on vios
+      #
+      # Fill altdisk_hash[vios] with the corresponding hdisk
+      #
+      #    Return 0 for success
+      #    Raise AltDiskFindError in case of error
+      # -----------------------------------------------------------------
+      def get_altinst_rootvg_disk(nim_vios, vios, altdisk_hash)
+        ret = 0
+
+        begin
+          get_pvs(nim_vios, vios)
+        rescue ViosCmdError => e
+          STDERR.puts e.message
+          msg = "Failed to find the alternate install rootvg"
+          log_warn("[#{vios}] #{msg}")
+          raise AltDiskFindError, "Error: #{msg} on #{vios}, see above error!"
+        end
+
+        # in auto mode, search for altinst_rootvg
+        if altdisk_hash[vios].empty?
+          nim_vios[vios]['pvs'].keys.each do |hdisk|
+            if nim_vios[vios]['pvs'][hdisk]['vg'] == "altinst_rootvg"
+              if altdisk_hash[vios].empty?
+                altdisk_hash[vios] = hdisk
+              else
+                msg = "There are several alternate install rootvg on #{vios}: #{altdisk_hash[vios]} and #{hdisk}"
+                log_warn("[#{vios}] #{msg}")
+                raise AltDiskFindError, "msg"
+              end
+            end
+          end
+        end
+
+        # Check we found an disk and its vg name is altinst_rootvg
+        if altdisk_hash[vios].empty?
+          msg = "No alternate install rootvg found"
+          ret = 1
+        elsif !nim_vios[vios]['pvs'].has_key?(altdisk_hash[vios])
+          msg = "No disk '#{altdisk_hash[vios]}' found"
+          ret = 1
+        elsif nim_vios[vios]['pvs'][altdisk_hash[vios]]['vg'] != "altinst_rootvg"
+          msg = "Disk '#{altdisk_hash[vios]}' is not an alternate install rootvg"
+          ret = 1
+        end
+        unless ret == 0
+          log_warn("[#{vios}] #{msg}")
+          raise AltDiskFindError, "#{msg} on '#{vios}'"
+        end
+
+        log_info("Found altinst_rootvg on disk '#{altdisk_hash[vios]}'")
+        return ret
+      end
+
+      # -----------------------------------------------------------------
+      # Remove the altinst_rootvg with the alt_rootvg_op command
+      #
+      #    Return 0 for success
+      #    Raise AltDiskFindError in case of error
+      # -----------------------------------------------------------------
+      def altdisk_copy_cleanup(nim_vios, vios, altdisk_hash)
+        ret = 0
+
+        puts "Start removing altinst_rootvg from '#{altdisk_hash[vios]}' on '#{vios}'."
+        cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{nim_vios[vios]['vios_ip']} \"/usr/sbin/alt_rootvg_op -X altinst_rootvg\""
+        log_info("altdisk_copy_cleanup: '#{cmd_s}'")
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+          stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+          stderr.each_line do |line|
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          wait_thr.value # Process::Status object returned.
+        end
+        puts "Finish removing altinst_rootvg from '#{altdisk_hash[vios]}' on '#{vios}'."
+        unless exit_status.success?
+          msg = "Failed to remove altinst_rootvg"
+          log_warn("[#{vios}] #{msg}")
+          raise AltDiskCleanError, "#{msg} on #{vios}, see above error!"
+        end
+
+        ret
+      end
+
+    end  # VioServer
+
 
     # -----------------------------------------------------------------
     # Print hash in column format
@@ -968,5 +1543,100 @@ module AIX
       end
       lppsource
     end
-  end
-end
+
+    # -----------------------------------------------------------------
+    # Expand the target vios pair list parameter
+    #
+    #    targets are in the form (vios1,vios2) (vios3,vios4) (vios5) (vios6)
+    #
+    #    for no altdisk checking altdisks should be nil otherwise
+    #    it should be the keyword 'auto' or in the form
+    #    (hdisk1,hdisk2) (hdisk1,) (vios5) ()
+    #    with the same number of hdisk than VIOSes even if empty
+    #
+    #    raise InvalidTargetsProperty in case of error
+    #    - cannot contact the target machines
+    # -----------------------------------------------------------------
+    def expand_vios_pair_targets(targets, vios_nim_list, altdisks, altdisk_hash)
+      selected_vios = []
+      vios_list = []
+      
+      vios_list_tuples = targets.gsub(' ','').gsub('),(', ')(').split('(')
+      vios_list_tuples.delete_at(0) # after the split, 1rst elt is nil
+
+      unless altdisks.nil? || altdisks == "auto"
+        hd_list_tuples = altdisks.gsub(' ','').gsub('),(', ')(').split('(')
+        hd_list_len = hd_list_tuples.length
+        if hd_list_len != vios_list_tuples.length
+          raise InvalidTargetsProperty, "Error: Alternate hdisks '#{altdisks}' and vios target '#{targets}' must have the same number of element"
+        end
+      end
+
+      # Build targets list
+      hd_tuple_index = 0
+      vios_list_tuples.each do |vios_tuple|
+        my_tuple = vios_tuple.gsub(')','')
+        tuple_elts = my_tuple.split(',')
+        tuple_len = tuple_elts.length
+
+        # check targets has the form of (vios1,vios2) or (vios3)
+        if tuple_len != 1 && tuple_len != 2
+          raise InvalidTargetsProperty, "Error: Malformed vios targets '#{targets}'"
+        end
+
+        # check vios not already exists in the target list
+        if vios_list.include?(tuple_elts[0]) ||
+           (tuple_len == 2 && (vios_list.include?(tuple_elts[1]) ||
+            tuple_elts[0] == tuple_elts[1]))
+          raise InvalidTargetsProperty, "Error: Malformed vios targets, Duplicated values '#{targets}'"
+        end
+
+        # check vios is knowed by the NIM master - if not ignore it
+        if !vios_nim_list.include?(tuple_elts[0]) ||
+           tuple_len == 2 && !vios_nim_list.include?(tuple_elts[1])
+          next
+        end
+
+        if tuple_len == 2
+          vios_list.push(tuple_elts[0], tuple_elts[1])
+        else
+          vios_list.push(tuple_elts[0])
+        end
+        selected_vios.push(my_tuple)
+
+        # Handle hdisk list if altdisks not nil
+        next if altdisks.nil?
+
+        # in auto mode, just add empty hdisk for the 2 vioses
+        if altdisks == "auto"
+          altdisk_hash[tuple_elts[0]] = ""
+          altdisk_hash[tuple_elts[1]] = ""
+          next
+        end
+
+        # parse the hdisk tuple
+        hd_tuple = hd_list_tuples[hd_tuple_index].gsub(')','')
+        hd_tuple_elts = hd_tuple.split(',')
+        hd_tuple_len = hd_tuple_elts.length
+        if hd_tuple_len != tuple_len
+          raise InvalidTargetsProperty, "Error: alternate hdsik tuple '#{hd_tuple}' and vios tuple '#{my_tuple}' must have the same number of element"
+        end
+        altdisk_hash[tuple_elts[0]] = hd_tuple_elts[0]
+        if tuple_len == 2
+          altdisk_hash[tuple_elts[1]] = hd_tuple_elts[1]
+        end
+
+        hd_tuple_index += 1
+      end
+
+      if selected_vios.empty?
+        raise InvalidTargetsProperty, "Error: cannot contact any machines in '#{targets}'"
+      end
+
+      log_info("List of targets expanded to #{selected_vios}")
+      log_info("List of altdisk: #{altdisk_hash}")
+      selected_vios
+    end
+
+  end  # module PatchMgmt
+end  # module AIX
