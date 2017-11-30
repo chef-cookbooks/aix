@@ -19,7 +19,6 @@ property :new_hostname, String
 property :aliases, Array
 
 load_current_value do |desired|
-  # hostent = shell_out("hostent -s #{desired.name}", returns: [0, 1])
   hostent = shell_out("hostent -s #{desired.name}")
   Chef::Log.debug("command: #{hostent}")
   current_value_does_not_exist! if hostent.exitstatus != 0
@@ -137,9 +136,12 @@ end
 
 # delete_all
 action :delete_all do
-  hostent_del_all_s = 'hostent -X'
-  converge_by('etchost: removing all entries') do
-    Chef::Log.debug("etchosts: running #{hostent_del_all_s}")
-    shell_out!(hostent_del_all_s)
+  so = shell_out("hostent -S >/dev/null")
+  if so.exitstatus == 0
+    hostent_del_all_s = 'hostent -X'
+    converge_by('etchost: removing all entries') do
+      Chef::Log.debug("etchosts: running #{hostent_del_all_s}")
+      shell_out!(hostent_del_all_s)
+    end
   end
 end
