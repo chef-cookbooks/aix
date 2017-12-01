@@ -48,17 +48,14 @@ action :add do
   unless current_resource
     hostent_add_s = "hostent -a #{new_resource.ip_address} -h \"#{new_resource.name}"
     # add aliases if there are aliases
-    if new_resource.aliases.nil?
-      # no aliases, closing the command line
-      hostent_add_s = hostent_add_s << '"'
-    else
+    unless new_resource.aliases.nil?
       # add each aliases to the command line
       (0..new_resource.aliases.length - 1).each do |i|
         hostent_add_s = hostent_add_s << " #{new_resource.aliases[i]}"
       end
-      # close last double quote
-      hostent_add_s = hostent_add_s << '"'
     end
+    # close last double quote
+    hostent_add_s << '"'
     # TODO: There isn't anything here to add aliases after the first name exists
     converge_by("hostent: add #{new_resource.name} in /etc/hosts file") do
       Chef::Log.debug("etchosts: running #{hostent_add_s}")
@@ -136,7 +133,7 @@ end
 
 # delete_all
 action :delete_all do
-  so = shell_out("hostent -S >/dev/null")
+  so = shell_out('hostent -S >/dev/null')
   if so.exitstatus == 0
     hostent_del_all_s = 'hostent -X'
     converge_by('etchost: removing all entries') do
