@@ -51,7 +51,7 @@ action :add do
     unless new_resource.aliases.nil?
       # add each aliases to the command line
       (0..new_resource.aliases.length - 1).each do |i|
-        hostent_add_s = hostent_add_s << " #{new_resource.aliases[i]}"
+        hostent_add_s << " #{new_resource.aliases[i]}"
       end
     end
     # close last double quote
@@ -85,19 +85,19 @@ action :change do
     if !new_resource.new_hostname.nil?
       if new_resource.new_hostname != current_value.name
         change = true
-        hostent_change_s = hostent_change_s << "-h \"#{new_resource.new_hostname} "
+        hostent_change_s << "-h \"#{new_resource.new_hostname} "
         # CASE2 hostname and aliases are changing
         unless new_resource.aliases.nil?
           # add each aliases to the command line
           (0..new_resource.aliases.length - 1).each do |i|
-            hostent_change_s = hostent_change_s << " #{new_resource.aliases[i]}"
+            hostent_change_s << " #{new_resource.aliases[i]}"
           end
         end
         # close last double quote
-        hostent_change_s = hostent_change_s << '" '
+        hostent_change_s << '" '
       end
     else
-      hostent_change_s = hostent_change_s << "-h \"#{new_resource.name}\" "
+      hostent_change_s << "-h \"#{new_resource.name}\" "
     end
     # CASE3 ip is changing
     # if ip_address are different change them
@@ -105,11 +105,11 @@ action :change do
       if new_resource.ip_address != current_value.ip_address
         # CASE4 ip and aliases are changing
         unless new_resource.aliases.nil?
-          hostent_change_s = hostent_change_s << "-h \"#{current_value.name} "
+          hostent_change_s << "-h \"#{current_value.name} "
           unless new_resource.aliases.nil?
             # add each aliases to the command line
             (0..new_resource.aliases.length - 1).each do |i|
-              hostent_change_s = hostent_change_s << " #{new_resource.aliases[i]}"
+              hostent_change_s << " #{new_resource.aliases[i]}"
             end
           end
           # close last double quote
@@ -117,7 +117,7 @@ action :change do
         end
         change = true
         if property_is_set?(:ip_address)
-          hostent_change_s = hostent_change_s << "-i #{new_resource.ip_address}"
+          hostent_change_s << "-i #{new_resource.ip_address}"
         end
       end
     end
