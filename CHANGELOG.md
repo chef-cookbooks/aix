@@ -2,6 +2,11 @@
 
 This file is used to list changes made in each version of the aix cookbook.
 
+## 2.1.0 (2017-12-01)
+
+- etchost resource converted to custom resource to support Chef 13. Thanks Mike Sgarbossa.
+- documentation cleanup
+
 ## 2.0.1 (2017-11-08)
 
 - Adds support for Chef 13 in the wpar resource by changing the state property to wpar_state
