@@ -43,6 +43,59 @@ module AIX
       print_hash_by_columns(nodes)
     end
 
+    def list_lpp_sources()
+      check_nim_info(node)
+      nodes = Hash.new { |h, k| h[k] = {} }
+      nodes['lpp'] = node['nim']['lpp_sources'].keys
+      print_hash_by_columns(nodes)
+    end
+
+    def vios(node)
+      check_nim_info(node)
+      nodes = Hash.new { |h, k| h[k] = {} }
+      nodes['machine'] = node['nim']['vioses'].keys
+      nodes['oslevel'] = node['nim']['vioses'].values.collect { |m| m.fetch('oslevel', nil) }
+      nodes['Cstate'] = node['nim']['vioses'].values.collect { |m| m.fetch('lsnim', {}).fetch('Cstate', nil) }
+      print_hash_by_columns(nodes)
+    end
+
+    def free_vios_disks(vios)
+        disks = {}
+        cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{vios} \"/usr/ios/cli/ioscli lspv -free\""
+
+        Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+          stderr.each_line do |line|
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          unless wait_thr.value.success?
+            stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+            msg = "Failed to get free Physical Volume list"
+            log_warn("[#{vios}] #{msg}")
+            raise ViosCmdError, "Error: #{msg} on #{vios}, command \"#{cmd_s}\" returns above error!"
+          end
+
+          # stdout is like:
+          # NAME            PVID                                SIZE(megabytes)
+          # hdiskX          none                                572325
+          stdout.each_line do |line|
+            next if line.start_with?('NAME') # skip header
+            line.chomp!
+            if line =~ /^(hdisk\S+)\s+(\S+)\s+([0-9]+)/
+              pv_name = Regexp.last_match(1)
+              disks[pv_name] = {}
+              disks[pv_name]['pvid'] = Regexp.last_match(2)
+              disks[pv_name]['size'] = Regexp.last_match(3)
+            end
+          end
+        end
+        nodes = Hash.new { |h, k| h[k] = {} }
+        nodes['hdisk'] = disks.keys
+        nodes['pvid'] = disks.values.collect { |m| m.fetch('pvid', nil) }
+        nodes['size'] = disks.values.collect { |m| m.fetch('size', nil) }
+        print_hash_by_columns(nodes)
+    end
+
     def list_sps(filter_ml)
       # suma metadata
       tmp_dir = ::File.join(Chef::Config[:file_cache_path], 'metadata')
@@ -101,18 +154,35 @@ module AIX
 
     def log_debug(message)
       Chef::Log.debug(message)
-      # STDERR.puts('DEBUG : ' + message)
+      # STDERR.puts('DEBUG: ' + message)
     end
 
     def log_info(message)
       Chef::Log.info(message)
-      # STOUT.puts('INFO : ' + message)
+      # STDOUT.puts('INFO: ' + message)
     end
 
     def log_warn(message)
       Chef::Log.warn(message)
-      # STDOUT.puts('WARN : ' + message)
+      # STDOUT.puts('\033[33;40WARN: ' + message + '\033[0m')
     end
+
+    def put_info(message)
+      Chef::Log.info(message)
+      STDOUT.puts("INFO: " + message)
+    end
+
+    def put_warn(message)
+      Chef::Log.warn(message)
+      # yelow message on on dark background
+      STDOUT.puts("\033[33;40mWARN: " + message + "\033[0m")
+    end
+
+    def put_error(message)
+      Chef::Log.error(message)
+      STDERR.puts("\033[31mERROR: " + message + "\033[0m")
+    end
+
 
     #############################
     #     E X C E P T I O N     #
@@ -736,8 +806,12 @@ module AIX
               # <viosName>:alt_disk_install operation is being performed:Creating logical volume alt_hd2.:success:  -> len=4
               # <viosName>:ready for a NIM operation:0505-126 alt_disk_install- target disk hdisk2 has a volume group assigned to it.:failure:  -> len=4
               nim_status = line.strip.split(':')
-              log_info("nim_status:#{nim_status}")
-              next if nim_status[0] == "#name"
+              if nim_status[0] != "#name"
+                  print("\033[2K\r#{nim_status[2]}")
+                  log_info("nim_status:#{nim_status}")
+              else
+                  next
+              end
 
               nim_Cstate = nim_status[1]
               if nim_status.length == 3 && (nim_status[2].downcase == "success" || nim_status[2].downcase == "failure")
@@ -756,6 +830,7 @@ module AIX
                   log_warn("[#{vios}] #{msg}")
                   raise NimAltDiskInstallError, msg
                 end
+                print("\033[2K\r")
                 return 0    # here the operation succeeded
               else
                 if nim_info_prev == nim_info
@@ -766,8 +841,8 @@ module AIX
                 end
               end
               if wait_time.modulo(60) == 0
-                msg = "Waiting completion of NIM alt_disk_install operation on #{vios}... #{wait_time / 60} minute(s)"
-                STDOUT.puts msg
+                msg = "\033[2K\rWaiting completion of NIM alt_disk_install operation on #{vios}... #{wait_time / 60} minute(s)"
+                print(msg)
                 log_info(msg)
               end
             end
@@ -890,7 +965,8 @@ module AIX
       #    Raise ViosCmdError in case of error
       # -----------------------------------------------------------------
       def get_vg_size(nim_vios, vios, vg_name)
-        vg_size = [0, 0]
+        vg_size = 0
+        used_size = 0
         cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{nim_vios[vios]['vios_ip']} \"/usr/ios/cli/ioscli lsvg #{vg_name}\""
 
         log_info("get_vg_size: '#{cmd_s}'")
@@ -916,22 +992,210 @@ module AIX
             log_debug("[STDOUT] #{line.chomp}")
             line.chomp!
             if line =~ /.*TOTAL PPs:\s+\d+\s+\((\d+)\s+megabytes\).*/
-              vg_size[0] = Regexp.last_match(1).to_i
+              vg_size = Regexp.last_match(1).to_i
             elsif line =~ /.*USED PPs:\s+\d+\s+\((\d+)\s+megabytes\).*/
-              vg_size[1] += Regexp.last_match(1).to_i
+              used_size += Regexp.last_match(1).to_i
             elsif line =~ /.*PP SIZE:\s+(\d+)\s+megabyte\(s\).*/
-              vg_size[1] += Regexp.last_match(1).to_i
+              used_size += Regexp.last_match(1).to_i
             end
           end
         end
-        if vg_size[0] == 0 || vg_size[1] == 0
-            msg = "Failed to get Volume Group '#{vg_name}' size: TOTAL PPs=#{vg_size[0]}, USED PPs+1=#{vg_size[1]}"
+
+        if vg_size == 0 || used_size == 0
+            msg = "Failed to get Volume Group '#{vg_name}' size: TOTAL PPs=#{vg_size}, USED PPs+1=#{vg_size[1]}"
             log_warn("[#{vios}] #{msg}")
             raise ViosCmdError, "Error: #{msg} on #{vios}"
           end
 
-        log_info("VG '#{vg_name}' TOTAL PPs=#{vg_size[0]} MB, USED PPs+1=#{vg_size[1]} MB")
-        vg_size
+        log_info("VG '#{vg_name}' TOTAL PPs=#{vg_size} MB, USED PPs+1=#{used_size} MB")
+        [vg_size, used_size]
+      end
+
+      # -----------------------------------------------------------------
+      # Find a valid alternate disk that
+      # - exists,
+      # - is not part of a VG
+      # - as enough space to copy the rootvg
+      # and so can be used for the alternate disk copy.
+      #
+      # sets the targets_status acordingly:
+      #  targets_status[vios_key] = "FAILURE-ALTDC <error message>"
+      #  targets_status[vios_key] = "SUCCESS-ALTDC"
+      #
+      #    Return 0 if alternat disk is found
+      #           1 otherwise
+      # -----------------------------------------------------------------
+      def find_valid_altdisk(nim_vios, vios_list, vios_key, targets_status, altdisk_hash, disk_size_policy)
+        rootvg_size = 0
+        used_size = 0
+        used_pv = []
+        msg = "Failed to find a disk for alternate disk copy"
+        vios_list.each do |vios|
+
+          err_label = "FAILURE-ALTDC"
+
+          # get pv list
+          begin
+            get_pvs(nim_vios, vios)
+          rescue ViosCmdError => e
+            STDERR.puts e.message
+            msg = "Failed to find disk for alternate install rootvg"
+            put_error("[#{vios}] #{msg}")
+            raise AltDiskFindError, "Error: #{msg} on #{vios}, see above error!"
+          end
+
+          # check an alternate disk not already exists
+          nim_vios[vios]['pvs'].each do |pv_name, pv|
+            if pv['vg'] == "altinst_rootvg"
+              targets_status[vios_key] = "#{err_label} an alternate disk (#{pv_name}) already exists on #{vios}"
+              put_error("An alternate disk is already available on disk #{pv_name} on #{vios}")
+              return 1
+            end
+          end
+
+          begin
+            rootvg_size, used_size = get_vg_size(nim_vios, vios, "rootvg")
+          rescue ViosCmdError => e
+            STDERR.puts e.message
+            msg = "Failed to get the rootvg size"
+            put_error("[#{vios}] #{msg}")
+            raise AltDiskFindError, "Error: #{msg} on #{vios}, see above error!"
+          end
+
+          begin
+            get_free_pvs(nim_vios, vios)
+          rescue ViosCmdError => e
+            STDERR.puts e.message
+            put_error("[#{vios}] #{msg}")
+            raise AltDiskFindError, "Error: #{msg} on #{vios}, see above error!"
+          end
+
+          if nim_vios[vios]['free_pvs'] == {}
+            targets_status[vios_key] = "#{err_label} no disk available on #{vios}"
+            put_error("no disk available on #{vios}")
+            return 1
+          end
+
+          # in auto mode, find the first alternate disk available
+          if altdisk_hash[vios] == ""
+            prev_disk = ""
+            diffsize = 0
+            prev_diffsize = 0
+            free_pvs = nim_vios[vios]['free_pvs']
+            # parse free disks in increasing size order
+            free_pvs.each_key.sort_by { |k| free_pvs[k]['size'] }.each do |hdisk|
+              # disk to small or already used
+              if free_pvs[hdisk]['size'] < used_size or
+                used_pv.include?(free_pvs[hdisk]['pvid'])
+                next
+              end
+
+              # smallest disk that can be selected
+              if disk_size_policy == 'minimize'
+                altdisk_hash[vios] = hdisk
+                if free_pvs[hdisk]['pvid'] != "none"
+                  used_pv << free_pvs[hdisk]['pvid']
+                end
+                break
+              end
+
+              diffsize = free_pvs[hdisk]['size'] - rootvg_size
+              # matching disk size
+              if diffsize == 0
+                altdisk_hash[vios] = hdisk
+                if free_pvs[hdisk]['pvid'] != "none"
+                  used_pv << free_pvs[hdisk]['pvid']
+                end
+                break
+              end
+
+              if diffsize > 0
+                # diffsize > 0: first disk found bigger than the rootvg disk
+                selected_disk = ""
+                if disk_size_policy == 'upper'
+                  selected_disk = hdisk
+                elsif disk_size_policy == 'lower'
+                  if prev_disk == ""
+                    # Best Can Do...
+                    selected_disk = hdisk
+                  else
+                    selected_disk = prev_disk
+                  end
+                else
+                  # disk_size_policy == 'nearest'
+                  if prev_disk == ""
+                    selected_disk = hdisk
+                  elsif prev_diffsize.abs > diffsize
+                    selected_disk = hdisk
+                  else
+                    selected_disk = prev_disk
+                  end
+                end
+
+                altdisk_hash[vios] = selected_disk
+                if free_pvs[selected_disk]['pvid'] != "none"
+                  used_pv << free_pvs[selected_disk]['pvid']
+                end
+                break
+              else
+                # disk size less than rootvg disk size
+                #   but big enough to contain the used PPs
+                prev_disk = hdisk
+                prev_diffsize = diffsize
+                next
+              end
+            end
+
+            if altdisk_hash[vios] == ""
+              if prev_disk != ""
+                # Best Can Do...
+                altdisk_hash[vios] = prev_disk
+                if free_pvs[prev_disk]['pvid'] != "none"
+                  used_pv << free_pvs[prev_disk]['pvid']
+                end
+              else
+                targets_status[vios_key] = "#{err_label} to find an alternate disk on #{vios}"
+                put_error("No available alternate disk with size greater than #{used_size} MB found on #{vios}")
+                return 1
+              end
+            end
+
+          # hdisk specified by the user
+          else
+            # check the specified hdisk is large enough
+            hdisk = altdisk_hash[vios]
+            if nim_vios[vios]['free_pvs'].has_key?(hdisk)
+              if used_pv.include?(nim_vios[vios]['free_pvs'][hdisk]['pvid'])
+                targets_status[vios_key] = "#{err_label} alternate disk #{hdisk} already used on the mirror VIOS"
+                put_error("Alternate disk #{hdisk} already used on the mirror VIOS")
+                return 1
+              end
+              if nim_vios[vios]['free_pvs'][hdisk]['size'] >= rootvg_size
+                if free_pvs[hdisk]['pvid'] != "none"
+                  used_pv << free_pvs[hdisk]['pvid']
+                end
+              else
+                if nim_vios[vios]['free_pvs'][hdisk]['size'] >= used_size
+                  if free_pvs[hdisk]['pvid'] != "none"
+                    used_pv << free_pvs[hdisk]['pvid']
+                  end
+                  log_warn("Alternate disk #{hdisk} smaller than the current rootvg")
+                else
+                  targets_status[vios_key] = "#{err_label} alternate disk #{hdisk} too small on #{vios}"
+                  log_error("Alternate disk #{hdisk} too small on #{vios}")
+                  return 1
+                end
+              end
+            else
+              targets_status[vios_key] = "#{err_label} disk #{hdisk} is not available on #{vios}"
+              put_error("Alternate disk #{hdisk} is either not found or not available on #{vios}")
+              return 1
+            end
+          end
+        end
+
+        # Disks found
+        return 0
       end
 
       # -----------------------------------------------------------------
@@ -1017,6 +1281,10 @@ module AIX
         end
 
         # in auto mode, search for altinst_rootvg
+        if altdisk_hash.empty? || !altdisk_hash.has_key?(vios)
+            altdisk_hash[vios] = ""
+        end
+
         if altdisk_hash[vios].empty?
           nim_vios[vios]['pvs'].keys.each do |hdisk|
             if nim_vios[vios]['pvs'][hdisk]['vg'] == "altinst_rootvg"
@@ -1024,7 +1292,7 @@ module AIX
                 altdisk_hash[vios] = hdisk
               else
                 msg = "There are several alternate install rootvg on #{vios}: #{altdisk_hash[vios]} and #{hdisk}"
-                log_warn("[#{vios}] #{msg}")
+                put_warn("[#{vios}] #{msg}")
                 raise AltDiskFindError, "msg"
               end
             end
@@ -1074,6 +1342,24 @@ module AIX
         puts "Finish removing altinst_rootvg from '#{altdisk_hash[vios]}' on '#{vios}'."
         unless exit_status.success?
           msg = "Failed to remove altinst_rootvg"
+          log_warn("[#{vios}] #{msg}")
+          raise AltDiskCleanError, "#{msg} on #{vios}, see above error!"
+        end
+
+        puts "    Clean the LVM info on #{altdisk_hash[vios]}."
+        cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{nim_vios[vios]['vios_ip']} \"/usr/bin/dd if=/dev/zero of=/dev/#{altdisk_hash[vios]}  seek=7 count=1 bs=512\""
+        log_info("altdisk_copy_cleanup: '#{cmd_s}'")
+        exit_status = Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+          stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+          stderr.each_line do |line|
+            STDERR.puts line
+            log_info("[STDERR] #{line.chomp}")
+          end
+          wait_thr.value # Process::Status object returned.
+        end
+        puts "Finish cleaning the LVM info from '#{altdisk_hash[vios]}' on '#{vios}'."
+        unless exit_status.success?
+          msg = "Failed to clean the LVM info from '#{altdisk_hash[vios]}'"
           log_warn("[#{vios}] #{msg}")
           raise AltDiskCleanError, "#{msg} on #{vios}, see above error!"
         end
@@ -1551,7 +1837,7 @@ module AIX
     #
     #    for no altdisk checking altdisks should be nil otherwise
     #    it should be the keyword 'auto' or in the form
-    #    (hdisk1,hdisk2) (hdisk1,) (vios5) ()
+    #    (hdisk1,hdisk2) (hdisk1,) (hdisk5) ()
     #    with the same number of hdisk than VIOSes even if empty
     #
     #    raise InvalidTargetsProperty in case of error
@@ -1560,14 +1846,17 @@ module AIX
     def expand_vios_pair_targets(targets, vios_nim_list, altdisks, altdisk_hash)
       selected_vios = []
       vios_list = []
-      
+
       vios_list_tuples = targets.gsub(' ','').gsub('),(', ')(').split('(')
       vios_list_tuples.delete_at(0) # after the split, 1rst elt is nil
 
       unless altdisks.nil? || altdisks == "auto"
-        hd_list_tuples = altdisks.gsub(' ','').gsub('),(', ')(').split('(')
-        hd_list_len = hd_list_tuples.length
-        if hd_list_len != vios_list_tuples.length
+        # hd_list_tuples = altdisks.gsub(' ','').gsub('),(', ')(').split('(')
+        altdisks.gsub(' ','').gsub('),(', ')(')
+        hd_list_tuples = altdisks.gsub('(,', '( ,').gsub(',)', ', )').split('(')
+        hd_list_tuples.delete_at(0)
+        # hd_list_len = hd_list_tuples.length
+        if hd_list_tuples.length != vios_list_tuples.length
           raise InvalidTargetsProperty, "Error: Alternate hdisks '#{altdisks}' and vios target '#{targets}' must have the same number of element"
         end
       end
@@ -1621,9 +1910,9 @@ module AIX
         if hd_tuple_len != tuple_len
           raise InvalidTargetsProperty, "Error: alternate hdsik tuple '#{hd_tuple}' and vios tuple '#{my_tuple}' must have the same number of element"
         end
-        altdisk_hash[tuple_elts[0]] = hd_tuple_elts[0]
+        altdisk_hash[tuple_elts[0]] = hd_tuple_elts[0].gsub(' ', '')
         if tuple_len == 2
-          altdisk_hash[tuple_elts[1]] = hd_tuple_elts[1]
+          altdisk_hash[tuple_elts[1]] = hd_tuple_elts[1].gsub(' ', '')
         end
 
         hd_tuple_index += 1
