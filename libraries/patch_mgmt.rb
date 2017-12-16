@@ -164,9 +164,10 @@ module AIX
 
     def log_warn(message)
       Chef::Log.warn(message)
-      # STDOUT.puts('\033[33;40WARN: ' + message + '\033[0m')
+      # STDOUT.puts("\033[0;31mWARN: " + message + "\033[0m")
     end
 
+    # mainly used for Start/Stop info
     def put_info(message)
       Chef::Log.info(message)
       STDOUT.puts("INFO: " + message)
@@ -174,13 +175,12 @@ module AIX
 
     def put_warn(message)
       Chef::Log.warn(message)
-      # yelow message on on dark background
-      STDOUT.puts("\033[33;40mWARN: " + message + "\033[0m")
+      STDOUT.puts("\033[0;31mWARN: " + message + "\033[0m")
     end
 
     def put_error(message)
       Chef::Log.error(message)
-      STDERR.puts("\033[31mERROR: " + message + "\033[0m")
+      STDERR.puts("\033[0;31mERROR: " + message + "\033[0m")
     end
 
 
@@ -739,9 +739,9 @@ module AIX
       def perform_altdisk_install(vios, source, disk, set_bootlist='no', boot_client='no')
         cmd_s = "/usr/sbin/nim -o alt_disk_install -a source=rootvg -a disk=#{disk} -a set_bootlist=#{set_bootlist} -a boot_client=#{boot_client} #{vios}"
         log_info("perform_altdisk_install: '#{cmd_s}'")
-        # TBC - For testing, will be remove after test !!!
+        # TBC - For testing, you can uncomment to bypass alt_disk_install operation
         # cmd_s = "/usr/sbin/lsnim -Z -a Cstate -a info -a Cstate_result #{vios}"
-        # log_info("perform_altdisk_install: overwrite cmd_s:'#{cmd_s}'")
+        # log_info("perform_altdisk_install: overwrite with cmd_s:'#{cmd_s}'")
         exit_status = Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
           stderr.each_line do |line|
@@ -751,7 +751,7 @@ module AIX
           wait_thr.value # Process::Status object returned.
         end
 
-        raise NimAltDiskInstallError, "Error: Command \"#{cmd_s}\" returns above error!" unless exit_status.success?
+        raise NimAltDiskInstallError, "Command \"#{cmd_s}\" returns above error!" unless exit_status.success?
       end
 
       # -----------------------------------------------------------------
@@ -768,9 +768,10 @@ module AIX
       #
       #    Return
       #    0   if the alt_disk_install operation ends with success
+      #    1   if the alt_disk_install operation failed
+      #    -1  if the alt_disk_install operation timed out
       #
-      #    raise NimAltDiskInstallError in case of error
-      #    raise NimAltDiskInstallTimedOut in case of time out
+      #    raise NimLparInfoError if cannot get NIM state
       # -----------------------------------------------------------------
       def wait_alt_disk_install(vios, check_count=180, sleep_time=10)
         nim_info_prev = "___"   # this info should not appears in nim info attribute
@@ -826,9 +827,9 @@ module AIX
               if nim_Cstate.downcase == "ready for a nim operation"
                 log_info("NIM alt_disk_install operation on #{vios} ended with #{nim_result}")
                 unless nim_result == "success"
-                  msg = "Failed to perform NIM alt_disk_install operation: #{nim_info}"
-                  log_warn("[#{vios}] #{msg}")
-                  raise NimAltDiskInstallError, msg
+                  msg = "Failed to perform NIM alt_disk_install operation on #{vios}: #{nim_info}"
+                  put_error("#{msg}")
+                  return 1
                 end
                 print("\033[2K\r")
                 return 0    # here the operation succeeded
@@ -841,8 +842,8 @@ module AIX
                 end
               end
               if wait_time.modulo(60) == 0
-                msg = "\033[2K\rWaiting completion of NIM alt_disk_install operation on #{vios}... #{wait_time / 60} minute(s)"
-                print(msg)
+                msg = "Waiting the NIM alt disk copy on #{vios}... duration: #{wait_time / 60} minute(s)"
+                print("\033[2K\r#{msg}")
                 log_info(msg)
               end
             end
@@ -850,7 +851,9 @@ module AIX
         end    # while count
 
         # timed out before the end of alt_disk_install
-        raise NimAltDiskInstallTimedOut, "NIM alt_disk_install operation for #{vios} shows no progress in #{count * sleep_time / 60} minute(s): #{nim_info}"
+        msg = "NIM alt_disk_install operation for #{vios} shows no progress in #{count * sleep_time / 60} minute(s): #{nim_info}"
+        put_error("#{msg}")
+        return -1
       end
 
     end  # Nim
@@ -881,9 +884,8 @@ module AIX
           end
           unless wait_thr.value.success?
             stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
-            msg = "Failed to get Physical Volume list"
-            log_warn("[#{vios}] #{msg}")
-            raise ViosCmdError, "Error: #{msg} on #{vios}, command \"#{cmd_s}\" returns above error!"
+            msg = "Failed to get Physical Volume list on #{vios}, command \"#{cmd_s}\" returns above error!"
+            raise ViosCmdError, msg
           end
 
           # stdout is like:
@@ -930,9 +932,8 @@ module AIX
           end
           unless wait_thr.value.success?
             stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
-            msg = "Failed to get free Physical Volume list"
-            log_warn("[#{vios}] #{msg}")
-            raise ViosCmdError, "Error: #{msg} on #{vios}, command \"#{cmd_s}\" returns above error!"
+            msg = "Failed to get free Physical Volume list on #{vios}, command \"#{cmd_s}\" returns above error!"
+            raise ViosCmdError, msg
           end
 
           # stdout is like:
@@ -977,9 +978,8 @@ module AIX
           end
           unless wait_thr.value.success?
             stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
-            msg = "Failed to get Volume Group '#{vg_name}' size"
-            log_warn("[#{vios}] #{msg}")
-            raise ViosCmdError, "Error: #{msg} on #{vios}, command \"#{cmd_s}\" returns above error!"
+            msg = "Failed to get Volume Group '#{vg_name}' size on #{vios}, command \"#{cmd_s}\" returns above error!"
+            raise ViosCmdError, msg
           end
 
           # stdout is like:
@@ -1002,9 +1002,8 @@ module AIX
         end
 
         if vg_size == 0 || used_size == 0
-            msg = "Failed to get Volume Group '#{vg_name}' size: TOTAL PPs=#{vg_size}, USED PPs+1=#{vg_size[1]}"
-            log_warn("[#{vios}] #{msg}")
-            raise ViosCmdError, "Error: #{msg} on #{vios}"
+            msg = "Failed to get Volume Group '#{vg_name}' size: TOTAL PPs=#{vg_size}, USED PPs+1=#{vg_size[1]} on #{vios}"
+            raise ViosCmdError, msg
           end
 
         log_info("VG '#{vg_name}' TOTAL PPs=#{vg_size} MB, USED PPs+1=#{used_size} MB")
@@ -1018,37 +1017,38 @@ module AIX
       # - as enough space to copy the rootvg
       # and so can be used for the alternate disk copy.
       #
+      # Fill altdisk_hash[vios] with the selected hdisk
+      #
       # sets the targets_status acordingly:
       #  targets_status[vios_key] = "FAILURE-ALTDC <error message>"
       #  targets_status[vios_key] = "SUCCESS-ALTDC"
       #
       #    Return 0 if alternat disk is found
       #           1 otherwise
+      #
+      #    Raise AltDiskFindError in case of error
       # -----------------------------------------------------------------
       def find_valid_altdisk(nim_vios, vios_list, vios_key, targets_status, altdisk_hash, disk_size_policy)
         rootvg_size = 0
         used_size = 0
         used_pv = []
-        msg = "Failed to find a disk for alternate disk copy"
         vios_list.each do |vios|
 
-          err_label = "FAILURE-ALTDC"
+          err_label = "FAILURE-ALTDC1"
 
           # get pv list
           begin
             get_pvs(nim_vios, vios)
           rescue ViosCmdError => e
-            STDERR.puts e.message
-            msg = "Failed to find disk for alternate install rootvg"
-            put_error("[#{vios}] #{msg}")
-            raise AltDiskFindError, "Error: #{msg} on #{vios}, see above error!"
+            msg = "Failed to find a valid alternate disk on #{vios}: #{e.message}"
+            raise AltDiskFindError, msg
           end
 
           # check an alternate disk not already exists
           nim_vios[vios]['pvs'].each do |pv_name, pv|
             if pv['vg'] == "altinst_rootvg"
               targets_status[vios_key] = "#{err_label} an alternate disk (#{pv_name}) already exists on #{vios}"
-              put_error("An alternate disk is already available on disk #{pv_name} on #{vios}")
+              put_error("An alternate rootvg already exists on disk #{pv_name} on #{vios}")
               return 1
             end
           end
@@ -1056,32 +1056,29 @@ module AIX
           begin
             rootvg_size, used_size = get_vg_size(nim_vios, vios, "rootvg")
           rescue ViosCmdError => e
-            STDERR.puts e.message
-            msg = "Failed to get the rootvg size"
-            put_error("[#{vios}] #{msg}")
-            raise AltDiskFindError, "Error: #{msg} on #{vios}, see above error!"
+            msg = "Failed to find a valid alternate disk on #{vios}: #{e.message}"
+            raise AltDiskFindError, msg
           end
 
           begin
             get_free_pvs(nim_vios, vios)
           rescue ViosCmdError => e
-            STDERR.puts e.message
-            put_error("[#{vios}] #{msg}")
-            raise AltDiskFindError, "Error: #{msg} on #{vios}, see above error!"
+            msg = "Failed to find a valid alternate disk on #{vios}: #{e.message}"
+            raise AltDiskFindError, msg
           end
 
           if nim_vios[vios]['free_pvs'] == {}
             targets_status[vios_key] = "#{err_label} no disk available on #{vios}"
-            put_error("no disk available on #{vios}")
+            put_error("No disk available on #{vios}")
             return 1
           end
+          free_pvs = nim_vios[vios]['free_pvs']
 
           # in auto mode, find the first alternate disk available
           if altdisk_hash[vios] == ""
             prev_disk = ""
             diffsize = 0
             prev_diffsize = 0
-            free_pvs = nim_vios[vios]['free_pvs']
             # parse free disks in increasing size order
             free_pvs.each_key.sort_by { |k| free_pvs[k]['size'] }.each do |hdisk|
               # disk to small or already used
@@ -1155,7 +1152,7 @@ module AIX
                 end
               else
                 targets_status[vios_key] = "#{err_label} to find an alternate disk on #{vios}"
-                put_error("No available alternate disk with size greater than #{used_size} MB found on #{vios}")
+                put_error("No available disk with size greater than #{used_size} MB found on #{vios}")
                 return 1
               end
             end
@@ -1179,10 +1176,10 @@ module AIX
                   if free_pvs[hdisk]['pvid'] != "none"
                     used_pv << free_pvs[hdisk]['pvid']
                   end
-                  log_warn("Alternate disk #{hdisk} smaller than the current rootvg")
+                  put_warn("Alternate disk #{hdisk} is smaller than the current rootvg")
                 else
-                  targets_status[vios_key] = "#{err_label} alternate disk #{hdisk} too small on #{vios}"
-                  log_error("Alternate disk #{hdisk} too small on #{vios}")
+                  targets_status[vios_key] = "#{err_label} alternate disk #{hdisk} is too small on #{vios}"
+                  put_error("Alternate disk #{hdisk} is too small on #{vios}")
                   return 1
                 end
               end
@@ -1208,57 +1205,52 @@ module AIX
       # Fill altdisk_hash[vios] with the selected hdisk
       #
       #    Return the altdisk_hash[vios] for success
+      #
       #    Raise AltDiskFindError in case of error
       # -----------------------------------------------------------------
-      def get_disk_for_altdisk_copy(nim_vios, vios, altdisk_hash)
-        rootvg_size = [0 , 0]
-        msg = "Failed to find a disk for alternate disk copy"
+      # TBC - To remove: duplicate or old version of find_valid_altdisk?
+      #def get_disk_for_altdisk_copy(nim_vios, vios, altdisk_hash)
+      #  rootvg_size = [0 , 0]
+      #  msg = "Failed to find the alternate install rootvg on #{vios}"
 
-        begin
-          get_free_pvs(nim_vios, vios)
-        rescue ViosCmdError => e
-          STDERR.puts e.message
-          log_warn("[#{vios}] #{msg}")
-          raise AltDiskFindError, "Error: #{msg} on #{vios}, see above error!"
-        end
+      #  begin
+      #    get_free_pvs(nim_vios, vios)
+      #  rescue ViosCmdError => e
+      #    raise AltDiskFindError, "#{msg}: #{e.message}"
+      #  end
 
-        begin
-          rootvg_size = get_vg_size(nim_vios, vios, "rootvg")
-        rescue ViosCmdError => e
-          STDERR.puts e.message
-          log_warn("[#{vios}] #{msg}")
-          raise AltDiskFindError, "Error: #{msg} on #{vios}, see above error!"
-        end
+      #  begin
+      #    rootvg_size = get_vg_size(nim_vios, vios, "rootvg")
+      #  rescue ViosCmdError => e
+      #    raise AltDiskFindError, "#{msg}: #{e.message}"
+      #  end
 
-        if altdisk_hash[vios].empty?
-          # in auto mode, find the first alternate disk available
-          nim_vios[vios]['free_pvs'].keys.each do |hdisk|
-            if nim_vios[vios]['free_pvs'][hdisk]['size'] >= rootvg_size[1]
-              altdisk_hash[vios] = hdisk
-              return altdisk_hash[vios]
-            end
-          end
-          msg = "No available alternate disk with size greater than #{rootvg_size[1]} MB found"
-          log_warn("[#{vios}] #{msg}")
-          raise AltDiskFindError, "Error: #{msg} on #{vios}"
-        end
+      #  if altdisk_hash[vios].empty?
+      #    # in auto mode, find the first alternate disk available
+      #    nim_vios[vios]['free_pvs'].keys.each do |hdisk|
+      #      if nim_vios[vios]['free_pvs'][hdisk]['size'] >= rootvg_size[1]
+      #        altdisk_hash[vios] = hdisk
+      #        return altdisk_hash[vios]
+      #      end
+      #    end
+      #    msg = "No available alternate disk with size greater than #{rootvg_size[1]} MB found on #{vios}"
+      #    raise AltDiskFindError, msg
+      #  end
 
-        # check the specified hdisk is large enough
-        if !nim_vios[vios]['free_pvs'].has_key?(altdisk_hash[vios])
-          msg = "Alternate disk #{altdisk_hash[vios]} is either not found or not available"
-          log_warn("[#{vios}] #{msg}")
-          raise AltDiskFindError, "Error: #{msg} on #{vios}"
-        end
+      #  # check the specified hdisk is large enough
+      #  if !nim_vios[vios]['free_pvs'].has_key?(altdisk_hash[vios])
+      #    msg = "Alternate disk #{altdisk_hash[vios]} is either not found or not available on #{vios}"
+      #    raise AltDiskFindError, msg
+      #  end
 
-        if nim_vios[vios]['free_pvs'][altdisk_hash[vios]]['size'] < rootvg_size[1]
-          msg = "Alternate disk #{altdisk_hash[vios]} too small (#{nim_vios[vios]['free_pvs'][altdisk_hash[vios]]['size']} < #{rootvg_size})"
-          log_warn("[#{vios}] #{msg}")
-          raise AltDiskFindError, "Error: #{msg} on #{vios}"
-        end
+      #  if nim_vios[vios]['free_pvs'][altdisk_hash[vios]]['size'] < rootvg_size[1]
+      #    msg = "Alternate disk #{altdisk_hash[vios]} on #{vios} too small (#{nim_vios[vios]['free_pvs'][altdisk_hash[vios]]['size']} < #{rootvg_size})"
+      #    raise AltDiskFindError, msg
+      #  end
 
-        log_info("Taking '#{altdisk_hash[vios]}' alternate disk for altdisk_copy on '#{vios}'")
-        altdisk_hash[vios]
-      end
+      #  log_info("Taking '#{altdisk_hash[vios]}' alternate disk for altdisk_copy on '#{vios}'")
+      #  altdisk_hash[vios]
+      #end
 
       # -----------------------------------------------------------------
       # Find the existing altinst rootvg on vios
@@ -1266,6 +1258,7 @@ module AIX
       # Fill altdisk_hash[vios] with the corresponding hdisk
       #
       #    Return 0 for success
+      #
       #    Raise AltDiskFindError in case of error
       # -----------------------------------------------------------------
       def get_altinst_rootvg_disk(nim_vios, vios, altdisk_hash)
@@ -1274,17 +1267,14 @@ module AIX
         begin
           get_pvs(nim_vios, vios)
         rescue ViosCmdError => e
-          STDERR.puts e.message
-          msg = "Failed to find the alternate install rootvg"
-          log_warn("[#{vios}] #{msg}")
-          raise AltDiskFindError, "Error: #{msg} on #{vios}, see above error!"
+          msg = "Failed to find the alternate install rootvg on #{vios}: #{e.message}"
+          raise AltDiskFindError, msg
         end
 
         # in auto mode, search for altinst_rootvg
         if altdisk_hash.empty? || !altdisk_hash.has_key?(vios)
             altdisk_hash[vios] = ""
         end
-
         if altdisk_hash[vios].empty?
           nim_vios[vios]['pvs'].keys.each do |hdisk|
             if nim_vios[vios]['pvs'][hdisk]['vg'] == "altinst_rootvg"
@@ -1292,8 +1282,8 @@ module AIX
                 altdisk_hash[vios] = hdisk
               else
                 msg = "There are several alternate install rootvg on #{vios}: #{altdisk_hash[vios]} and #{hdisk}"
-                put_warn("[#{vios}] #{msg}")
-                raise AltDiskFindError, "msg"
+                altdisk_hash[vios] = ""
+                raise AltDiskFindError, msg
               end
             end
           end
@@ -1301,18 +1291,19 @@ module AIX
 
         # Check we found an disk and its vg name is altinst_rootvg
         if altdisk_hash[vios].empty?
-          msg = "No alternate install rootvg found"
+          msg = "No alternate install rootvg found on #{vios}"
           ret = 1
         elsif !nim_vios[vios]['pvs'].has_key?(altdisk_hash[vios])
-          msg = "No disk '#{altdisk_hash[vios]}' found"
+          msg = "No disk '#{altdisk_hash[vios]}' found on #{vios}"
           ret = 1
         elsif nim_vios[vios]['pvs'][altdisk_hash[vios]]['vg'] != "altinst_rootvg"
-          msg = "Disk '#{altdisk_hash[vios]}' is not an alternate install rootvg"
+          msg = "Disk '#{altdisk_hash[vios]}' is not an alternate install rootvg on #{vios}"
           ret = 1
         end
         unless ret == 0
-          log_warn("[#{vios}] #{msg}")
-          raise AltDiskFindError, "#{msg} on '#{vios}'"
+          altdisk_hash[vios] = ""
+          put_warn("#{msg}")
+          return ret
         end
 
         log_info("Found altinst_rootvg on disk '#{altdisk_hash[vios]}'")
@@ -1328,7 +1319,7 @@ module AIX
       def altdisk_copy_cleanup(nim_vios, vios, altdisk_hash)
         ret = 0
 
-        puts "Start removing altinst_rootvg from '#{altdisk_hash[vios]}' on '#{vios}'."
+        put_info("Start removing altinst_rootvg from '#{altdisk_hash[vios]}' on '#{vios}'.")
         cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{nim_vios[vios]['vios_ip']} \"/usr/sbin/alt_rootvg_op -X altinst_rootvg\""
         log_info("altdisk_copy_cleanup: '#{cmd_s}'")
         exit_status = Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
@@ -1339,14 +1330,13 @@ module AIX
           end
           wait_thr.value # Process::Status object returned.
         end
-        puts "Finish removing altinst_rootvg from '#{altdisk_hash[vios]}' on '#{vios}'."
+        put_info("Finish removing altinst_rootvg from '#{altdisk_hash[vios]}' on '#{vios}'.")
         unless exit_status.success?
-          msg = "Failed to remove altinst_rootvg"
-          log_warn("[#{vios}] #{msg}")
-          raise AltDiskCleanError, "#{msg} on #{vios}, see above error!"
+          msg = "Failed to remove altinst_rootvg on #{vios}, see above error!"
+          raise AltDiskCleanError, msg
         end
 
-        puts "    Clean the LVM info on #{altdisk_hash[vios]}."
+        put_info("Clean the LVM info on #{altdisk_hash[vios]}.")
         cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{nim_vios[vios]['vios_ip']} \"/usr/bin/dd if=/dev/zero of=/dev/#{altdisk_hash[vios]}  seek=7 count=1 bs=512\""
         log_info("altdisk_copy_cleanup: '#{cmd_s}'")
         exit_status = Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
@@ -1357,11 +1347,10 @@ module AIX
           end
           wait_thr.value # Process::Status object returned.
         end
-        puts "Finish cleaning the LVM info from '#{altdisk_hash[vios]}' on '#{vios}'."
+        put_info("Finish cleaning the LVM info from '#{altdisk_hash[vios]}' on '#{vios}'.")
         unless exit_status.success?
-          msg = "Failed to clean the LVM info from '#{altdisk_hash[vios]}'"
-          log_warn("[#{vios}] #{msg}")
-          raise AltDiskCleanError, "#{msg} on #{vios}, see above error!"
+          msg = "Failed to clean the LVM info from '#{altdisk_hash[vios]}' on #{vios}, see above error!"
+          raise AltDiskCleanError, msg
         end
 
         ret
@@ -1851,11 +1840,11 @@ module AIX
       vios_list_tuples.delete_at(0) # after the split, 1rst elt is nil
 
       unless altdisks.nil? || altdisks == "auto"
+        # TBC VRO: we use gsub to remove spaces then we add them back? 
         # hd_list_tuples = altdisks.gsub(' ','').gsub('),(', ')(').split('(')
         altdisks.gsub(' ','').gsub('),(', ')(')
         hd_list_tuples = altdisks.gsub('(,', '( ,').gsub(',)', ', )').split('(')
         hd_list_tuples.delete_at(0)
-        # hd_list_len = hd_list_tuples.length
         if hd_list_tuples.length != vios_list_tuples.length
           raise InvalidTargetsProperty, "Error: Alternate hdisks '#{altdisks}' and vios target '#{targets}' must have the same number of element"
         end

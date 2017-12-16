@@ -14,12 +14,12 @@
 # limitations under the License.
 #
 
-# TBC - uniform use of log_xxx (pach_mgmt.rb) instead of Chef::Log.xxx
-# TBC - uniform use of log_xxx starting by [vios]?
-# TBC - uniform info message on STDOUT with puts (like Start/Finish key operation)
-# TBC - should we add color in error message (like in pach_mgmt.rb: perform_efix_vios_customization)?
-# TBC - should we check the properties (mandatory) before starting operations?
-# TBC - uniform use of put_info and put_error (pach_mgmt.rb) to previous code?
+# TBC - uniform use of log_xxx instead of Chef::Log.xxx in previous code
+# TBC - uniform use of put_xxx (pach_mgmt.rb) in previous code
+# TBC - add color in exception error message?
+# TBC - Is there a difference btw put_error("#{msg}") and put_error(msg)?
+# TBC - Should we use Mixlib::ShellOut.new(cmd_s) instead of popen3 in nim_updateios?
+# TBC - get_disk_for_altdisk_copy is not used, old version of find_valid_altdisk
 
 include AIX::PatchMgmt
 
@@ -32,7 +32,7 @@ property :altdisks, String
 property :filesets, String
 property :installp_bundle, String
 property :lpp_source, String
-property :updateios_flags, String, equal_to: %w(install commit reject cleanup remove)
+property :updateios_flags, String, equal_to: %w(install commit cleanup remove) # TBC - reject is not currently supported
 property :accept_licenses, String, default: 'yes', equal_to: %w(yes no)
 property :preview, default: 'yes', equal_to: %w(yes no)
 property :action_list, String, default: 'check,altdisk_copy,update' # no altdisk_cleanup by default
@@ -65,31 +65,33 @@ end
 # -----------------------------------------------------------------
 # Check the vioshc script can be used
 #
-#    return 0 if success, the number of issues otherwise
+#    return 0 if success
+#
+#    raise ViosHealthCheckError in case of error
 # -----------------------------------------------------------------
 def check_vioshc
-  ret = 0
   vioshc_file = '/usr/sbin/vioshc.py'
 
   unless ::File.exist?(vioshc_file)
-    Chef::Log.warn("Error: Health check script file '#{vioshc_file}': not found")
-    ret += 1
+    msg = "Error: Health check script file '#{vioshc_file}': not found"
+    raise ViosHealthCheckError, msg
   end
 
   unless ::File.executable?(vioshc_file)
-    Chef::Log.warn("Error:Health check script file '#{vioshc_file}': not executable")
-    ret += 1
+    msg = "Error: Health check script file '#{vioshc_file}' not executable"
+    raise ViosHealthCheckError, msg
   end
 
-  ret
+  return 0
 end
 
 # -----------------------------------------------------------------
 # Check the specified lpp_source location exists
 #
 #    return true if success
-#    raise  ViosUpdateBadProperty in case of error
-#    raise  VioslppSourceBadLocation in case of error
+#
+#    raise ViosUpdateBadProperty in case of error
+#    raise VioslppSourceBadLocation in case of error
 # -----------------------------------------------------------------
 def check_lpp_source(lpp_source)
   location = ""
@@ -109,33 +111,34 @@ def check_lpp_source(lpp_source)
     end
     wait_thr.value # Process::Status object returned.
   end
-  raise ViosUpdateBadProperty, "Command \"#{cmd_s}\" returns above error. Cannot find location of lpp_source \#{lpp_source}" if !exit_status.success?
+  raise ViosUpdateBadProperty, "Cannot find location of lpp_source='#{lpp_source}': Command '#{cmd_s}' returns above error." if !exit_status.success?
 
   # check to make sure path exists
-  raise VioslppSourceBadLocation, "Cannot find location '{#location}' of lpp_source '#{lpp_source}'" unless Dir.exist?(location)
+  raise VioslppSourceBadLocation, "Cannot find location='#{location}' of lpp_source='#{lpp_source}'" unless Dir.exist?(location)
 
-  log_warn("Warning: the lpp_source '#{lpp_source}' location '#{location}' is empty") if Dir.entries(location).size == 2
+  log_warn("The location='#{location}' of lpp_source='#{lpp_source}' is empty") if Dir.entries(location).size == 0
 
   ret
 end
 
 # -----------------------------------------------------------------
-# Check the "health" of the given VIOSES for a rolling update point of view
+# Collect VIOS and Managed System UUIDs.
 #
-# This operation uses the vioshc.py script to evaluate the capacity of the
-# pair of the VIOSes to support the rolling update operation:
-# - check they manage the same LPARs,
+#    This first call to the vioshc.py script intend to collect
+#    UUIDs. The actual health assessment is performed in a second
+#    call.
 #
 #    Return 0 if success
+#
 #    raise ViosHealthCheckError in case of error
 # -----------------------------------------------------------------
 def vios_health_init(nim_vios, hmc_id, hmc_ip)
-  log_info("vios_health_init: hmc_id='#{hmc_id}', hmc_ip='#{hmc_ip}'")
+  log_debug("vios_health_init: hmc_id='#{hmc_id}', hmc_ip='#{hmc_ip}'")
   ret = 0
 
-  # Call the /usr/sbin/vioshc.py script a first time to collect UUIDs
+  # first call to collect UUIDs
   cmd_s = "/usr/sbin/vioshc.py -i #{hmc_ip} -l a"
-  log_info("vios_health_init: '#{cmd_s}'")
+  log_info("Health Check: init command '#{cmd_s}'")
 
   Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
     stderr.each_line do |line|
@@ -145,7 +148,7 @@ def vios_health_init(nim_vios, hmc_id, hmc_ip)
     end
     unless wait_thr.value.success?
       stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
-      raise ViosHealthCheckError, "Error: Command \"#{cmd_s}\" returns above error!"
+      raise ViosHealthCheckError, "Heath check init command \"#{cmd_s}\" returns above error!"
     end
 
     data_start = 0
@@ -156,8 +159,9 @@ def vios_health_init(nim_vios, hmc_id, hmc_ip)
     # Parse the output and store the UUIDs
     stdout.each_line do |line|
       log_info("[STDOUT] #{line.chomp}")
-      if line.include? "ERROR"
-        log_warn("Heath check (vioshc.py) script error: '#{line.strip}'")
+      if line.include?("ERROR") || line.include?("WARN")
+        # Needed this because vioshc.py script does not prints error to stderr
+        put_warn("Heath check (vioshc.py) script: '#{line.strip}'")
         next
       end
       line.rstrip!
@@ -173,12 +177,12 @@ def vios_health_init(nim_vios, hmc_id, hmc_ip)
         # New managed system section
         if line =~ /^(\S+)\s+(\S+)\s*$/
           unless cec_uuid == "" && cec_serial == ""
-            log_warn("Unexpected Health check script output: consecutive Managed Systems UUIDs: '#{line.strip}'")
+            put_warn("Health Check: unexpected script output: consecutive Managed System UUID: '#{line.strip}'")
           end
           cec_uuid = Regexp.last_match(1)
           cec_serial = Regexp.last_match(2).gsub('*', '_')
 
-          log_debug("vios_health_init - New managed system: cec_uuid:'#{cec_uuid}', cec_serial:'#{cec_serial}'")
+          log_info("Health Check: init found managed system: cec_uuid:'#{cec_uuid}', cec_serial:'#{cec_serial}'")
           next
         end
 
@@ -208,7 +212,7 @@ def vios_health_init(nim_vios, hmc_id, hmc_ip)
             nim_vios[vios_key]['vios_uuid'] = vios_uuid
             nim_vios[vios_key]['cec_uuid'] = cec_uuid
 
-            log_info("vios_health_init - matching vios #{vios_key}: vios_part_id='#{vios_part_id}' vios_uuid='#{vios_uuid}'")
+            log_info("Health Check: init found matching vios #{vios_key}: vios_part_id='#{vios_part_id}' vios_uuid='#{vios_uuid}'")
             break
           end
         end
@@ -223,19 +227,18 @@ def vios_health_init(nim_vios, hmc_id, hmc_ip)
         next
       end
 
-      raise ViosHealthCheckError, "Health init check failed. Bad Heath check command output for the #{hmc_id} hmc - output: '#{line}'"
+      raise ViosHealthCheckError, "Health Check: init failed, bad script output for the #{hmc_id} hmc: '#{line}'"
     end
   end
   ret
 end
 
 # -----------------------------------------------------------------
-# Health assessment of the VIOSes targets to ensure they can be support
+# Health assessment of the VIOSes targets to ensure they can support
 #    a rolling update operation.
 #
-#    For each VIOS tuple,
-#    - call /usr/sbin/vioshc.py a first time to collect the VIOS UUIDs
-#    - call it a second time to check the healthiness
+#    This operation uses the vioshc.py script to evaluate the capacity
+#    of the pair of the VIOSes to support the rolling update operation:
 #
 #    return: 0 if ok, 1 otherwise
 # -----------------------------------------------------------------
@@ -245,12 +248,11 @@ def vios_health_check(nim_vios, hmc_ip, vios_list)
   rate = 0
   msg = ""
 
-  # Call the /usr/sbin/vioshc.py script
   cmd_s = "/usr/sbin/vioshc.py -i #{hmc_ip} -m #{nim_vios[vios_list[0]]['cec_uuid']} "
   vios_list.each do |vios|
     cmd_s << "-U #{nim_vios[vios]['vios_uuid']} "
   end
-  log_debug("vios_health_check: '#{cmd_s}'")
+  log_info("Health Check: init command '#{cmd_s}'")
 
   Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
     stderr.each_line do |line|
@@ -259,24 +261,22 @@ def vios_health_check(nim_vios, hmc_ip, vios_list)
     end
     ret = 1 unless wait_thr.value.success?
 
+    # Parse the output to get the "Pass rate"
     stdout.each_line do |line|
       log_info("[STDOUT] #{line.chomp}")
 
-      if line =~ /^ERROR:(.*)$/ and msg == ""
-        msg = Regexp.last_match(1)
+      if line.include?("ERROR") || line.include?("WARN")
+        # Need because vioshc.py script does not prints error to stderr
+        put_warn("Heath check (vioshc.py) script: '#{line.strip}'")
       end
       next unless line =~ /Pass rate of/
 
       rate = Regexp.last_match(1).to_i if line =~ /Pass rate of (\d+)%/
 
       if ret == 0 && rate == 100
-        msg = "INFO: VIOSes #{vios_list.join('-')} can be updated"
-        log_info("#{msg}")
-        STDOUT.puts msg
+        put_info("VIOSes #{vios_list.join('-')} can be updated")
       else
-        msg = "Warning: VIOSes #{vios_list.join('-')} can NOT be updated: only #{rate}% of checks pass"
-        STDERR.puts msg
-        log_warn("#{msg}")
+        put_warn("VIOSes #{vios_list.join('-')} can NOT be updated: only #{rate}% of checks pass")
         ret = 1
       end
       break
@@ -290,7 +290,9 @@ end
 # Build the NIM updateios command to run
 #
 #    return the command string to pass to nim_updateios()
+#
 #    raise ViosUpdateBadProperty in case of error
+#    raise VioslppSourceBadLocation in case of error
 # -----------------------------------------------------------------
 def get_updateios_cmd(accept_licenses, updateios_flags, filesets, installp_bundle, preview)
   cmd = '/usr/sbin/nim -o updateios'
@@ -315,29 +317,17 @@ def get_updateios_cmd(accept_licenses, updateios_flags, filesets, installp_bundl
     cmd << " -a updateios_flags=-#{updateios_flags}"
 
     if updateios_flags == 'remove'
-      attr_found = false
       if !filesets.nil? && !filesets.emty? && fileset.downcase != "none"
         cmd << " -a filesets=#{filesets}"
-        if !installp_bundle.nil? && !installp_bundle.emty? && installp_bundle != "none"
-          raise ViosUpdateBadProperty, "'filesets' and 'installp_bundle' attribute are exclusive when 'updateios_flags' is 'remove'."
-        end
-        attr_found = true
       end
       if !installp_bundle.nil? && !installp_bundle.emty? && installp_bundle != "none"
         cmd << " -a installp_bundle=#{installp_bundle}"
-        if !filesets.nil? && !filesets.emty? && fileset.downcase != "none"
-          raise ViosUpdateBadProperty, "'filesets' and 'installp_bundle' attribute are exclusive when 'updateios_flags' is 'remove'."
-        end
-        attr_found = true
       end
-      raise ViosUpdateBadProperty, "'filesets' or 'installp_bundle' attribute must be specified when 'updateios_flags' is 'remove'." unless attr_found
     else
       if (!filesets.nil? && !filesets.emty?) || (!installp_bundle.nil? && !installp_bundle.emty?)
-        log_info('updateios command: filesets and installp_bundle parameters have been discarded')
+        put_info('updateios command: filesets and installp_bundle parameters have been discarded')
       end
     end
-  else
-    raise ViosUpdateBadProperty, "updateios_flags attribute is mandatory for update."
   end
 
   # preview mode
@@ -360,7 +350,7 @@ end
 # -----------------------------------------------------------------
 def nim_updateios(vios, cmd_s)
   # TBC - Why not use  nim = Mixlib::ShellOut.new(cmd_s) like in resources/nim.rb?
-  put_info("Start updating vios '#{vios}' with nim updateios.")
+  put_info("Start updating vios '#{vios}' with NIM updateios.")
   log_info("nim_updateios: '#{cmd_s}'")
   # TBC - For testing, will be remove after test !!!
   #cmd_s = "/usr/sbin/lsnim -Z -a Cstate -a info -a Cstate_result #{vios}"
@@ -384,30 +374,57 @@ end
 ##############################
 action :update do
   # inputs
-  Chef::Log.info("VIOS UPDATE - desc=\"#{desc}\"")
-  Chef::Log.info("VIOS UPDATE - action_list=\"#{action_list}\"")
-  Chef::Log.info("VIOS UPDATE - targets=#{targets}")
+  log_info("VIOS UPDATE - desc=\"#{desc}\"")
+  log_info("VIOS UPDATE - action_list=\"#{action_list}\"")
+  log_info("VIOS UPDATE - targets=#{targets}")
   STDOUT.puts ""
   STDERR.puts ""  # TBC - need for message presentation
 
-  # check mandatory property
+  # check the action_list property
   allowed_action = ["check", "altdisk_copy", "update", "altdisk_cleanup"]
   action_list.gsub(' ','').split(',').each do |my_action|
     unless allowed_action.include?(my_action)
       raise ViosUpdateBadProperty, "Invalid action '#{my_action}' in action_list '#{action_list}', must be in: #{allowed_action.join(',')}"
     end
   end
-  if action_list.include?("altdisk_copy") && altdisks.nil?
-    raise ViosUpdateBadProperty, "Please specify an 'altdisks' property for altdisk operation"
+
+  # check mandatory properties for the action_list
+  if action_list.include?("altdisk_copy") && (altdisks.nil? || altdisks.empty?)
+    raise ViosUpdateBadProperty, "Please specify an 'altdisks' property for altdisk_copy operation"
   end
+
+  if action_list.include?('update')
+    raise ViosUpdateBadProperty, "filesets is required for the update remove operation" if (filesets.nil? || filesets.empty?) && updateios_flags == "remove"
+    raise ViosUpdateBadProperty, "lpp_source is required for the update operation"      if lpp_source.nil? || lpp_source.empty?
+    raise ViosUpdateBadProperty, "updateios_flags is required for the update operation"  if updateios_flags.nil? || updateios_flags.empty?
+
+    if updateios_flags == 'remove'
+      attr_found = false
+      if !filesets.nil? && !filesets.emty? && fileset.downcase != "none" &&
+         !installp_bundle.nil? && !installp_bundle.emty? && installp_bundle != "none"
+        raise ViosUpdateBadProperty, "'filesets' and 'installp_bundle' properties are exclusive when 'updateios_flags' is 'remove'."
+        attr_found = true
+      end
+      if !installp_bundle.nil? && !installp_bundle.emty? && installp_bundle != "none" &&
+         !filesets.nil? && !filesets.emty? && fileset.downcase != "none"
+        raise ViosUpdateBadProperty, "'filesets' and 'installp_bundle' properties are exclusive when 'updateios_flags' is 'remove'."
+        attr_found = true
+      end
+      raise ViosUpdateBadProperty, "'filesets' or 'installp_bundle' property must be specified when 'updateios_flags' is 'remove'." unless attr_found
+    else
+      raise ViosUpdateBadProperty, "installp_bundle is required for the update operation" if installp_bundle.nil? || installp_bundle.empty?
+    end
+  end
+
   # build time object from time_limit attribute,
   end_time = nil
   if !time_limit.nil?
     if time_limit =~ /^(\d{2})\/(\d{2})\/(\d{2,4}) (\d{1,2}):(\d{1,2})$/
       end_time = Time.local(Regexp.last_match(3).to_i, Regexp.last_match(2).to_i, Regexp.last_match(1).to_i, Regexp.last_match(4).to_i, Regexp.last_match(5).to_i)
-      log_info("end_time: '#{end_time}'")
+      log_info("End time for operation: '#{end_time}'")
+      next
     else
-      raise InvalidTimeLimitProperty, "Error: 'time_limit' property must be 'mm/dd/yy HH:MM', got:'#{time_limit}'"
+      raise ViosUpdateBadProperty, "Error: 'time_limit' property must be in the format: 'mm/dd/yy HH:MM', got:'#{time_limit}'"
     end
   end
 
@@ -430,11 +447,11 @@ action :update do
   # build list of targets
   altdisk_hash = {}
   target_list = expand_vios_pair_targets(targets, nim_vios.keys, altdisks, altdisk_hash)
-  log_warn("Empty alternate hdisk hash for altdisks #{altdisks}") if !altdisks.nil? && altdisk_hash.empty?
 
   # check vioshc script is executable
-  check_vioshc
+  check_vioshc if action_list.include?('check')
 
+  # main loop on target: can be 1-tuple or 2-tuple of VIOS
   targets_status = {}
   vios_key = ""
   target_list.each do |target_tuple|
@@ -454,7 +471,8 @@ action :update do
     ###############
     # health_check
     if action_list.include?('check')
-      log_info("VIOS Health Check operation for VIOS tuple: #{target_tuple}")
+      Chef::Log.info("VIOS UPDATE - action=altdisk_copy")
+      put_info("Health Check for VIOS tuple: #{target_tuple}")
 
       # Credentials
       log_info("Credentials (for VIOS: #{vios1})")
@@ -462,9 +480,10 @@ action :update do
       hmc_id = nim_vios[vios1]['mgmt_hmc_id']
 
       if !nim_hmc.has_key?(hmc_id)
-        log_warn("VIOS Update: - HMC ID '#{hmc_id}' for VIOS '#{vios1}' refers to an inexistant HMC #{hmc_id}")
+        # this should not happen
+        put_error("Health Check, VIOS '#{vios1}' NIM management HMC ID '#{hmc_id}' not found")
         targets_status[vios_key] = 'FAILURE-HC'
-        next
+        next # continue with next target tuple
       end
 
       hmc_login = nim_hmc[hmc_id]['login']
@@ -476,8 +495,8 @@ action :update do
         begin
           vios_health_init(nim_vios, hmc_id, hmc_ip)
         rescue ViosHealthCheckError => e
-          STDERR.puts e.message
-          log_warn("#{e.message}")
+          targets_status[vios_key] = 'FAILURE-HC'
+          put_error("#{e.message}")
         end
         # Error case is handle by the next if statement
       end
@@ -503,13 +522,14 @@ action :update do
           vios_err = vios2 unless nim_vios[vios2].has_key?('vios_uuid')
         end
         targets_status[vios_key] = 'FAILURE-HC'
-        msg = "VIOS Health Check did not get the UUID of VIOS: #{vios_err}"
-        put_error("msg")
+        msg = "Health Check did not get the UUID of VIOS: #{vios_err}"
+        put_error("#{msg}")
       end
 
-      put_info("VIOS Health Check status for #{vios_key}: #{targets_status[vios_key]}")
+      log_info("Health Check status for #{vios_key}: #{targets_status[vios_key]}")
 
-      next if targets_status[vios_key] == 'FAILURE-HC'
+      next if targets_status[vios_key] == 'FAILURE-HC' # continue with next target tuple
+
     end    # check
 
 
@@ -518,14 +538,14 @@ action :update do
 
     # check previous status and skip if failure
     if action_list.include?('altdisk_copy')
-      Chef::Log.info("VIOS UPDATE - action=altdisk_copy")
-      Chef::Log.info("VIOS UPDATE - altdisks=#{altdisks}")
-      Chef::Log.info("VIOS UPDATE - disk_size_policy=#{disk_size_policy}")
-      log_info("VIOS altdisk copy operation for VIOS tuple: #{target_tuple}")
+      log_info("VIOS UPDATE - action=altdisk_copy")
+      log_info("VIOS UPDATE - altdisks=#{altdisks}")
+      log_info("VIOS UPDATE - disk_size_policy=#{disk_size_policy}")
+      log_info("Alternate disk copy for VIOS tuple: #{target_tuple}")
 
       # if health check status is known, check the vios tuple has passed
       if action_list.include?('check') && targets_status[vios_key] != 'SUCCESS-HC'
-        log_warn("#{vios_key} vioses skipped (previous status: #{targets_status[vios_key]}")
+        put_warn("Alternate disk copy for #{vios_key} VIOSes skipped (previous status: #{targets_status[vios_key]})")
         next
       end
 
@@ -534,23 +554,26 @@ action :update do
         # first find the right hdisk and check if we can perform the copy
         ret = 0
 
-        ret = vio_server.find_valid_altdisk(nim_vios, vios_list, vios_key, targets_status, altdisk_hash, disk_size_policy)
-        if ret == 1
+        begin
+          ret = vio_server.find_valid_altdisk(nim_vios, vios_list, vios_key, targets_status, altdisk_hash, disk_size_policy)
+          if ret == 1
             next
+          end
+        rescue AltDiskFindError => e
+          put_error("#{e.message}")
+          put_info("Finish NIM alt_disk_install operation for disk '#{altdisk_hash[vios_key]}' on vios '#{vios_key}': #{targets_status[vios_key]}.")
+          next
         end
 
         # actually perform the alternate disk copy
         vios_list.each do |vios|
-          log_info("VIOS altdisk copy, perform the copy for vios #{vios} on disk #{altdisk_hash[vios]}")
           converge_by("nim: perform alt_disk_install for vios '#{vios}' on disk '#{altdisk_hash[vios]}'\n") do
             begin
               put_info("Start NIM alt_disk_install operation using disk '#{altdisk_hash[vios]}' on vios '#{vios}'.")
               nim.perform_altdisk_install(vios, "rootvg", altdisk_hash[vios])
             rescue NimAltDiskInstallError => e
-              msg = "Failed to start the alternate disk copy on #{altdisk_hash[vios]}"
-              STDERR.puts e.message
-              STDERR.puts "#{msg} of #{vios}"
-              log_warn("[#{vios}] #{msg}")
+              msg = "Failed to start the alternate disk copy on #{altdisk_hash[vios]} of #{vios}: #{e.message}"
+              put_error("#{msg}")
               targets_status[vios_key] = if vios == vios1
                                            'FAILURE-ALTDCOPY1'
                                          else
@@ -567,24 +590,23 @@ action :update do
               STDERR.puts e.message
               log_warn("[#{vios}] #{e.message}")
               ret = 1
-            rescue NimAltDiskInstallTimedOut => e
-              STDERR.puts e.message
-              msg = "Alternate disk copy failed on #{altdisk_hash[vios]}: timed out"
-              log_warn("[#{vios}] #{msg}")
-              STDERR.puts "#{msg} on vios #{vios}"
-              ret = 1
-            rescue NimAltDiskInstallError => e
-              STDERR.puts e.message
-              msg = "Alternate disk copy failed on #{altdisk_hash[vios]}"
-              log_warn("[#{vios}] #{msg}")
-              STDERR.puts "#{msg} on vios #{vios}"
-              ret = 1
             end
-
             if ret == 0
               targets_status[vios_key] = 'SUCCESS-ALTDC'
               log_info("[#{vios}] VIOS altdisk copy succeeded on #{altdisk_hash[vios]}")
             else
+              if ret == 1
+                STDERR.puts e.message
+                msg = "Alternate disk copy failed on #{altdisk_hash[vios]} of vios #{vios}"
+                put_error("#{msg}")
+                ret = 1
+              else
+                msg = "Alternate disk copy failed on #{altdisk_hash[vios]}: timed out"
+                put_warn("#{msg}")
+                STDERR.puts "#{msg} on vios #{vios}"
+              end
+              ret = 1
+
               targets_status[vios_key] = if vios == vios1
                                            'FAILURE-ALTDCOPY1'
                                          else
@@ -596,38 +618,38 @@ action :update do
           end
         end
       else
-        put_warn("#{vios_key} vioses skipped: time limit '#{time_limit}' reached")
+        put_warn("Alternate disk copy for #{vios_key} skipped: time limit '#{time_limit}' reached")
       end
 
-      log_info("VIOS altdisk copy status for #{vios_key}: #{targets_status[vios_key]}")
+      log_info("Alternate disk copy status for #{vios_key}: #{targets_status[vios_key]}")
     end    # altdisk_copy
 
 
     ########
     # update
     if action_list.include?('update')
-      Chef::Log.info("VIOS UPDATE - action=update")
-      Chef::Log.info("VIOS UPDATE - lpp_source=#{lpp_source}")
-      Chef::Log.info("VIOS UPDATE - updateios_flags=#{updateios_flags}")
-      Chef::Log.info("VIOS UPDATE - accept_licenses=#{accept_licenses}")
-      Chef::Log.info("VIOS UPDATE - preview=#{preview}")
+      log_info("VIOS UPDATE - action=update")
+      log_info("VIOS UPDATE - lpp_source=#{lpp_source}")
+      log_info("VIOS UPDATE - updateios_flags=#{updateios_flags}")
+      log_info("VIOS UPDATE - accept_licenses=#{accept_licenses}")
+      log_info("VIOS UPDATE - preview=#{preview}")
       log_info("VIOS update operation for VIOS tuple: #{target_tuple}")
 
       if action_list.include?('altdisk_copy') && targets_status[vios_key] != 'SUCCESS-ALTDC' ||
         !action_list.include?('altdisk_copy') && action_list.include?('check') && targets_status[vios_key] != 'SUCCESS-HC'
-        log_warn("#{vios_key} vioses skipped (previous status: #{targets_status[vios_key]}")
+        put_warn("Update of #{vios_key} vioses skipped (previous status: #{targets_status[vios_key]})")
         next
       end
 
       begin
         cmd = get_updateios_cmd(accept_licenses, updateios_flags, filesets, installp_bundle, preview)
       rescue ViosUpdateBadProperty, VioslppSourceBadLocation => e
-        # TBC VRO - do we print the status out or just log as we printed the error?
-        put_error("#{e.message}")
+        put_error("Update #{vios_key}: #{e.message}")
         targets_status[vios_key] = "FAILURE-UPDT1"
-        log_info("VIOS update status for #{vios_key}: #{targets_status[vios_key]}")
+        log_info("Update status for #{vios_key}: #{targets_status[vios_key]}")
         break # cannot continue, will skip cleanup anyway
       end
+
       targets_status[vios_key] = "SUCCESS-UPDT"
       vios_list.each do |vios|
         # set the error label
@@ -638,53 +660,56 @@ action :update do
         cmd_to_run = cmd + vios
         converge_by("nim: perform NIM updateios for vios '#{vios}'\n") do
           begin
-            put_info("Start NIM updateios operation for vios '#{vios}'.")
+            put_info("Start NIM updateios for vios '#{vios}'.")
             nim_updateios(vios, cmd_to_run)
           rescue ViosUpdateError => e
             put_error("#{e.message}")
             targets_status[vios_key] = err_label
-            put_info("Finish NIM alt_disk_install operation for vios '#{vios}': #{targets_status[vios_key]}.")
+            put_info("Finish NIM updateios for vios '#{vios}': #{targets_status[vios_key]}.")
             break
           end
         end
       end
-      put_info("Finish NIM alt_disk_install operation for vios '#{vios_key}': #{targets_status[vios_key]}.")
+      log_info("Update status for vios '#{vios_key}': #{targets_status[vios_key]}.")
     end    # update
 
 
     ###############
     # Alternate disk cleanup operation
     if action_list.include?('altdisk_cleanup')
-      log_info("VIOS altdisk cleanup operation for VIOS tuple: #{target_tuple}")
+      log_info("VIOS UPDATE - action=altdisk_cleanup")
+      log_info("VIOS UPDATE - altdisks=#{altdisks}")
+      log_info("Alternate disk cleanup for VIOS tuple: #{target_tuple}")
 
       # check previous status and skip if failure
       if action_list.include?('update') && targets_status[vios_key] != 'SUCCESS-UPDT' ||
          !action_list.include?('update') && action_list.include?('altdisk_copy') && targets_status[vios_key] != 'SUCCESS-ALTDC' ||
          !action_list.include?('update') && !action_list.include?('altdisk_copy') && action_list.include?('check') && targets_status[vios_key] != 'SUCCESS-HC'
-        log_warn("#{vios_key} vioses skipped (previous status: #{targets_status[vios_key]}")
+        put_warn("Alternate disk cleanup for #{vios_key} VIOSes skipped (previous status: #{targets_status[vios_key]}")
         next
       end
 
+      # find the altinst_rootvg disk
       ret = 0
       vios_list.each do |vios|
+        log_info("Alternate disk cleanup, get the alternate rootvg disk for vios #{vios}")
+        begin
+          ret = vio_server.get_altinst_rootvg_disk(nim_vios, vios, altdisk_hash)
+        rescue AltDiskFindError => e
+          put_error(msg)
+          ret = 1
+          targets_status[vios_key] = if vios == vios1
+                                       'FAILURE-ALTDCLEAN1'
+                                     else
+                                       'FAILURE-ALTDCLEAN2'
+                                     end
+        end
+        put_warn("Failed to get the alternate disk on #{vios}") unless ret == 0
+      end
+
+      # perform the alternate disk cleanup
+      vios_list.select {|k| altdisk_hash[k] != ""}.each do |vios|
         converge_by("vios: cleanup altinst_rootvg disk on vios '#{vios}'\n") do
-
-          log_info("VIOS altdisk cleanup, get the alternate rootvg disk for vios #{vios}")
-          begin
-            ret = vio_server.get_altinst_rootvg_disk(nim_vios, vios, altdisk_hash)
-          rescue AltDiskFindError => e
-            STDERR.puts e.message
-            ret = 1
-            targets_status[vios_key] = if vios == vios1
-                                         'FAILURE-ALTDCLEAN1'
-                                       else
-                                         'FAILURE-ALTDCLEAN2'
-                                       end
-          end
-          log_info("Taking '#{altdisk_hash[vios]}' for altdisk_cleanup of '#{vios}'.") if ret == 0
-          next unless ret == 0    # skip the cleanup as cannot found the disk
-
-          # perform the alternate disk cleanup
           targets_status[vios_key] = if vios == vios1
                                        'FAILURE-ALTDCOPY1'
                                      else
@@ -693,10 +718,8 @@ action :update do
           begin
             ret = vio_server.altdisk_copy_cleanup(nim_vios, vios, altdisk_hash)
           rescue AltDiskCleanError => e
-            STDERR.puts e.message
-            msg = "Failed to cleanup altinst_rootvg on disk #{altdisk_hash[vios]}"
-            STDERR.puts "#{msg} of #{vios}"
-            log_warn("[#{vios}] #{msg}")
+            msg = "Cleanup failed: #{e.message}"
+            put_error("#{msg}")
           end
           if ret == 0
             targets_status[vios_key] = if vios == vios1
@@ -704,12 +727,14 @@ action :update do
                                        else
                                          'SUCCESS-ALTDCLEAN2'
                                        end
-            log_info("[#{vios}] VIOS altdisk cleanup succeeded on #{altdisk_hash[vios]}")
+            log_info("Alternate disk cleanup succeeded on #{altdisk_hash[vios]} of #{vios}")
+          else
+            put_warn("Failed to clean the alternate disk on #{altdisk_hash[vios]} of #{vios}") unless ret == 0
           end
-          puts "\nCleanup operation for disk '#{altdisk_hash[vios]}' on vios '#{vios}': #{targets_status[vios_key]}."
         end
       end
-      log_info("VIOS altdisk cleanup status for #{vios_key}: #{targets_status[vios_key]}")
+
+      log_info("Alternate disk cleanup status for #{vios_key}: #{targets_status[vios_key]}")
     end    # altdisk_cleanup
 
   end    # target_list.each
