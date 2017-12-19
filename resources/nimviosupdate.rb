@@ -411,8 +411,6 @@ action :update do
         attr_found = true
       end
       raise ViosUpdateBadProperty, "'filesets' or 'installp_bundle' property must be specified when 'updateios_flags' is 'remove'." unless attr_found
-    else
-      raise ViosUpdateBadProperty, "installp_bundle is required for the update operation" if installp_bundle.nil? || installp_bundle.empty?
     end
   end
 
@@ -422,7 +420,6 @@ action :update do
     if time_limit =~ /^(\d{2})\/(\d{2})\/(\d{2,4}) (\d{1,2}):(\d{1,2})$/
       end_time = Time.local(Regexp.last_match(3).to_i, Regexp.last_match(2).to_i, Regexp.last_match(1).to_i, Regexp.last_match(4).to_i, Regexp.last_match(5).to_i)
       log_info("End time for operation: '#{end_time}'")
-      next
     else
       raise ViosUpdateBadProperty, "Error: 'time_limit' property must be in the format: 'mm/dd/yy HH:MM', got:'#{time_limit}'"
     end
@@ -641,35 +638,44 @@ action :update do
         next
       end
 
-      begin
-        cmd = get_updateios_cmd(accept_licenses, updateios_flags, filesets, installp_bundle, preview)
-      rescue ViosUpdateBadProperty, VioslppSourceBadLocation => e
-        put_error("Update #{vios_key}: #{e.message}")
-        targets_status[vios_key] = "FAILURE-UPDT1"
-        log_info("Update status for #{vios_key}: #{targets_status[vios_key]}")
-        break # cannot continue, will skip cleanup anyway
-      end
+      # check if there is time to handle this tuple
+      if end_time.nil? || Time.now <= end_time
+        # first find the right hdisk and check if we can perform the copy
+        ret = 0
 
-      targets_status[vios_key] = "SUCCESS-UPDT"
-      vios_list.each do |vios|
-        # set the error label
-        err_label = "FAILURE-UPDT1"
-        if vios != vios1
-          err_label = "FAILURE-UPDT2"
+        begin
+          cmd = get_updateios_cmd(accept_licenses, updateios_flags, filesets, installp_bundle, preview)
+        rescue ViosUpdateBadProperty, VioslppSourceBadLocation => e
+          put_error("Update #{vios_key}: #{e.message}")
+          targets_status[vios_key] = "FAILURE-UPDT1"
+          log_info("Update status for #{vios_key}: #{targets_status[vios_key]}")
+          break # cannot continue, will skip cleanup anyway
         end
-        cmd_to_run = cmd + vios
-        converge_by("nim: perform NIM updateios for vios '#{vios}'\n") do
-          begin
-            put_info("Start NIM updateios for vios '#{vios}'.")
-            nim_updateios(vios, cmd_to_run)
-          rescue ViosUpdateError => e
-            put_error("#{e.message}")
-            targets_status[vios_key] = err_label
-            put_info("Finish NIM updateios for vios '#{vios}': #{targets_status[vios_key]}.")
-            break
+
+        targets_status[vios_key] = "SUCCESS-UPDT"
+        vios_list.each do |vios|
+          # set the error label
+          err_label = "FAILURE-UPDT1"
+          if vios != vios1
+            err_label = "FAILURE-UPDT2"
+          end
+          cmd_to_run = cmd + vios
+          converge_by("nim: perform NIM updateios for vios '#{vios}'\n") do
+            begin
+              put_info("Start NIM updateios for vios '#{vios}'.")
+              nim_updateios(vios, cmd_to_run)
+            rescue ViosUpdateError => e
+              put_error("#{e.message}")
+              targets_status[vios_key] = err_label
+              put_info("Finish NIM updateios for vios '#{vios}': #{targets_status[vios_key]}.")
+              break
+            end
           end
         end
+      else
+        put_warn("Update #{vios_key} skipped: time limit '#{time_limit}' reached")
       end
+
       log_info("Update status for vios '#{vios_key}': #{targets_status[vios_key]}.")
     end    # update
 
