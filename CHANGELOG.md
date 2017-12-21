@@ -2,6 +2,11 @@
 
 This file is used to list changes made in each version of the aix cookbook.
 
+## 2.2.0 (2017-12-21)
+
+- Convert nimclient and toolboxpackage to custom resources
+- Add back the subsystem provider which was removed by accident
+
 ## 2.1.0 (2017-12-01)
 
 - etchost resource converted to custom resource to support Chef 13. Thanks Mike Sgarbossa.
