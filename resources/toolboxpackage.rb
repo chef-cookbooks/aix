@@ -14,9 +14,30 @@
 # limitations under the License.
 #
 
-actions :install, :remove
+property :package_name, String, name_property: true
+property :base_url, String, default: 'ftp://ftp.software.ibm.com/aix/freeSoftware/aixtoolbox/RPMS/ppc'
 
-attribute :package_name, name_attribute: true, kind_of: String
-attribute :base_url, kind_of: String, default: 'ftp://ftp.software.ibm.com/aix/freeSoftware/aixtoolbox/RPMS/ppc'
+action :install do
+  package_url = url_for(new_resource.package_name, new_resource.base_url)
+  unless package_url.nil?
+    remote_file "#{Chef::Config[:file_cache_path]}/#{::File.basename(package_url)}" do
+      source package_url
+      action :create
+    end
 
-default_action :install
+    rpm_package new_resource.package_name do
+      source "#{Chef::Config[:file_cache_path]}/#{::File.basename(package_url)}"
+      action :install
+    end
+  end
+end
+
+action :remove do
+  rpm_package new_resource.package_name do
+    action :remove
+  end
+end
+
+action_class do
+  include Opscode::Aix::Helpers
+end

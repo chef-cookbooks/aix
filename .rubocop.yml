@@ -6,7 +6,7 @@ Lint/FormatParameterMismatch:
 
 Lint/UselessAssignment:
   Exclude:
-    - 'providers/nimclient.rb'
+    - 'resources/nimclient.rb'
 
 Metrics/BlockNesting:
   Max: 5
@@ -35,9 +35,9 @@ Style/GuardClause:
     - 'libraries/tools.rb'
     - 'providers/altdisk.rb'
     - 'providers/etchosts.rb'
-    - 'providers/nimclient.rb'
     - 'resources/chdev.rb'
     - 'resources/chsec.rb'
+    - 'resources/nimclient.rb'
     - 'resources/no.rb'
 
 Style/IdenticalConditionalBranches:
@@ -55,4 +55,4 @@ Style/NonNilCheck:
 Style/PredicateName:
   Exclude:
     - 'spec/**/*'
-    - 'providers/nimclient.rb'
+    - 'resources/nimclient.rb'
