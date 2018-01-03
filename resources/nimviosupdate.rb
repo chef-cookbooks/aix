@@ -368,6 +368,189 @@ def nim_updateios(vios, cmd_s)
   raise ViosUpdateError, "Failed to perform NIM updateios operation on '#{vios}', see above error!" unless exit_status.success?
 end
 
+# -----------------------------------------------------------------
+# Check the SSP status of the VIOS tuple
+# Alternate disk copy can only be done when both VIOSes in the tuple
+#     refer to the same cluster and have the same SSP status
+#
+#    ret = 0 if OK
+#          1 else
+# -----------------------------------------------------------------
+def get_vios_ssp_status(nim_vios, vios_list, vios_key, targets_status)
+  ssp_name = ""
+  vios_ssp_status = ""
+  vios_name = ""
+  err_label = "FAILURE-SSP"
+  ret = -1
+
+  vios_list.each do |vios|
+    nim_vios[vios]['ssp_status'] = "none"
+  end
+
+  # get the SSP status
+  vios_list.each do |vios|
+#  vios = vios_list[0]
+    cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{nim_vios[vios]['vios_ip']} \"/usr/ios/cli/ioscli cluster -status -fmt :\""
+
+    log_debug("ssp_status: '#{cmd_s}'")
+    Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+      stderr.each_line do |line|
+        STDERR.puts line
+        log_info("[STDERR] #{line.chomp}")
+      end
+      unless wait_thr.value.success?
+        srdout.each_line do |line|
+          line.chomp!
+          if line =~ /^Cluster does not exist.$/
+            log_debug("There is no cluster or the node #{vios} is DOWN")
+            nim_vios[vios]['ssp_vios_status'] = "DOWN"
+            if vios_list.length == 1
+              retun 0
+            else
+              next
+            end
+          end
+        end
+        if vios_list.length != 1 && nim_vios[vios]['ssp_vios_status'] = "DOWN"
+          # will get cluster status from the next vios
+          next
+        end
+      end
+
+      # check that the VIOSes belong to the same cluster and have the same satus
+      #                  or there is no SSP
+      # stdout is like:
+      # gdr_ssp3:OK:castor_gdr_vios3:8284-22A0221FD4BV:17:OK:OK
+      # gdr_ssp3:OK:castor_gdr_vios2:8284-22A0221FD4BV:16:OK:OK
+      #  or
+      # Cluster does not exist.
+      #
+      stdout.each_line do |line|
+        log_debug("[STDOUT] #{line.chomp}")
+        line.chomp!
+        if line =~ /^Cluster does not exist.$/
+          log_debug("There is no cluster or the node #{vios} is DOWN")
+          nim_vios[vios]['ssp_vios_status'] = "DOWN"
+          if vios_list.length == 1
+            retun 0
+          else
+            next
+          end
+        end
+
+        if line =~ /^(\S+):(\S+):(\S+):\S+:\S+:(\S+):.*/
+          cur_ssp_name = Regexp.last_match(1)
+          cur_ssp_satus = Regexp.last_match(2)
+          cur_vios_name = Regexp.last_match(3)
+          cur_vios_ssp_status = Regexp.last_match(4)
+
+          if vios_list.include?(cur_vios_name)
+            nim_vios[cur_vios_name]['ssp_vios_status'] = cur_vios_ssp_status
+            nim_vios[cur_vios_name]['ssp_name'] = cur_ssp_name
+            # single VIOS case
+            if vios_list.length == 1
+              if cur_vios_ssp_status == "OK"
+                err_msg = "SSP is active for the single VIOS: #{cur_vios_name}. VIOS cannot be updated"
+                put_error(err_msg)
+                return 1
+              else
+                return 0
+              end
+            elsif cur_ssp_satus == "DEGRADED"
+              err_msg = "SSP #{cur_ssp_name} is working in degraded mode then VIOS: #{vios} cannot be updated"
+              put_error(err_msg)
+              return 1
+            end
+            # first VIOS in the pair
+            if ssp_name == ""
+              ssp_name = cur_ssp_name
+              vios_name = cur_vios_name
+              vios_ssp_status = cur_vios_ssp_status
+              next
+            end
+
+            # both VIOSes found
+            if vios_ssp_status != cur_vios_ssp_status
+              err_msg = "SSP status is not the same for the both VIOSes: (#{vios_key}). VIOSes cannot be updated"
+              put_error(err_msg)
+              return 1
+            elsif ssp_name != cur_ssp_name && cur_vios_ssp_status == "OK"
+              err_msg = "Both VIOSes: #{vios_key} does not belong to the same SSP. VIOSes cannot be updated"
+              put_error(err_msg)
+              return 1
+            else
+              return 0
+            end
+            break
+          else
+            # Compute here the case where SSP vios member does not belong to vios list
+            ret = 1
+          end
+        end
+      end
+    end
+  end
+  if ret == -1
+    if ssp_name == ""
+      # VIOSes doesn't belong to any SSP
+      ret = 0
+    else
+      ret = 1
+      err_msg = "Only one VIOS belongs to an SSP. VIOSes cannot be updated"
+    end
+  end
+
+  if ret == 1
+    log_debug("#{err_msg}")
+    put_error("#{err_msg}")
+    targets_status[vios_key] = err_label
+  end
+  ret
+end
+
+# -----------------------------------------------------------------
+# Stop/start the SSP for a VIOS
+#
+#    ret = 0 if OK
+#          1 else
+# -----------------------------------------------------------------
+def ssp_stop_start(vios_list, vios, nim_vios, action)
+  # if action is start SSP,  find the first node running SSP
+  node = vios
+  if action == 'start'
+    vios_list.each do |n|
+      if nim_vios[n]['ssp_vios_status'] == "OK"
+        node = n
+        break
+      end
+    end
+  end
+  cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{nim_vios[node]['vios_ip']} \"/usr/sbin/clctrl -#{action} -n #{nim_vios[vios]['ssp_name']} -m #{vios}\""
+
+  log_debug("ssp_stop_start: '#{cmd_s}'")
+  Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+    stderr.each_line do |line|
+      STDERR.puts line
+      log_info("[STDERR] #{line.chomp}")
+    end
+    unless wait_thr.value.success?
+      stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+      msg = "Failed to #{action} cluster #{nim_vios[vios]['ssp_name']} on vios #{vios}"
+      log_warn("#{msg}")
+      raise ViosCmdError, "#{msg}, command: \"#{cmd_s}\" returns above error!"
+    end
+  end
+
+  nim_vios[vios]['ssp_vios_status'] = if action == 'stop'
+                                        "DOWN"
+                                      else
+                                        "OK"
+                                      end
+  log_info("#{action} cluster #{nim_vios[vios]['ssp_name']} on vios #{vios} succeed")
+
+  return 0
+end
+
 
 ##############################
 # ACTION: update
@@ -640,8 +823,25 @@ action :update do
 
       # check if there is time to handle this tuple
       if end_time.nil? || Time.now <= end_time
-        # first find the right hdisk and check if we can perform the copy
         ret = 0
+
+        # check SSP status of the tuple
+        # Alternate disk copy can only be done when both VIOSes in the tuple
+        # have the same SSP status
+        begin
+          ret = get_vios_ssp_status(nim_vios, vios_list, vios_key, targets_status)
+        rescue ViosCmdError => e
+          # TBC VRO - do we print the status out or just log as we printed the error?
+          put_error("#{e.message}")
+          targets_status[vios_key] = "FAILURE-UPDT1"
+          log_info("VIOS update status for #{vios_key}: #{targets_status[vios_key]}")
+          break # cannot continue
+        end
+        if ret == 1
+          put_warn("Update operation for #{vios_key} vioses skipped due to bad SSP status")
+          put_info("Update operation can only be done when both of the VIOSes have the same SSP status (or for a single VIOS, when the SSP status is inactive) and belong to the same SSP")
+          next
+        end
 
         begin
           cmd = get_updateios_cmd(accept_licenses, updateios_flags, filesets, installp_bundle, preview)
@@ -659,6 +859,26 @@ action :update do
           if vios != vios1
             err_label = "FAILURE-UPDT2"
           end
+
+          # if needed stop the SSP for the VIOS
+          restart_needed = false
+          if nim_vios[vios]['ssp_vios_status'] == 'OK'
+            begin
+              ret = ssp_stop_start(vios_list, vios, nim_vios, 'stop')
+            rescue ViosCmdError => e
+              # TBC VRO - do we print the status out or just log as we printed the error?
+              put_error("#{e.message}")
+              targets_status[vios_key] = "FAILURE-UPDT1"
+              log_info("VIOS update status for #{vios_key}: #{targets_status[vios_key]}")
+              break # cannot continue
+            end
+            restart_needed = true
+
+            log_info(" #{vios_key}: #{targets_status[vios_key]}")
+            break if ret == 1
+          end
+
+          break_required = false
           cmd_to_run = cmd + vios
           converge_by("nim: perform NIM updateios for vios '#{vios}'\n") do
             begin
@@ -668,9 +888,30 @@ action :update do
               put_error("#{e.message}")
               targets_status[vios_key] = err_label
               put_info("Finish NIM updateios for vios '#{vios}': #{targets_status[vios_key]}.")
-              break
+
+              # in case of failure try to restart the SSP if needed
+              break_required = true
             end
           end
+
+          # if needed restart the SSP for the VIOS
+          if restart_needed
+            begin
+              ret = ssp_stop_start(vios_list, vios, nim_vios, 'start')
+            rescue ViosCmdError => e
+              # TBC VRO - do we print the status out or just log as we printed the error?
+              put_error("#{e.message}")
+              targets_status[vios_key] = "FAILURE-UPDT1"
+              log_info("VIOS update status for #{vios_key}: #{targets_status[vios_key]}")
+              break # cannot continue
+            end
+
+            log_info(" #{vios_key}: #{targets_status[vios_key]}")
+            break if ret == 1
+          end
+
+          break if break_required
+
         end
       else
         put_warn("Update #{vios_key} skipped: time limit '#{time_limit}' reached")
