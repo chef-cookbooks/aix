@@ -19,7 +19,6 @@
 # TBC - add color in exception error message?
 # TBC - Is there a difference btw put_error("#{msg}") and put_error(msg)?
 # TBC - Should we use Mixlib::ShellOut.new(cmd_s) instead of popen3 in nim_updateios?
-# TBC - get_disk_for_altdisk_copy is not used, old version of find_valid_altdisk
 
 include AIX::PatchMgmt
 

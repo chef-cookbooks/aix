@@ -1196,63 +1196,6 @@ module AIX
       end
 
       # -----------------------------------------------------------------
-      # Find a valid alternate disk that
-      # - exists,
-      # - is not part of a VG
-      # - as enough space to copy the rootvg
-      # and so can be used for the alternate disk copy.
-      #
-      # Fill altdisk_hash[vios] with the selected hdisk
-      #
-      #    Return the altdisk_hash[vios] for success
-      #
-      #    Raise AltDiskFindError in case of error
-      # -----------------------------------------------------------------
-      # TBC - To remove: duplicate or old version of find_valid_altdisk?
-      #def get_disk_for_altdisk_copy(nim_vios, vios, altdisk_hash)
-      #  rootvg_size = [0 , 0]
-      #  msg = "Failed to find the alternate install rootvg on #{vios}"
-
-      #  begin
-      #    get_free_pvs(nim_vios, vios)
-      #  rescue ViosCmdError => e
-      #    raise AltDiskFindError, "#{msg}: #{e.message}"
-      #  end
-
-      #  begin
-      #    rootvg_size = get_vg_size(nim_vios, vios, "rootvg")
-      #  rescue ViosCmdError => e
-      #    raise AltDiskFindError, "#{msg}: #{e.message}"
-      #  end
-
-      #  if altdisk_hash[vios].empty?
-      #    # in auto mode, find the first alternate disk available
-      #    nim_vios[vios]['free_pvs'].keys.each do |hdisk|
-      #      if nim_vios[vios]['free_pvs'][hdisk]['size'] >= rootvg_size[1]
-      #        altdisk_hash[vios] = hdisk
-      #        return altdisk_hash[vios]
-      #      end
-      #    end
-      #    msg = "No available alternate disk with size greater than #{rootvg_size[1]} MB found on #{vios}"
-      #    raise AltDiskFindError, msg
-      #  end
-
-      #  # check the specified hdisk is large enough
-      #  if !nim_vios[vios]['free_pvs'].has_key?(altdisk_hash[vios])
-      #    msg = "Alternate disk #{altdisk_hash[vios]} is either not found or not available on #{vios}"
-      #    raise AltDiskFindError, msg
-      #  end
-
-      #  if nim_vios[vios]['free_pvs'][altdisk_hash[vios]]['size'] < rootvg_size[1]
-      #    msg = "Alternate disk #{altdisk_hash[vios]} on #{vios} too small (#{nim_vios[vios]['free_pvs'][altdisk_hash[vios]]['size']} < #{rootvg_size})"
-      #    raise AltDiskFindError, msg
-      #  end
-
-      #  log_info("Taking '#{altdisk_hash[vios]}' alternate disk for altdisk_copy on '#{vios}'")
-      #  altdisk_hash[vios]
-      #end
-
-      # -----------------------------------------------------------------
       # Find the existing altinst rootvg on vios
       #
       # Fill altdisk_hash[vios] with the corresponding hdisk
