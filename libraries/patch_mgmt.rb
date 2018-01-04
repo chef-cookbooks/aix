@@ -828,7 +828,7 @@ module AIX
                 log_info("NIM alt_disk_install operation on #{vios} ended with #{nim_result}")
                 unless nim_result == "success"
                   msg = "Failed to perform NIM alt_disk_install operation on #{vios}: #{nim_info}"
-                  put_error("#{msg}")
+                  put_error(msg)
                   return 1
                 end
                 print("\033[2K\r")
@@ -852,7 +852,7 @@ module AIX
 
         # timed out before the end of alt_disk_install
         msg = "NIM alt_disk_install operation for #{vios} shows no progress in #{count * sleep_time / 60} minute(s): #{nim_info}"
-        put_error("#{msg}")
+        put_error(msg)
         return -1
       end
 
@@ -1245,7 +1245,7 @@ module AIX
         end
         unless ret == 0
           altdisk_hash[vios] = ""
-          put_warn("#{msg}")
+          put_warn(msg)
           return ret
         end
 

@@ -17,7 +17,6 @@
 # TBC - uniform use of log_xxx instead of Chef::Log.xxx in previous code
 # TBC - uniform use of put_xxx (pach_mgmt.rb) in previous code
 # TBC - add color in exception error message?
-# TBC - Is there a difference btw put_error("#{msg}") and put_error(msg)?
 # TBC - Should we use Mixlib::ShellOut.new(cmd_s) instead of popen3 in nim_updateios?
 
 include AIX::PatchMgmt
@@ -500,8 +499,7 @@ def get_vios_ssp_status(nim_vios, vios_list, vios_key, targets_status)
   end
 
   if ret == 1
-    log_debug("#{err_msg}")
-    put_error("#{err_msg}")
+    put_error(err_msg)
     targets_status[vios_key] = err_label
   end
   ret
@@ -535,7 +533,7 @@ def ssp_stop_start(vios_list, vios, nim_vios, action)
     unless wait_thr.value.success?
       stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
       msg = "Failed to #{action} cluster #{nim_vios[vios]['ssp_name']} on vios #{vios}"
-      log_warn("#{msg}")
+      log_warn(msg)
       raise ViosCmdError, "#{msg}, command: \"#{cmd_s}\" returns above error!"
     end
   end
@@ -675,7 +673,7 @@ action :update do
           vios_health_init(nim_vios, hmc_id, hmc_ip)
         rescue ViosHealthCheckError => e
           targets_status[vios_key] = 'FAILURE-HC'
-          put_error("#{e.message}")
+          put_error(e.message)
         end
         # Error case is handle by the next if statement
       end
@@ -702,7 +700,7 @@ action :update do
         end
         targets_status[vios_key] = 'FAILURE-HC'
         msg = "Health Check did not get the UUID of VIOS: #{vios_err}"
-        put_error("#{msg}")
+        put_error(msg)
       end
 
       log_info("Health Check status for #{vios_key}: #{targets_status[vios_key]}")
@@ -739,7 +737,7 @@ action :update do
             next
           end
         rescue AltDiskFindError => e
-          put_error("#{e.message}")
+          put_error(e.message)
           put_info("Finish NIM alt_disk_install operation for disk '#{altdisk_hash[vios_key]}' on vios '#{vios_key}': #{targets_status[vios_key]}.")
           next
         end
@@ -752,7 +750,7 @@ action :update do
               nim.perform_altdisk_install(vios, "rootvg", altdisk_hash[vios])
             rescue NimAltDiskInstallError => e
               msg = "Failed to start the alternate disk copy on #{altdisk_hash[vios]} of #{vios}: #{e.message}"
-              put_error("#{msg}")
+              put_error(msg)
               targets_status[vios_key] = if vios == vios1
                                            'FAILURE-ALTDCOPY1'
                                          else
@@ -777,11 +775,11 @@ action :update do
               if ret == 1
                 STDERR.puts e.message
                 msg = "Alternate disk copy failed on #{altdisk_hash[vios]} of vios #{vios}"
-                put_error("#{msg}")
+                put_error(msg)
                 ret = 1
               else
                 msg = "Alternate disk copy failed on #{altdisk_hash[vios]}: timed out"
-                put_warn("#{msg}")
+                put_warn(msg)
                 STDERR.puts "#{msg} on vios #{vios}"
               end
               ret = 1
@@ -830,10 +828,9 @@ action :update do
         begin
           ret = get_vios_ssp_status(nim_vios, vios_list, vios_key, targets_status)
         rescue ViosCmdError => e
-          # TBC VRO - do we print the status out or just log as we printed the error?
-          put_error("#{e.message}")
+          put_error(e.message)
           targets_status[vios_key] = "FAILURE-UPDT1"
-          log_info("VIOS update status for #{vios_key}: #{targets_status[vios_key]}")
+          log_info("Update status for #{vios_key}: #{targets_status[vios_key]}")
           break # cannot continue
         end
         if ret == 1
@@ -865,15 +862,14 @@ action :update do
             begin
               ret = ssp_stop_start(vios_list, vios, nim_vios, 'stop')
             rescue ViosCmdError => e
-              # TBC VRO - do we print the status out or just log as we printed the error?
-              put_error("#{e.message}")
+              put_error(e.message)
               targets_status[vios_key] = "FAILURE-UPDT1"
-              log_info("VIOS update status for #{vios_key}: #{targets_status[vios_key]}")
+              log_info("Update status for #{vios_key}: #{targets_status[vios_key]}")
               break # cannot continue
             end
             restart_needed = true
 
-            log_info(" #{vios_key}: #{targets_status[vios_key]}")
+            log_info("Update status for #{vios_key}: #{targets_status[vios_key]}")
             break if ret == 1
           end
 
@@ -884,7 +880,7 @@ action :update do
               put_info("Start NIM updateios for vios '#{vios}'.")
               nim_updateios(vios, cmd_to_run)
             rescue ViosUpdateError => e
-              put_error("#{e.message}")
+              put_error(e.message)
               targets_status[vios_key] = err_label
               put_info("Finish NIM updateios for vios '#{vios}': #{targets_status[vios_key]}.")
 
@@ -898,14 +894,13 @@ action :update do
             begin
               ret = ssp_stop_start(vios_list, vios, nim_vios, 'start')
             rescue ViosCmdError => e
-              # TBC VRO - do we print the status out or just log as we printed the error?
-              put_error("#{e.message}")
+              put_error(e.message)
               targets_status[vios_key] = "FAILURE-UPDT1"
-              log_info("VIOS update status for #{vios_key}: #{targets_status[vios_key]}")
+              log_info("Update status for #{vios_key}: #{targets_status[vios_key]}")
               break # cannot continue
             end
 
-            log_info(" #{vios_key}: #{targets_status[vios_key]}")
+            log_info("Update status for #{vios_key}: #{targets_status[vios_key]}")
             break if ret == 1
           end
 
@@ -965,7 +960,7 @@ action :update do
             ret = vio_server.altdisk_copy_cleanup(nim_vios, vios, altdisk_hash)
           rescue AltDiskCleanError => e
             msg = "Cleanup failed: #{e.message}"
-            put_error("#{msg}")
+            put_error(msg)
           end
           if ret == 0
             targets_status[vios_key] = if vios == vios1
