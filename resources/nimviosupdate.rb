@@ -397,22 +397,10 @@ def get_vios_ssp_status(nim_vios, vios_list, vios_key, targets_status)
         log_info("[STDERR] #{line.chomp}")
       end
       unless wait_thr.value.success?
-        srdout.each_line do |line|
-          line.chomp!
-          if line =~ /^Cluster does not exist.$/
-            log_debug("There is no cluster or the node #{vios} is DOWN")
-            nim_vios[vios]['ssp_vios_status'] = "DOWN"
-            if vios_list.length == 1
-              retun 0
-            else
-              next
-            end
-          end
-        end
-        if vios_list.length != 1 && nim_vios[vios]['ssp_vios_status'] = "DOWN"
-          # will get cluster status from the next vios
-          next
-        end
+        stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+        msg = "Failed to get SSP status of #{vios_key}"
+        log_warn("[#{vios}] #{msg}")
+        raise ViosCmdError, "Error: #{msg} on #{vios}, command \"#{cmd_s}\" returns above error!"
       end
 
       # check that the VIOSes belong to the same cluster and have the same satus
@@ -430,7 +418,7 @@ def get_vios_ssp_status(nim_vios, vios_list, vios_key, targets_status)
           log_debug("There is no cluster or the node #{vios} is DOWN")
           nim_vios[vios]['ssp_vios_status'] = "DOWN"
           if vios_list.length == 1
-            retun 0
+            return 0
           else
             next
           end
