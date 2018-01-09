@@ -371,15 +371,15 @@ end
 # Alternate disk copy can only be done when both VIOSes in the tuple
 #     refer to the same cluster and have the same SSP status
 #
-#    ret = 0 if OK
-#          1 else
+#    return  0 if OK
+#            1 else
 # -----------------------------------------------------------------
 def get_vios_ssp_status(nim_vios, vios_list, vios_key, targets_status)
   ssp_name = ""
   vios_ssp_status = ""
   vios_name = ""
   err_label = "FAILURE-SSP"
-  ret = -1
+  cluster_found = false
 
   vios_list.each do |vios|
     nim_vios[vios]['ssp_status'] = "none"
@@ -420,10 +420,11 @@ def get_vios_ssp_status(nim_vios, vios_list, vios_key, targets_status)
           if vios_list.length == 1
             return 0
           else
-            next
+            break
           end
         end
 
+        cluster_found = true
         if line =~ /^(\S+):(\S+):(\S+):\S+:\S+:(\S+):.*/
           cur_ssp_name = Regexp.last_match(1)
           cur_ssp_satus = Regexp.last_match(2)
@@ -438,14 +439,11 @@ def get_vios_ssp_status(nim_vios, vios_list, vios_key, targets_status)
               if cur_vios_ssp_status == "OK"
                 err_msg = "SSP is active for the single VIOS: #{cur_vios_name}. VIOS cannot be updated"
                 put_error(err_msg)
+                targets_status[vios_key] = err_label
                 return 1
               else
                 return 0
               end
-            elsif cur_ssp_satus == "DEGRADED"
-              err_msg = "SSP #{cur_ssp_name} is working in degraded mode then VIOS: #{vios} cannot be updated"
-              put_error(err_msg)
-              return 1
             end
             # first VIOS in the pair
             if ssp_name == ""
@@ -459,38 +457,29 @@ def get_vios_ssp_status(nim_vios, vios_list, vios_key, targets_status)
             if vios_ssp_status != cur_vios_ssp_status
               err_msg = "SSP status is not the same for the both VIOSes: (#{vios_key}). VIOSes cannot be updated"
               put_error(err_msg)
+              targets_status[vios_key] = err_label
               return 1
             elsif ssp_name != cur_ssp_name && cur_vios_ssp_status == "OK"
               err_msg = "Both VIOSes: #{vios_key} does not belong to the same SSP. VIOSes cannot be updated"
               put_error(err_msg)
+              targets_status[vios_key] = err_label
               return 1
             else
               return 0
             end
-            break
-          else
-            # Compute here the case where SSP vios member does not belong to vios list
-            ret = 1
           end
         end
       end
     end
   end
-  if ret == -1
-    if ssp_name == ""
-      # VIOSes doesn't belong to any SSP
-      ret = 0
-    else
-      ret = 1
-      err_msg = "Only one VIOS belongs to an SSP. VIOSes cannot be updated"
-    end
-  end
-
-  if ret == 1
+  if cluster_found == true
+    err_msg = "Only one VIOS belongs to an SSP. VIOSes cannot be updated"
     put_error(err_msg)
     targets_status[vios_key] = err_label
+    return 1
+  else
+    return 0
   end
-  ret
 end
 
 # -----------------------------------------------------------------
