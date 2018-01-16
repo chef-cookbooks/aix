@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-property :file_name, String, identity: true, default: lazy { |r| r.name }
+property :file_name, String, identity: true, default: lazy(&:name)
 property :attributes, Hash
 property :stanza, String, desired_state: false
 
