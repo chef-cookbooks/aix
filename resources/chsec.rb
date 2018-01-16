@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-property :file_name, String, name_property: true, identity: true
+property :file_name, String, identity: true, default: lazy { |r| r.name }
 property :attributes, Hash
 property :stanza, String, desired_state: false
 
@@ -67,7 +67,7 @@ end
 
 # update action
 action :update do
-  chsec_s = "chsec -f #{new_resource.name} -s #{new_resource.stanza}"
+  chsec_s = "chsec -f #{new_resource.file_name} -s #{new_resource.stanza}"
   change = false
   # iterating trough the hash table of sec attributes
   new_resource.attributes.each do |key, value|
@@ -81,7 +81,7 @@ action :update do
   end
   if change
     # we converge if the is a change to do
-    converge_by("chsec: changing #{new_resource.name} for stanza #{new_resource.stanza}") do
+    converge_by("chsec: changing #{new_resource.file_name} for stanza #{new_resource.stanza}") do
       Chef::Log.debug("chsec: command #{chsec_s}")
       shell_out!(chsec_s)
     end
