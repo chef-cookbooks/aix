@@ -43,7 +43,7 @@ module AIX
       print_hash_by_columns(nodes)
     end
 
-    def list_lpp_sources()
+    def list_lpp_sources
       check_nim_info(node)
       nodes = Hash.new { |h, k| h[k] = {} }
       nodes['lpp'] = node['nim']['lpp_sources'].keys
@@ -60,40 +60,39 @@ module AIX
     end
 
     def free_vios_disks(vios)
-        disks = {}
-        cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{vios} \"/usr/ios/cli/ioscli lspv -free\""
+      disks = {}
+      cmd_s = "/usr/lpp/bos.sysmgt/nim/methods/c_rsh #{vios} \"/usr/ios/cli/ioscli lspv -free\""
 
-        Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
-          stderr.each_line do |line|
-            STDERR.puts line
-            log_info("[STDERR] #{line.chomp}")
-          end
-          unless wait_thr.value.success?
-            stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
-            msg = "Failed to get free Physical Volume list"
-            log_warn("[#{vios}] #{msg}")
-            raise ViosCmdError, "Error: #{msg} on #{vios}, command \"#{cmd_s}\" returns above error!"
-          end
-
-          # stdout is like:
-          # NAME            PVID                                SIZE(megabytes)
-          # hdiskX          none                                572325
-          stdout.each_line do |line|
-            next if line.start_with?('NAME') # skip header
-            line.chomp!
-            if line =~ /^(hdisk\S+)\s+(\S+)\s+([0-9]+)/
-              pv_name = Regexp.last_match(1)
-              disks[pv_name] = {}
-              disks[pv_name]['pvid'] = Regexp.last_match(2)
-              disks[pv_name]['size'] = Regexp.last_match(3)
-            end
-          end
+      Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+        stderr.each_line do |line|
+          STDERR.puts line
+          log_info("[STDERR] #{line.chomp}")
         end
-        nodes = Hash.new { |h, k| h[k] = {} }
-        nodes['hdisk'] = disks.keys
-        nodes['pvid'] = disks.values.collect { |m| m.fetch('pvid', nil) }
-        nodes['size'] = disks.values.collect { |m| m.fetch('size', nil) }
-        print_hash_by_columns(nodes)
+        unless wait_thr.value.success?
+          stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
+          msg = 'Failed to get free Physical Volume list'
+          log_warn("[#{vios}] #{msg}")
+          raise ViosCmdError, "Error: #{msg} on #{vios}, command \"#{cmd_s}\" returns above error!"
+        end
+
+        # stdout is like:
+        # NAME            PVID                                SIZE(megabytes)
+        # hdiskX          none                                572325
+        stdout.each_line do |line|
+          next if line.start_with?('NAME') # skip header
+          line.chomp!
+          next unless line =~ /^(hdisk\S+)\s+(\S+)\s+([0-9]+)/
+          pv_name = Regexp.last_match(1)
+          disks[pv_name] = {}
+          disks[pv_name]['pvid'] = Regexp.last_match(2)
+          disks[pv_name]['size'] = Regexp.last_match(3)
+        end
+      end
+      nodes = Hash.new { |h, k| h[k] = {} }
+      nodes['hdisk'] = disks.keys
+      nodes['pvid'] = disks.values.collect { |m| m.fetch('pvid', nil) }
+      nodes['size'] = disks.values.collect { |m| m.fetch('size', nil) }
+      print_hash_by_columns(nodes)
     end
 
     def list_sps(filter_ml)
@@ -138,7 +137,6 @@ module AIX
                    '7.1 TL4' => ['7100-04-00-0000', '7100-04-01-1543', '7100-04-02-1614', '7100-04-03-1643', '7100-04-04-1717'],
                    '7.2 TL0' => ['7200-00-00-0000', '7200-00-01-1543', '7200-00-02-1614', '7200-00-03-1642', '7200-00-04-1717'],
                    '7.2 TL1' => ['7200-01-00-0000', '7200-01-01-1643', '7200-01-02-1717'] }
-
                end
       levels.each do |k, v|
         levels[k] = v.collect do |oslevel|
@@ -170,7 +168,7 @@ module AIX
     # mainly used for Start/Stop info
     def put_info(message)
       Chef::Log.info(message)
-      STDOUT.puts("INFO: " + message)
+      STDOUT.puts('INFO: ' + message)
     end
 
     def put_warn(message)
@@ -182,7 +180,6 @@ module AIX
       Chef::Log.error(message)
       STDERR.puts("\033[0;31mERROR: " + message + "\033[0m")
     end
-
 
     #############################
     #     E X C E P T I O N     #
@@ -445,7 +442,7 @@ module AIX
         @failed = download_failed
         @skipped = download_skipped
       end
-    end  # Suma
+    end # Suma
 
     #################
     #     N I M     #
@@ -605,12 +602,12 @@ module AIX
       #    return a dic with hmc info
       #    raise NimHmcInfoError in case of error
       # -----------------------------------------------------------------
-      def get_hmc_info()
+      def get_hmc_info
         info_hash = {}
         obj_key = ''
-        cmd_s = "/usr/sbin/lsnim -t hmc -l"
+        cmd_s = '/usr/sbin/lsnim -t hmc -l'
         log_debug("get_hmc_info: #{cmd_s}")
-        exit_status = Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
+        Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
           stderr.each_line do |line|
             STDERR.puts line
             log_info("[STDERR] #{line.chomp}")
@@ -630,37 +627,37 @@ module AIX
             end
             # Cstate
             if line =~ /^\s+Cstate\s+=\s+(.*)$/
-                cstate = Regexp.last_match(1)
-                info_hash[obj_key]['cstate'] = cstate
-                next
+              cstate = Regexp.last_match(1)
+              info_hash[obj_key]['cstate'] = cstate
+              next
             end
             # passwd_file
             if line =~ /^\s+passwd_file\s+=\s+(.*)$/
-                passwd_file = Regexp.last_match(1)
-                info_hash[obj_key]['passwd_file'] = passwd_file
-                next
+              passwd_file = Regexp.last_match(1)
+              info_hash[obj_key]['passwd_file'] = passwd_file
+              next
             end
             # login
             if line =~ /^\s+login\s+=\s+(.*)$/
-                login = Regexp.last_match(1)
-                info_hash[obj_key]['login'] = login
-                next
+              login = Regexp.last_match(1)
+              info_hash[obj_key]['login'] = login
+              next
             end
             # ip
             if line =~ /^\s+if1\s*=\s*\S+\s*(\S*)\s*.*$/
-                ip = Regexp.last_match(1)
-                info_hash[obj_key]['ip'] = ip
-                next
+              ip = Regexp.last_match(1)
+              info_hash[obj_key]['ip'] = ip
+              next
             end
           end
         end
 
-        log_info("HMC information:")
-        info_hash.keys.each do |obj_key|
-            log_info("#{obj_key}")
-            info_hash[obj_key].keys.each do |k|
-                log_info("  #{k}: #{info_hash[obj_key][k]}")
-            end
+        log_info('HMC information:')
+        info_hash.keys.each do |key|
+          log_info(key.to_s)
+          info_hash[key].keys.each do |k|
+            log_info("  #{k}: #{info_hash[key][k]}")
+          end
         end
         info_hash
       end
@@ -721,11 +718,11 @@ module AIX
         end
 
         log_info("NIM Clients for type: '#{lpar_type}'")
-        info_hash.keys.each do |obj_key|
-            log_info("#{obj_key}")
-            info_hash[obj_key].keys.each do |k|
-                log_info("  #{k}: #{info_hash[obj_key][k]}")
-            end
+        info_hash.keys.each do |key|
+          log_info(key.to_s)
+          info_hash[key].keys.each do |k|
+            log_info("  #{k}: #{info_hash[key][k]}")
+          end
         end
         info_hash
       end
@@ -736,8 +733,8 @@ module AIX
       #
       #    raise NimAltDiskInstallError in case of error
       # -----------------------------------------------------------------
-      def perform_altdisk_install(vios, source, disk, set_bootlist='no', boot_client='no')
-        cmd_s = "/usr/sbin/nim -o alt_disk_install -a source=rootvg -a disk=#{disk} -a set_bootlist=#{set_bootlist} -a boot_client=#{boot_client} #{vios}"
+      def perform_altdisk_install(vios, source, disk, set_bootlist = 'no', boot_client = 'no')
+        cmd_s = "/usr/sbin/nim -o alt_disk_install -a source=#{source} -a disk=#{disk} -a set_bootlist=#{set_bootlist} -a boot_client=#{boot_client} #{vios}"
         log_info("perform_altdisk_install: '#{cmd_s}'")
         # TBC - For testing, you can uncomment to bypass alt_disk_install operation
         # cmd_s = "/usr/sbin/lsnim -Z -a Cstate -a info -a Cstate_result #{vios}"
@@ -773,20 +770,20 @@ module AIX
       #
       #    raise NimLparInfoError if cannot get NIM state
       # -----------------------------------------------------------------
-      def wait_alt_disk_install(vios, check_count=180, sleep_time=10)
-        nim_info_prev = "___"   # this info should not appears in nim info attribute
-        nim_info = ""
+      def wait_alt_disk_install(vios, check_count = 180, sleep_time = 10)
+        nim_info_prev = '___' # this info should not appears in nim info attribute
+        nim_info = ''
         count = 0
         wait_time = 0
         cmd_s = "/usr/sbin/lsnim -Z -a Cstate -a info -a Cstate_result #{vios}"
         log_info("wait_alt_disk_install: '#{cmd_s}'")
 
-        while count <= check_count do
+        while count <= check_count
           sleep(sleep_time)
           wait_time += 10
-          nim_Cstate = ""
-          nim_result = ""
-          nim_info = ""
+          nim_cstate = ''
+          nim_result = ''
+          nim_info = ''
 
           Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
             stderr.each_line do |line|
@@ -807,15 +804,12 @@ module AIX
               # <viosName>:alt_disk_install operation is being performed:Creating logical volume alt_hd2.:success:  -> len=4
               # <viosName>:ready for a NIM operation:0505-126 alt_disk_install- target disk hdisk2 has a volume group assigned to it.:failure:  -> len=4
               nim_status = line.strip.split(':')
-              if nim_status[0] != "#name"
-                  print("\033[2K\r#{nim_status[2]}")
-                  log_info("nim_status:#{nim_status}")
-              else
-                  next
-              end
+              next if nim_status[0] == '#name'
+              print("\033[2K\r#{nim_status[2]}")
+              log_info("nim_status:#{nim_status}")
 
-              nim_Cstate = nim_status[1]
-              if nim_status.length == 3 && (nim_status[2].downcase == "success" || nim_status[2].downcase == "failure")
+              nim_cstate = nim_status[1]
+              if nim_status.length == 3 && (nim_status[2].downcase == 'success' || nim_status[2].downcase == 'failure')
                 nim_result = nim_status[2].downcase
               elsif nim_status.length > 3
                 nim_info = nim_status[2]
@@ -824,39 +818,36 @@ module AIX
                 log_warn("[#{vios}] Unexpected output #{nim_status} for command '#{cmd_s}'")
               end
 
-              if nim_Cstate.downcase == "ready for a nim operation"
+              if nim_cstate.downcase == 'ready for a nim operation'
                 log_info("NIM alt_disk_install operation on #{vios} ended with #{nim_result}")
-                unless nim_result == "success"
+                unless nim_result == 'success'
                   msg = "Failed to perform NIM alt_disk_install operation on #{vios}: #{nim_info}"
                   put_error(msg)
                   return 1
                 end
                 print("\033[2K\r")
-                return 0    # here the operation succeeded
+                return 0 # here the operation succeeded
+              elsif nim_info_prev == nim_info
+                count += 1
               else
-                if nim_info_prev == nim_info
-                  count += 1
-                else
-                  nim_info_prev = nim_info unless nim_info.empty?
-                  count = 0
-                end
+                nim_info_prev = nim_info unless nim_info.empty?
+                count = 0
               end
-              if wait_time.modulo(60) == 0
-                msg = "Waiting the NIM alt disk copy on #{vios}... duration: #{wait_time / 60} minute(s)"
-                print("\033[2K\r#{msg}")
-                log_info(msg)
-              end
+
+              next unless wait_time.modulo(60) == 0
+              msg = "Waiting the NIM alt disk copy on #{vios}... duration: #{wait_time / 60} minute(s)"
+              print("\033[2K\r#{msg}")
+              log_info(msg)
             end
           end
-        end    # while count
+        end # while count
 
         # timed out before the end of alt_disk_install
         msg = "NIM alt_disk_install operation for #{vios} shows no progress in #{count * sleep_time / 60} minute(s): #{nim_info}"
         put_error(msg)
-        return -1
+        -1
       end
-
-    end  # Nim
+    end # Nim
 
     #################
     #   VioServer   #
@@ -896,13 +887,13 @@ module AIX
 
             next if line.start_with?('NAME') # skip header
             line.chomp!
-            if line =~ /^(hdisk\S+)\s+(\S+)\s+(\S+)\s*(\S*)/
-              pv_name = Regexp.last_match(1)
-              nim_vios[vios]['pvs'][pv_name] = {}
-              nim_vios[vios]['pvs'][pv_name]['pvid'] = Regexp.last_match(2)
-              nim_vios[vios]['pvs'][pv_name]['vg'] = Regexp.last_match(3)
-              nim_vios[vios]['pvs'][pv_name]['status'] = Regexp.last_match(4)
-            end
+            next unless line =~ /^(hdisk\S+)\s+(\S+)\s+(\S+)\s*(\S*)/
+
+            pv_name = Regexp.last_match(1)
+            nim_vios[vios]['pvs'][pv_name] = {}
+            nim_vios[vios]['pvs'][pv_name]['pvid'] = Regexp.last_match(2)
+            nim_vios[vios]['pvs'][pv_name]['vg'] = Regexp.last_match(3)
+            nim_vios[vios]['pvs'][pv_name]['status'] = Regexp.last_match(4)
           end
         end
 
@@ -1002,9 +993,9 @@ module AIX
         end
 
         if vg_size == 0 || used_size == 0
-            msg = "Failed to get Volume Group '#{vg_name}' size: TOTAL PPs=#{vg_size}, USED PPs+1=#{vg_size[1]} on #{vios}"
-            raise ViosCmdError, msg
-          end
+          msg = "Failed to get Volume Group '#{vg_name}' size: TOTAL PPs=#{vg_size}, USED PPs+1=#{vg_size[1]} on #{vios}"
+          raise ViosCmdError, msg
+        end
 
         log_info("VG '#{vg_name}' TOTAL PPs=#{vg_size} MB, USED PPs+1=#{used_size} MB")
         [vg_size, used_size]
@@ -1033,8 +1024,7 @@ module AIX
         used_size = 0
         used_pv = []
         vios_list.each do |vios|
-
-          err_label = "FAILURE-ALTDC1"
+          err_label = 'FAILURE-ALTDC1'
 
           # get pv list
           begin
@@ -1046,7 +1036,7 @@ module AIX
 
           # check an alternate disk not already exists
           nim_vios[vios]['pvs'].each do |pv_name, pv|
-            if pv['vg'] == "altinst_rootvg"
+            if pv['vg'] == 'altinst_rootvg'
               targets_status[vios_key] = "#{err_label} an alternate disk (#{pv_name}) already exists on #{vios}"
               put_error("An alternate rootvg already exists on disk #{pv_name} on #{vios}")
               return 1
@@ -1054,7 +1044,7 @@ module AIX
           end
 
           begin
-            rootvg_size, used_size = get_vg_size(nim_vios, vios, "rootvg")
+            rootvg_size, used_size = get_vg_size(nim_vios, vios, 'rootvg')
           rescue ViosCmdError => e
             msg = "Failed to find a valid alternate disk on #{vios}: #{e.message}"
             raise AltDiskFindError, msg
@@ -1075,22 +1065,19 @@ module AIX
           free_pvs = nim_vios[vios]['free_pvs']
 
           # in auto mode, find the first alternate disk available
-          if altdisk_hash[vios] == ""
-            prev_disk = ""
+          if altdisk_hash[vios] == ''
+            prev_disk = ''
             diffsize = 0
             prev_diffsize = 0
             # parse free disks in increasing size order
             free_pvs.each_key.sort_by { |k| free_pvs[k]['size'] }.each do |hdisk|
               # disk to small or already used
-              if free_pvs[hdisk]['size'] < used_size or
-                used_pv.include?(free_pvs[hdisk]['pvid'])
-                next
-              end
+              next if free_pvs[hdisk]['size'] < used_size || used_pv.include?(free_pvs[hdisk]['pvid'])
 
               # smallest disk that can be selected
               if disk_size_policy == 'minimize'
                 altdisk_hash[vios] = hdisk
-                if free_pvs[hdisk]['pvid'] != "none"
+                if free_pvs[hdisk]['pvid'] != 'none'
                   used_pv << free_pvs[hdisk]['pvid']
                 end
                 break
@@ -1100,7 +1087,7 @@ module AIX
               # matching disk size
               if diffsize == 0
                 altdisk_hash[vios] = hdisk
-                if free_pvs[hdisk]['pvid'] != "none"
+                if free_pvs[hdisk]['pvid'] != 'none'
                   used_pv << free_pvs[hdisk]['pvid']
                 end
                 break
@@ -1108,29 +1095,26 @@ module AIX
 
               if diffsize > 0
                 # diffsize > 0: first disk found bigger than the rootvg disk
-                selected_disk = ""
-                if disk_size_policy == 'upper'
-                  selected_disk = hdisk
-                elsif disk_size_policy == 'lower'
-                  if prev_disk == ""
-                    # Best Can Do...
-                    selected_disk = hdisk
-                  else
-                    selected_disk = prev_disk
-                  end
-                else
-                  # disk_size_policy == 'nearest'
-                  if prev_disk == ""
-                    selected_disk = hdisk
-                  elsif prev_diffsize.abs > diffsize
-                    selected_disk = hdisk
-                  else
-                    selected_disk = prev_disk
-                  end
-                end
+                selected_disk = if disk_size_policy == 'upper'
+                                  hdisk
+                                elsif disk_size_policy == 'lower'
+                                  if prev_disk == ''
+                                    hdisk # Best Can Do...
+                                  else
+                                    prev_disk
+                                  end
+                                elsif disk_size_policy == 'nearest'
+                                  if prev_disk == '' || prev_diffsize.abs > diffsize
+                                    hdisk
+                                  else
+                                    prev_disk
+                                  end
+                                else
+                                  ''
+                                end
 
                 altdisk_hash[vios] = selected_disk
-                if free_pvs[selected_disk]['pvid'] != "none"
+                if free_pvs[selected_disk]['pvid'] != 'none'
                   used_pv << free_pvs[selected_disk]['pvid']
                 end
                 break
@@ -1143,11 +1127,11 @@ module AIX
               end
             end
 
-            if altdisk_hash[vios] == ""
-              if prev_disk != ""
+            if altdisk_hash[vios] == ''
+              if prev_disk != ''
                 # Best Can Do...
                 altdisk_hash[vios] = prev_disk
-                if free_pvs[prev_disk]['pvid'] != "none"
+                if free_pvs[prev_disk]['pvid'] != 'none'
                   used_pv << free_pvs[prev_disk]['pvid']
                 end
               else
@@ -1161,27 +1145,25 @@ module AIX
           else
             # check the specified hdisk is large enough
             hdisk = altdisk_hash[vios]
-            if nim_vios[vios]['free_pvs'].has_key?(hdisk)
+            if nim_vios[vios]['free_pvs'].key?(hdisk)
               if used_pv.include?(nim_vios[vios]['free_pvs'][hdisk]['pvid'])
                 targets_status[vios_key] = "#{err_label} alternate disk #{hdisk} already used on the mirror VIOS"
                 put_error("Alternate disk #{hdisk} already used on the mirror VIOS")
                 return 1
               end
               if nim_vios[vios]['free_pvs'][hdisk]['size'] >= rootvg_size
-                if free_pvs[hdisk]['pvid'] != "none"
+                if free_pvs[hdisk]['pvid'] != 'none'
                   used_pv << free_pvs[hdisk]['pvid']
                 end
-              else
-                if nim_vios[vios]['free_pvs'][hdisk]['size'] >= used_size
-                  if free_pvs[hdisk]['pvid'] != "none"
-                    used_pv << free_pvs[hdisk]['pvid']
-                  end
-                  put_warn("Alternate disk #{hdisk} is smaller than the current rootvg")
-                else
-                  targets_status[vios_key] = "#{err_label} alternate disk #{hdisk} is too small on #{vios}"
-                  put_error("Alternate disk #{hdisk} is too small on #{vios}")
-                  return 1
+              elsif nim_vios[vios]['free_pvs'][hdisk]['size'] >= used_size
+                if free_pvs[hdisk]['pvid'] != 'none'
+                  used_pv << free_pvs[hdisk]['pvid']
                 end
+                put_warn("Alternate disk #{hdisk} is smaller than the current rootvg")
+              else
+                targets_status[vios_key] = "#{err_label} alternate disk #{hdisk} is too small on #{vios}"
+                put_error("Alternate disk #{hdisk} is too small on #{vios}")
+                return 1
               end
             else
               targets_status[vios_key] = "#{err_label} disk #{hdisk} is not available on #{vios}"
@@ -1192,7 +1174,7 @@ module AIX
         end
 
         # Disks found
-        return 0
+        0
       end
 
       # -----------------------------------------------------------------
@@ -1215,17 +1197,17 @@ module AIX
         end
 
         # in auto mode, search for altinst_rootvg
-        if altdisk_hash.empty? || !altdisk_hash.has_key?(vios)
-            altdisk_hash[vios] = ""
+        if altdisk_hash.empty? || !altdisk_hash.key?(vios)
+          altdisk_hash[vios] = ''
         end
         if altdisk_hash[vios].empty?
           nim_vios[vios]['pvs'].keys.each do |hdisk|
-            if nim_vios[vios]['pvs'][hdisk]['vg'] == "altinst_rootvg"
+            if nim_vios[vios]['pvs'][hdisk]['vg'] == 'altinst_rootvg'
               if altdisk_hash[vios].empty?
                 altdisk_hash[vios] = hdisk
               else
                 msg = "There are several alternate install rootvg on #{vios}: #{altdisk_hash[vios]} and #{hdisk}"
-                altdisk_hash[vios] = ""
+                altdisk_hash[vios] = ''
                 raise AltDiskFindError, msg
               end
             end
@@ -1236,21 +1218,21 @@ module AIX
         if altdisk_hash[vios].empty?
           msg = "No alternate install rootvg found on #{vios}"
           ret = 1
-        elsif !nim_vios[vios]['pvs'].has_key?(altdisk_hash[vios])
+        elsif !nim_vios[vios]['pvs'].key?(altdisk_hash[vios])
           msg = "No disk '#{altdisk_hash[vios]}' found on #{vios}"
           ret = 1
-        elsif nim_vios[vios]['pvs'][altdisk_hash[vios]]['vg'] != "altinst_rootvg"
+        elsif nim_vios[vios]['pvs'][altdisk_hash[vios]]['vg'] != 'altinst_rootvg'
           msg = "Disk '#{altdisk_hash[vios]}' is not an alternate install rootvg on #{vios}"
           ret = 1
         end
         unless ret == 0
-          altdisk_hash[vios] = ""
+          altdisk_hash[vios] = ''
           put_warn(msg)
           return ret
         end
 
         log_info("Found altinst_rootvg on disk '#{altdisk_hash[vios]}'")
-        return ret
+        ret
       end
 
       # -----------------------------------------------------------------
@@ -1298,9 +1280,7 @@ module AIX
 
         ret
       end
-
-    end  # VioServer
-
+    end # VioServer
 
     # -----------------------------------------------------------------
     # Print hash in column format
@@ -1779,13 +1759,13 @@ module AIX
       selected_vios = []
       vios_list = []
 
-      vios_list_tuples = targets.gsub(' ','').gsub('),(', ')(').split('(')
+      vios_list_tuples = targets.delete(' ').gsub('),(', ')(').split('(')
       vios_list_tuples.delete_at(0) # after the split, 1rst elt is nil
 
-      unless altdisks.nil? || altdisks == "auto"
-        # TBC VRO: we use gsub to remove spaces then we add them back? 
+      unless altdisks.nil? || altdisks == 'auto'
+        # TBC VRO - we use gsub to remove spaces then we add them back?
         # hd_list_tuples = altdisks.gsub(' ','').gsub('),(', ')(').split('(')
-        altdisks.gsub(' ','').gsub('),(', ')(')
+        altdisks.delete(' ').gsub('),(', ')(')
         hd_list_tuples = altdisks.gsub('(,', '( ,').gsub(',)', ', )').split('(')
         hd_list_tuples.delete_at(0)
         if hd_list_tuples.length != vios_list_tuples.length
@@ -1796,7 +1776,7 @@ module AIX
       # Build targets list
       hd_tuple_index = 0
       vios_list_tuples.each do |vios_tuple|
-        my_tuple = vios_tuple.gsub(')','')
+        my_tuple = vios_tuple.delete(')')
         tuple_elts = my_tuple.split(',')
         tuple_len = tuple_elts.length
 
@@ -1829,22 +1809,22 @@ module AIX
         next if altdisks.nil?
 
         # in auto mode, just add empty hdisk for the 2 vioses
-        if altdisks == "auto"
-          altdisk_hash[tuple_elts[0]] = ""
-          altdisk_hash[tuple_elts[1]] = ""
+        if altdisks == 'auto'
+          altdisk_hash[tuple_elts[0]] = ''
+          altdisk_hash[tuple_elts[1]] = ''
           next
         end
 
         # parse the hdisk tuple
-        hd_tuple = hd_list_tuples[hd_tuple_index].gsub(')','')
+        hd_tuple = hd_list_tuples[hd_tuple_index].delete(')')
         hd_tuple_elts = hd_tuple.split(',')
         hd_tuple_len = hd_tuple_elts.length
         if hd_tuple_len != tuple_len
           raise InvalidTargetsProperty, "Error: alternate hdsik tuple '#{hd_tuple}' and vios tuple '#{my_tuple}' must have the same number of element"
         end
-        altdisk_hash[tuple_elts[0]] = hd_tuple_elts[0].gsub(' ', '')
+        altdisk_hash[tuple_elts[0]] = hd_tuple_elts[0].delete(' ')
         if tuple_len == 2
-          altdisk_hash[tuple_elts[1]] = hd_tuple_elts[1].gsub(' ', '')
+          altdisk_hash[tuple_elts[1]] = hd_tuple_elts[1].delete(' ')
         end
 
         hd_tuple_index += 1
@@ -1858,6 +1838,5 @@ module AIX
       log_info("List of altdisk: #{altdisk_hash}")
       selected_vios
     end
-
-  end  # module PatchMgmt
-end  # module AIX
+  end # module PatchMgmt
+end # module AIX

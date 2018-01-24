@@ -1,4 +1,4 @@
-# recipe example update 
+# recipe example update
 vios = '(gdrh9v1,gdrh9v2) (gdrh10v1,gdrh10v2)'
 disks = '(hdisk1,hdisk2) (hdisk1,)'
 lpp = 'VIOS_225_30-lpp_source'
