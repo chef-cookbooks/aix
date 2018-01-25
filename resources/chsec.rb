@@ -15,14 +15,48 @@
 #
 
 property :file_name, String, name_property: true, identity: true
-property :attributes, Hash
-property :stanza, String, desired_state: false
+property :attributes, Hash, required: true
+property :stanza, String, desired_state: false, required: true
+
+##############################
+# DEFINITIONS
+##############################
+
+# Run lssec and return value of requested attribute or false if command fails
+def lssec(file, stanza, attribute)
+ cmd = shell_out("lssec -c -f '#{file}' -s '#{stanza}' -a '#{attribute}'")
+ if cmd.error?
+  Chef::Log.debug("lssec: attribute '#{attribute}' not found in #{file}:#{stanza}")
+  return false
+ end
+ cmd.stdout.split(/\n/).last.split(':', 2).last
+end
+ 
+def load_current_resource
+ nr.attributes.each_key do |key|
+ current_value = lssec(nr.file_name, nr.stanza, key)
+ current_attributes[key] = current_value if current_value
+ @current_resource.attributes(current_attributes)
+ end
+end
+ 
+def changed_attributes
+ changed            = []
+ new_attributes     = @new_resource.attributes
+ current_attributes = @current_resource.attributes
+ 
+ new_attributes.each_key do |key, value|
+ changed << key unless current_attributes[key.to_sym] == value
+ end
+ 
+ changed
+end
 
 load_current_value do |desired|
   # Check if file exists
   if ::File.exist?(desired.file_name)
     # check if the stanza exists
-    # if the stanza does not exists the resource does not exists
+    # if the stanza does not exists the resource does not exist
     unless ::File.readlines(desired.file_name).grep(/#{desired.stanza}:/)
       Chef::Log.debug("chsec: no stanza found (#{desired.stanza})")
       current_value_does_not_exist!
@@ -67,23 +101,19 @@ end
 
 # update action
 action :update do
-  chsec_s = "chsec -f #{new_resource.name} -s #{new_resource.stanza}"
-  change = false
-  # iterating trough the hash table of sec attributes
-  new_resource.attributes.each do |key, value|
-    # checking if value has to be changed
-    if new_resource.attributes[key] == current_value.attributes[key]
-      Chef::Log.debug("chsec: value of #{key} already set to #{value} for stanza #{new_resource.stanza}")
-    else
-      change = true
-      chsec_s = chsec_s << " -a \"#{key}=#{new_resource.attributes[key]}\""
-    end
+ nr = @new_resource
+ chsec_attrs = []
+ chsec_prefix = \
+ "chsec -f '#{@new_resource.file_name}' -s '#{new_resource.stanza}'"
+ 
+ changed_attributes.each do |key|
+ chsec_attrs << "-a '#{key}'='#{nr.attributes[key]}'"
+ end
+ 
+ unless chsec_attrs.empty?
+  chsec = "#{chsec_prefix} #{chsec_attrs.join(' ')}"
+  converge_by chsec do
+  shell_out!(chsec)
   end
-  if change
-    # we converge if the is a change to do
-    converge_by("chsec: changing #{new_resource.name} for stanza #{new_resource.stanza}") do
-      Chef::Log.debug("chsec: command #{chsec_s}")
-      shell_out!(chsec_s)
-    end
-  end
+ end
 end
