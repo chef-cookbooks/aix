@@ -24,32 +24,32 @@ property :stanza, String, desired_state: false, required: true
 
 # Run lssec and return value of requested attribute or false if command fails
 def lssec(file, stanza, attribute)
- cmd = shell_out("lssec -c -f '#{file}' -s '#{stanza}' -a '#{attribute}'")
- if cmd.error?
-  Chef::Log.debug("lssec: attribute '#{attribute}' not found in #{file}:#{stanza}")
-  return false
- end
- cmd.stdout.split(/\n/).last.split(':', 2).last
+  cmd = shell_out("lssec -c -f '#{file}' -s '#{stanza}' -a '#{attribute}'")
+  if cmd.error?
+    Chef::Log.debug("lssec: attribute '#{attribute}' not found in #{file}:#{stanza}")
+    return false
+  end
+  cmd.stdout.split(/\n/).last.split(':', 2).last
 end
- 
+
 def load_current_resource
- nr.attributes.each_key do |key|
- current_value = lssec(nr.file_name, nr.stanza, key)
- current_attributes[key] = current_value if current_value
- @current_resource.attributes(current_attributes)
- end
+  nr.attributes.each_key do |key|
+    current_value = lssec(nr.file_name, nr.stanza, key)
+    current_attributes[key] = current_value if current_value
+    @current_resource.attributes(current_attributes)
+  end
 end
- 
+
 def changed_attributes
- changed            = []
- new_attributes     = @new_resource.attributes
- current_attributes = @current_resource.attributes
- 
- new_attributes.each_key do |key, value|
- changed << key unless current_attributes[key.to_sym] == value
- end
- 
- changed
+  changed = []
+  new_attributes     = @new_resource.attributes
+  current_attributes = @current_resource.attributes
+
+  new_attributes.each_key do |key, value|
+    changed << key unless current_attributes[key.to_sym] == value
+  end
+
+  changed
 end
 
 load_current_value do |desired|
@@ -101,19 +101,19 @@ end
 
 # update action
 action :update do
- nr = @new_resource
- chsec_attrs = []
- chsec_prefix = \
- "chsec -f '#{@new_resource.file_name}' -s '#{new_resource.stanza}'"
- 
- changed_attributes.each do |key|
- chsec_attrs << "-a '#{key}'='#{nr.attributes[key]}'"
- end
- 
- unless chsec_attrs.empty?
-  chsec = "#{chsec_prefix} #{chsec_attrs.join(' ')}"
-  converge_by chsec do
-  shell_out!(chsec)
+  nr = @new_resource
+  chsec_attrs = []
+  chsec_prefix = \
+    "chsec -f '#{@new_resource.file_name}' -s '#{new_resource.stanza}'"
+
+  changed_attributes.each do |key|
+    chsec_attrs << "-a '#{key}'='#{nr.attributes[key]}'"
   end
- end
+
+  unless chsec_attrs.empty?
+    chsec = "#{chsec_prefix} #{chsec_attrs.join(' ')}"
+    converge_by chsec do
+      shell_out!(chsec)
+    end
+  end
 end
