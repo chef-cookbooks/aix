@@ -1763,10 +1763,8 @@ module AIX
       vios_list_tuples.delete_at(0) # after the split, 1rst elt is nil
 
       unless altdisks.nil? || altdisks == 'auto'
-        # TBC VRO - we use gsub to remove spaces then we add them back?
-        # hd_list_tuples = altdisks.gsub(' ','').gsub('),(', ')(').split('(')
-        altdisks.delete(' ').gsub('),(', ')(')
-        hd_list_tuples = altdisks.gsub('(,', '( ,').gsub(',)', ', )').split('(')
+        # Remove the spaces added here after after the tuple lengh has beed tested
+        hd_list_tuples = altdisks.delete(' ').gsub('),(', ')(').gsub('(,', '( ,').gsub(',)', ', )').split('(')
         hd_list_tuples.delete_at(0)
         if hd_list_tuples.length != vios_list_tuples.length
           raise InvalidTargetsProperty, "Error: Alternate hdisks '#{altdisks}' and vios target '#{targets}' must have the same number of element"

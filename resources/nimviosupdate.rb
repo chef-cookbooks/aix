@@ -14,9 +14,8 @@
 # limitations under the License.
 #
 
-# TBC - uniform use of log_xxx instead of Chef::Log.xxx in previous code
-# TBC - uniform use of put_xxx (pach_mgmt.rb) in previous code
-# TBC - Should we use Mixlib::ShellOut.new(cmd_s) instead of popen3 in nim_updateios?
+# TBC - uniformize use of log_xxx instead of Chef::Log.xxx in previous code
+# TBC - uniformize use of put_xxx (pach_mgmt.rb) in previous code
 
 include AIX::PatchMgmt
 
@@ -337,7 +336,6 @@ end
 #    raise ViosUpdateError in case of error
 # -----------------------------------------------------------------
 def nim_updateios(vios, cmd_s)
-  # TBC - Why not use  nim = Mixlib::ShellOut.new(cmd_s) like in resources/nim.rb?
   put_info("Start updating vios '#{vios}' with NIM updateios.")
   log_info("nim_updateios: '#{cmd_s}'")
   # TBC - For testing, will be remove after test !!!
@@ -517,7 +515,7 @@ action :update do
   log_info("VIOS UPDATE - action_list=\"#{action_list}\"")
   log_info("VIOS UPDATE - targets=#{targets}")
   STDOUT.puts ''
-  STDERR.puts '' # TBC - need for message presentation
+  STDERR.puts '' # TBC - needed for message presentation
 
   # check the action_list property
   allowed_action = %w(check altdisk_copy update altdisk_cleanup)
