@@ -697,6 +697,74 @@ aix_flrtvc "download recommended efixes only" do
 end
 ```
 
+### nimviosupdate
+
+Use nimviosupdate to update a VIOS or a couple of VIOSes by installing software from the NIM server.
+Each action from the action list can be executed independently or together: check, altdisk_copy, update, altdisk_cleanup
+action_list:
+ * check: verify the redundancy of the 2 VIOSes for the update
+ * altdisk_copy: will make an alternate rootvg on an available disk
+ * update: install software on VIOSes from existing NIM lpp source
+ * altdisk_cleanup: to remove the altinst_rootvg
+ 
+#### Properties
+
+- `lpp_source` - Name of NIM lpp_source resource to install
+- `targets` - Comma separated list of single or dual VIOSes to manage in a tuple format (required)
+- `altdisks` - List of hdisks on which the alternate disk copy will be created. A disk is automatically searched when no disk is specified for a VIOS
+- `action_list` - Comma separated list of actions to perform on VIOSes and or VIOSes tuples (default: "check,altdisk_copy,update")
+- `updateios_flags` - Flags and update options for the updateios command (values: install, commit, cleanup or remove)
+- `accept_licenses` - (values: yes or no) (default: yes) To automatically accept license at software installation
+- `preview` - (values: yes or no) (default: yes) To select the install preview mode.
+
+#### Actions
+
+- `update` - check, altdisk copy, update, cleanup depending on the action_list parameter.
+
+#### Examples
+
+```ruby
+aix_nimviosupdate "check the vios redundancy" do
+  targets "(vios1,vios2),(vios3,vios4)(vios5)"
+  action_list "check"
+  action :update
+end
+
+aix_nimviosupdate "build an alternate rootvg" do
+  targets "(vios1,vios2),(vios3,vios4),(vios5)"
+  altdisks "(hdisk1,hdisk2)(hdisk1,)()"
+  action_list "altdisk_copy"
+  action :update
+end
+
+aix_nimviosupdate "update VIOSes using lpp_source " do
+  lpp_source "lpp_source_name"
+  targets "(vios1,vios2),(vios3,vios4),(vios5)"
+  action_list "update"
+  updateios_flags "install"
+  accept_licenses "yes"
+  preview "no"
+  action :update
+end
+
+aix_nimviosupdate "remove alternate rootvg" do
+  targets "(vios1,vios2),(vios3,vios4),(vios5)"
+  action_list "altdisk_cleanup"
+  action :update
+end
+
+aix_nimviosupdate "check VIOSes tuples, make alternate rootvg, update VIOSes, remove alternate rootvg" do
+  lpp_source "lpp_source_name"
+  targets "(vios1,vios2),(vios3,vios4),(vios())"
+  altdisks "(,)(,),()"
+  updateios_flags "install"
+  accept_licenses "yes"
+  preview "no"
+  action_list "check,altdisk_copy,update,altdisk_cleanup"
+  action :update
+end
+```
+
 ### niminit
 
 Use niminit to configure the nimclient package. This will look if /etc/niminfo exists and create it if it does not exist. You can the use nimclient provider after niminiting the client.
