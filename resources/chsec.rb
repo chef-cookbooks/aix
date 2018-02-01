@@ -15,8 +15,8 @@
 #
 
 property :file_name, String, name_property: true, identity: true
-property :attributes, Hash, required: true
-property :stanza, String, desired_state: false, required: true
+property :attributes, Hash
+property :stanza, String, desired_state: false
 
 ##############################
 # DEFINITIONS
@@ -33,8 +33,8 @@ def lssec(file, stanza, attribute)
 end
  
 def load_current_resource
- nr.attributes.each_key do |key|
- current_value = lssec(nr.file_name, nr.stanza, key)
+ new_res.attributes.each_key do |key|
+ current_value = lssec(new_res.file_name, new_res.stanza, key)
  current_attributes[key] = current_value if current_value
  @current_resource.attributes(current_attributes)
  end
@@ -101,13 +101,13 @@ end
 
 # update action
 action :update do
- nr = @new_resource
+ new_res = @new_resource
  chsec_attrs = []
  chsec_prefix = \
  "chsec -f '#{@new_resource.file_name}' -s '#{new_resource.stanza}'"
  
  changed_attributes.each do |key|
- chsec_attrs << "-a '#{key}'='#{nr.attributes[key]}'"
+ chsec_attrs << "-a '#{key}'='#{new_res.attributes[key]}'"
  end
  
  unless chsec_attrs.empty?
