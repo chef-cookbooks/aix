@@ -92,7 +92,7 @@ def increase_filesystem(path)
   Chef::Log.warn(so.stdout.chomp)
 end
 
-def run_flrtvc(m)
+def run_flrtvc(m, apar, filesets, csv, path, verbose)
   # check other properties
   apar_s = validate_apar(apar)
   Chef::Log.debug("apar_s: #{apar_s}")
@@ -386,7 +386,7 @@ action :install do
     # delete
     file unzip_file.to_s do
       action :delete
-      only_if { clean == true }
+      only_if { new_resource.clean == true }
     end
   end
 
@@ -405,7 +405,7 @@ action :install do
     # delete
     file flrtvc_file.to_s do
       action :delete
-      only_if { clean == true }
+      only_if { new_resource.clean == true }
     end
   end
 
@@ -420,11 +420,11 @@ end
 ##############################
 action :patch do
   # inputs
-  Chef::Log.debug("targets=#{targets}")
-  Chef::Log.debug("apar=#{apar}")
-  Chef::Log.debug("filesets=#{filesets}")
-  Chef::Log.debug("csv=#{csv}")
-  Chef::Log.debug("path=#{path}")
+  Chef::Log.debug("targets=#{new_resource.targets}")
+  Chef::Log.debug("apar=#{new_resource.apar}")
+  Chef::Log.debug("filesets=#{new_resource.filesets}")
+  Chef::Log.debug("csv=#{new_resource.csv}")
+  Chef::Log.debug("path=#{new_resource.path}")
 
   check_flrtvc
 
@@ -437,14 +437,14 @@ action :patch do
   # build list of targets
   so = Mixlib::ShellOut.new("lsnim -t standalone | cut -d' ' -f1 | sort").run_command.stdout.split
   so.concat Mixlib::ShellOut.new("lsnim -t vios | cut -d' ' -f1 | sort").run_command.stdout.split
-  target_list = expand_targets(targets, so)
+  target_list = expand_targets(new_resource.targets, so)
   Chef::Log.debug("target_list: #{target_list}")
 
   # loop on clients
   target_list.each do |m|
     # run flrtvc
     begin
-      out = run_flrtvc(m)
+      out = run_flrtvc(m, new_resource.apar, new_resource.filesets, new_resource.csv, new_resource.path, new_resource.verbose)
     rescue Mixlib::ShellOut::ShellCommandFailed => e
       Chef::Log.warn("[#{m}] Cannot be contacted")
       next # target unreachable
@@ -458,7 +458,7 @@ action :patch do
       next # target up-to-date
     end
 
-    next if check_only == true
+    next if new_resource.check_only == true
 
     # download and check fixes
     efixes = download_and_check_fixes(m, urls, base_dir)
@@ -468,7 +468,7 @@ action :patch do
       next
     end
 
-    next if download_only == true
+    next if new_resource.download_only == true
 
     # create lpp source directory
     lpp_source = "#{m}-lpp_source"
@@ -534,7 +534,7 @@ action :patch do
           STDERR.puts e.message
           Chef::Log.warn("[#{m}] Failed installing some efixes. See /var/adm/ras/emgr.log on #{m} for details")
         end
-        nim.remove_resource(lpp_source) if clean == true
+        nim.remove_resource(lpp_source) if new_resource.clean == true
       end
     else
       # create lpp source, patch and remove it
@@ -547,11 +547,11 @@ action :patch do
           STDERR.puts e.message
           Chef::Log.warn("[#{m}] Failed installing some efixes. See /var/adm/ras/emgr.log on #{m} for details")
         end
-        nim.remove_resource(lpp_source) if clean == true
+        nim.remove_resource(lpp_source) if new_resource.clean == true
       end
     end
   end # end targets
 
   # clean temporary files
-  ::FileUtils.remove_dir(base_dir) if clean == true
+  ::FileUtils.remove_dir(base_dir) if new_resource.clean == true
 end

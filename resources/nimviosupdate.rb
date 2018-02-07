@@ -287,7 +287,7 @@ end
 #    raise ViosUpdateBadProperty in case of error
 #    raise VioslppSourceBadLocation in case of error
 # -----------------------------------------------------------------
-def get_updateios_cmd(accept_licenses, updateios_flags, filesets, installp_bundle, preview)
+def get_updateios_cmd(lpp_source, accept_licenses, updateios_flags, filesets, installp_bundle, preview)
   cmd = '/usr/sbin/nim -o updateios'
 
   # lpp_source
@@ -511,35 +511,35 @@ end
 ##############################
 action :update do
   # inputs
-  log_info("VIOS UPDATE - desc=\"#{desc}\"")
-  log_info("VIOS UPDATE - action_list=\"#{action_list}\"")
-  log_info("VIOS UPDATE - targets=#{targets}")
+  log_info("VIOS UPDATE - desc=\"#{new_resource.desc}\"")
+  log_info("VIOS UPDATE - action_list=\"#{new_resource.action_list}\"")
+  log_info("VIOS UPDATE - targets=#{new_resource.targets}")
   STDOUT.puts ''
   STDERR.puts '' # TBC - needed for message presentation
 
   # check the action_list property
   allowed_action = %w(check altdisk_copy update altdisk_cleanup)
-  action_list.delete(' ').split(',').each do |my_action|
+  new_resource.action_list.delete(' ').split(',').each do |my_action|
     unless allowed_action.include?(my_action)
-      raise ViosUpdateBadProperty, "Invalid action '#{my_action}' in action_list '#{action_list}', must be in: #{allowed_action.join(',')}"
+      raise ViosUpdateBadProperty, "Invalid action '#{my_action}' in action_list '#{new_resource.action_list}', must be in: #{allowed_action.join(',')}"
     end
   end
 
   # check mandatory properties for the action_list
-  if action_list.include?('altdisk_copy') && (altdisks.nil? || altdisks.empty?)
+  if new_resource.action_list.include?('altdisk_copy') && (new_resource.altdisks.nil? || new_resource.altdisks.empty?)
     raise ViosUpdateBadProperty, "Please specify an 'altdisks' property for altdisk_copy operation"
   end
 
-  if action_list.include?('update')
-    raise ViosUpdateBadProperty, 'filesets is required for the update remove operation' if (filesets.nil? || filesets.empty?) && updateios_flags == 'remove'
-    raise ViosUpdateBadProperty, 'lpp_source is required for the update operation' if lpp_source.nil? || lpp_source.empty?
-    raise ViosUpdateBadProperty, 'updateios_flags is required for the update operation' if updateios_flags.nil? || updateios_flags.empty?
+  if new_resource.action_list.include?('update')
+    raise ViosUpdateBadProperty, 'filesets is required for the update remove operation' if (new_resource.filesets.nil? || new_resource.filesets.empty?) && new_resource.updateios_flags == 'remove'
+    raise ViosUpdateBadProperty, 'lpp_source is required for the update operation' if new_resource.lpp_source.nil? || new_resource.lpp_source.empty?
+    raise ViosUpdateBadProperty, 'updateios_flags is required for the update operation' if new_resource.updateios_flags.nil? || new_resource.updateios_flags.empty?
 
-    if updateios_flags == 'remove'
-      if fileset.downcase != 'none' && !installp_bundle.nil? && !installp_bundle.emty? && installp_bundle != 'none'
+    if new_resource.updateios_flags == 'remove'
+      if new_resource.filesets.downcase != 'none' && !new_resource.installp_bundle.nil? && !new_resource.installp_bundle.emty? && new_resource.installp_bundle != 'none'
         raise ViosUpdateBadProperty, "'filesets' and 'installp_bundle' properties are exclusive when 'updateios_flags' is 'remove'."
       end
-      if fileset.downcase == 'none' && (installp_bundle.nil? || !installp_bundle.emty? || installp_bundle == 'none')
+      if new_resource.filesets.downcase == 'none' && (new_resource.installp_bundle.nil? || !new_resource.installp_bundle.emty? || new_resource.installp_bundle == 'none')
         raise ViosUpdateBadProperty, "'filesets' or 'installp_bundle' property must be specified when 'updateios_flags' is 'remove'."
       end
     end
@@ -547,8 +547,8 @@ action :update do
 
   # build time object from time_limit attribute,
   end_time = nil
-  unless time_limit.nil?
-    if time_limit =~ %r/^(\d{2})\/(\d{2})\/(\d{2,4}) (\d{1,2}):(\d{1,2})$/
+  unless new_resource.time_limit.nil?
+    if new_resource.time_limit =~ %r/^(\d{2})\/(\d{2})\/(\d{2,4}) (\d{1,2}):(\d{1,2})$/
       end_time = Time.local(Regexp.last_match(3).to_i,
                             Regexp.last_match(2).to_i,
                             Regexp.last_match(1).to_i,
@@ -556,7 +556,7 @@ action :update do
                             Regexp.last_match(5).to_i)
       log_info("End time for operation: '#{end_time}'")
     else
-      raise ViosUpdateBadProperty, "Error: 'time_limit' property must be in the format: 'mm/dd/yy HH:MM', got:'#{time_limit}'"
+      raise ViosUpdateBadProperty, "Error: 'time_limit' property must be in the format: 'mm/dd/yy HH:MM', got:'#{new_resource.time_limit}'"
     end
   end
 
@@ -578,10 +578,10 @@ action :update do
 
   # build list of targets
   altdisk_hash = {}
-  target_list = expand_vios_pair_targets(targets, nim_vios.keys, altdisks, altdisk_hash)
+  target_list = expand_vios_pair_targets(new_resource.targets, nim_vios.keys, new_resource.altdisks, altdisk_hash)
 
   # check vioshc script is executable
-  check_vioshc if action_list.include?('check')
+  check_vioshc if new_resource.action_list.include?('check')
 
   # main loop on target: can be 1-tuple or 2-tuple of VIOS
   targets_status = {}
@@ -602,7 +602,7 @@ action :update do
 
     ###############
     # health_check
-    if action_list.include?('check')
+    if new_resource.action_list.include?('check')
       Chef::Log.info('VIOS UPDATE - action=altdisk_copy')
       put_info("Health Check for VIOS tuple: #{target_tuple}")
 
@@ -664,14 +664,14 @@ action :update do
     # Alternate disk copy operation
 
     # check previous status and skip if failure
-    if action_list.include?('altdisk_copy')
+    if new_resource.action_list.include?('altdisk_copy')
       log_info('VIOS UPDATE - action=altdisk_copy')
-      log_info("VIOS UPDATE - altdisks=#{altdisks}")
-      log_info("VIOS UPDATE - disk_size_policy=#{disk_size_policy}")
+      log_info("VIOS UPDATE - altdisks=#{new_resource.altdisks}")
+      log_info("VIOS UPDATE - disk_size_policy=#{new_resource.disk_size_policy}")
       log_info("Alternate disk copy for VIOS tuple: #{target_tuple}")
 
       # if health check status is known, check the vios tuple has passed
-      if action_list.include?('check') && targets_status[vios_key] != 'SUCCESS-HC'
+      if new_resource.action_list.include?('check') && targets_status[vios_key] != 'SUCCESS-HC'
         put_warn("Alternate disk copy for #{vios_key} VIOSes skipped (previous status: #{targets_status[vios_key]})")
         next
       end
@@ -682,7 +682,7 @@ action :update do
         ret = 0
 
         begin
-          ret = vio_server.find_valid_altdisk(nim_vios, vios_list, vios_key, targets_status, altdisk_hash, disk_size_policy)
+          ret = vio_server.find_valid_altdisk(nim_vios, vios_list, vios_key, targets_status, altdisk_hash, new_resource.disk_size_policy)
           next if ret == 1
         rescue AltDiskFindError => e
           put_error(e.message)
@@ -743,7 +743,7 @@ action :update do
           end
         end
       else
-        put_warn("Alternate disk copy for #{vios_key} skipped: time limit '#{time_limit}' reached")
+        put_warn("Alternate disk copy for #{vios_key} skipped: time limit '#{new_resource.time_limit}' reached")
       end
 
       log_info("Alternate disk copy status for #{vios_key}: #{targets_status[vios_key]}")
@@ -751,16 +751,16 @@ action :update do
 
     ########
     # update
-    if action_list.include?('update')
+    if new_resource.action_list.include?('update')
       log_info('VIOS UPDATE - action=update')
-      log_info("VIOS UPDATE - lpp_source=#{lpp_source}")
-      log_info("VIOS UPDATE - updateios_flags=#{updateios_flags}")
-      log_info("VIOS UPDATE - accept_licenses=#{accept_licenses}")
-      log_info("VIOS UPDATE - preview=#{preview}")
+      log_info("VIOS UPDATE - lpp_source=#{new_resource.lpp_source}")
+      log_info("VIOS UPDATE - updateios_flags=#{new_resource.updateios_flags}")
+      log_info("VIOS UPDATE - accept_licenses=#{new_resource.accept_licenses}")
+      log_info("VIOS UPDATE - preview=#{new_resource.preview}")
       log_info("VIOS update operation for VIOS tuple: #{target_tuple}")
 
-      if action_list.include?('altdisk_copy') && targets_status[vios_key] != 'SUCCESS-ALTDC' ||
-         !action_list.include?('altdisk_copy') && action_list.include?('check') && targets_status[vios_key] != 'SUCCESS-HC'
+      if new_resource.action_list.include?('altdisk_copy') && targets_status[vios_key] != 'SUCCESS-ALTDC' ||
+         !new_resource.action_list.include?('altdisk_copy') && new_resource.action_list.include?('check') && targets_status[vios_key] != 'SUCCESS-HC'
         put_warn("Update of #{vios_key} vioses skipped (previous status: #{targets_status[vios_key]})")
         next
       end
@@ -787,7 +787,7 @@ action :update do
         end
 
         begin
-          cmd = get_updateios_cmd(accept_licenses, updateios_flags, filesets, installp_bundle, preview)
+          cmd = get_updateios_cmd(new_resource.lpp_source, new_resource.accept_licenses, new_resource.updateios_flags, new_resource.filesets, new_resource.installp_bundle, new_resource.preview)
         rescue ViosUpdateBadProperty, VioslppSourceBadLocation => e
           put_error("Update #{vios_key}: #{e.message}")
           targets_status[vios_key] = 'FAILURE-UPDT1'
@@ -855,7 +855,7 @@ action :update do
           break if break_required
         end
       else
-        put_warn("Update #{vios_key} skipped: time limit '#{time_limit}' reached")
+        put_warn("Update #{vios_key} skipped: time limit '#{new_resource.time_limit}' reached")
       end
 
       log_info("Update status for vios '#{vios_key}': #{targets_status[vios_key]}.")
@@ -863,15 +863,15 @@ action :update do
 
     ###############
     # Alternate disk cleanup operation
-    if action_list.include?('altdisk_cleanup')
+    if new_resource.action_list.include?('altdisk_cleanup')
       log_info('VIOS UPDATE - action=altdisk_cleanup')
-      log_info("VIOS UPDATE - altdisks=#{altdisks}")
+      log_info("VIOS UPDATE - altdisks=#{new_resource.altdisks}")
       log_info("Alternate disk cleanup for VIOS tuple: #{target_tuple}")
 
       # check previous status and skip if failure
-      if action_list.include?('update') && targets_status[vios_key] != 'SUCCESS-UPDT' ||
-         !action_list.include?('update') && action_list.include?('altdisk_copy') && targets_status[vios_key] != 'SUCCESS-ALTDC' ||
-         !action_list.include?('update') && !action_list.include?('altdisk_copy') && action_list.include?('check') && targets_status[vios_key] != 'SUCCESS-HC'
+      if new_resource.action_list.include?('update') && targets_status[vios_key] != 'SUCCESS-UPDT' ||
+         !new_resource.action_list.include?('update') && new_resource.action_list.include?('altdisk_copy') && targets_status[vios_key] != 'SUCCESS-ALTDC' ||
+         !new_resource.action_list.include?('update') && !new_resource.action_list.include?('altdisk_copy') && new_resource.action_list.include?('check') && targets_status[vios_key] != 'SUCCESS-HC'
         put_warn("Alternate disk cleanup for #{vios_key} VIOSes skipped (previous status: #{targets_status[vios_key]}")
         next
       end

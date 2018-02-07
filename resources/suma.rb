@@ -60,13 +60,13 @@ action :download do
   check_nim_info(node)
 
   # obtain suma parameters
-  params = suma_params(node, desc, oslevel, location, targets)
+  params = suma_params(node, new_resource.desc, new_resource.oslevel, new_resource.location, new_resource.targets)
   return if params.nil?
 
   # suma preview
   suma = Suma.new(params)
   suma.preview
-  return if preview_only == true
+  return if new_resource.preview_only == true
 
   if suma.downloaded?
     # suma download
@@ -87,7 +87,7 @@ end
 # ACTION: list
 ##############################
 action :list do
-  so = shell_out!('/usr/sbin/suma -l ' + task_id.to_s)
+  so = shell_out!('/usr/sbin/suma -l ' + new_resource.task_id.to_s)
   converge_by("Suma tasks:\n#{so.stdout}") do
   end
 end
@@ -101,19 +101,19 @@ action :edit do
   # TODO: treat fields
 
   if property_is_set?(:sched_time)
-    if sched_time.empty?
+    if new_resource.sched_time.empty?
       # unschedule
       suma_s << ' -u'
     else
       # schedule
-      minute, hour, day, month, weekday = sched_time.split(' ')
+      minute, hour, day, month, weekday = new_resource.sched_time.split(' ')
       raise SumaError unless minute.eql?('*') || (minute.to_i >= 0 && minute.to_i <= 59)
       raise SumaError unless hour.eql?('*') || (hour.to_i >= 0 && hour.to_i <= 23)
       raise SumaError unless day.eql?('*') || (day.to_i >= 1 && day.to_i <= 31)
       raise SumaError unless month.eql?('*') || (month.to_i >= 1 && month.to_i <= 12)
       raise SumaError unless weekday.eql?('*') || (weekday.to_i >= 0 && weekday.to_i <= 6)
       Chef::Log.debug("minute=#{minute}, hour=#{hour}, day=#{day}, month=#{month}, weekday=#{weekday}")
-      suma_s << ' -s "' << sched_time << '"'
+      suma_s << ' -s "' << new_resource.sched_time << '"'
     end
   else
     # save
@@ -121,10 +121,10 @@ action :edit do
   end
 
   raise MissingTaskIdProperty, 'Please provide a task_id property to edit !' unless property_is_set?(:task_id)
-  suma_s << ' ' << task_id.to_s
+  suma_s << ' ' << new_resource.task_id.to_s
 
   Chef::Log.warn(suma_s)
-  converge_by("Edit suma task #{task_id}") do
+  converge_by("Edit suma task #{new_resource.task_id}") do
     shell_out!(suma_s)
   end
 end
@@ -134,8 +134,8 @@ end
 ##############################
 action :unschedule do
   raise MissingTaskIdProperty, 'Please provide a task_id property to unschedule !' unless property_is_set?(:task_id)
-  converge_by("Unschedule suma task #{task_id}") do
-    shell_out!('/usr/sbin/suma -u ' + task_id.to_s)
+  converge_by("Unschedule suma task #{new_resource.task_id}") do
+    shell_out!('/usr/sbin/suma -u ' + new_resource.task_id.to_s)
   end
 end
 
@@ -144,8 +144,8 @@ end
 ##############################
 action :delete do
   raise MissingTaskIdProperty, 'Please provide a task_id property to delete !' unless property_is_set?(:task_id)
-  converge_by("Delete suma task #{task_id}") do
-    shell_out!('/usr/sbin/suma -d ' + task_id.to_s)
+  converge_by("Delete suma task #{new_resource.task_id}") do
+    shell_out!('/usr/sbin/suma -d ' + new_resource.task_id.to_s)
   end
 end
 
