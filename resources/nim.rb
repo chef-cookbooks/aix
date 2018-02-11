@@ -35,28 +35,28 @@ property :force, [true, false], default: false
 ##############################
 action :update do
   # inputs
-  Chef::Log.debug("desc=\"#{desc}\"")
-  Chef::Log.debug("lpp_source=#{lpp_source}")
-  Chef::Log.debug("targets=#{targets}")
-  Chef::Log.debug("async=#{async}")
-  Chef::Log.debug("force=#{force}")
+  Chef::Log.debug("desc=\"#{new_resource.desc}\"")
+  Chef::Log.debug("lpp_source=#{new_resource.lpp_source}")
+  Chef::Log.debug("targets=#{new_resource.targets}")
+  Chef::Log.debug("async=#{new_resource.async}")
+  Chef::Log.debug("force=#{new_resource.force}")
 
   check_nim_info(node)
 
   # force latest_sp/tl synchronously
-  if property_is_set?(:async) && (lpp_source == 'latest_tl' || lpp_source == 'latest_sp')
+  if property_is_set?(:async) && (new_resource.lpp_source == 'latest_tl' || new_resource.lpp_source == 'latest_sp')
     Chef::Log.warn('Force customization synchronously')
     local_async = false
   else
-    local_async = async
+    local_async = new_resource.async
   end
 
   # build list of targets
-  target_list = expand_targets(targets, node['nim']['clients'].keys)
+  target_list = expand_targets(new_resource.targets, node['nim']['clients'].keys)
   Chef::Log.debug("target_list: #{target_list}")
 
   # force interim fixes automatic removal
-  if property_is_set?(:force) && force == true
+  if property_is_set?(:force) && new_resource.force == true
     target_list.each do |m|
       fixes = list_fixes(m)
       fixes.each do |fix|
@@ -69,9 +69,9 @@ action :update do
   # nim install
   nim = Nim.new
   if local_async
-    check_lpp_source_name(lpp_source, node)
-    converge_by("nim: perform asynchronous software customization for client(s) \'#{target_list.join(' ')}\' with resource \'#{lpp_source}\'") do
-      nim.perform_async_customization(lpp_source, target_list.join(' '))
+    check_lpp_source_name(new_resource.lpp_source, node)
+    converge_by("nim: perform asynchronous software customization for client(s) \'#{target_list.join(' ')}\' with resource \'#{new_resource.lpp_source}\'") do
+      nim.perform_async_customization(new_resource.lpp_source, target_list.join(' '))
     end
   else # synchronous update
     target_list.each do |m|
@@ -85,15 +85,15 @@ action :update do
       current_oslevel = current_oslevel.split('-')
 
       # get lpp source
-      if lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
-        lpp_source_array = lpp_source.split('_')
+      if new_resource.lpp_source == 'latest_tl' || new_resource.lpp_source == 'latest_sp'
+        lpp_source_array = new_resource.lpp_source.split('_')
         time = lpp_source_array[0]
         type = lpp_source_array[1]
         new_lpp_source = find_resource_by_client(type, time, current_oslevel, node)
         Chef::Log.debug("new_lpp_source: #{new_lpp_source}")
       else
-        check_lpp_source_name(lpp_source, node)
-        new_lpp_source = lpp_source
+        check_lpp_source_name(new_resource.lpp_source, node)
+        new_lpp_source = new_resource.lpp_source
       end
 
       # extract oslevel from lpp source
@@ -131,8 +131,8 @@ end
 action :master_setup do
   # Example of nim_master_setup
   # nim_master_setup -a mk_resource=no -B -a device=/mnt
-  unless device.nil? || device.empty?
-    nim_master_setup_s = 'nim_master_setup -B -a mk_resource=no -a device=' + device
+  unless new_resource.device.nil? || new_resource.device.empty?
+    nim_master_setup_s = 'nim_master_setup -B -a mk_resource=no -a device=' + new_resource.device
 
     # converge here
     converge_by("nim: setup master \"#{nim_master_setup_s}\"") do
@@ -170,7 +170,7 @@ action :compare do
   check_nim_info(node)
 
   # build list of targets
-  target_list = expand_targets(targets, node['nim']['clients'].keys)
+  target_list = expand_targets(new_resource.targets, node['nim']['clients'].keys)
   Chef::Log.debug("target_list: #{target_list}")
 
   # run niminv command
@@ -186,19 +186,19 @@ end
 # ACTION: script
 ##############################
 action :script do
-  Chef::Log.debug("targets: #{targets}")
-  Chef::Log.debug("script: #{script}")
-  Chef::Log.debug("async: #{async}")
+  Chef::Log.debug("targets: #{new_resource.targets}")
+  Chef::Log.debug("script: #{new_resource.script}")
+  Chef::Log.debug("async: #{new_resource.async}")
 
   check_nim_info(node)
 
-  local_async = async == true ? 'yes' : 'no'
+  local_async = new_resource.async == true ? 'yes' : 'no'
 
   # build list of targets
-  target_list = expand_targets(targets, node['nim']['clients'].keys)
+  target_list = expand_targets(new_resource.targets, node['nim']['clients'].keys)
   Chef::Log.debug("target_list: #{target_list}")
 
-  nim_s = "nim -o cust -a script=#{script} -a async=#{local_async} #{target_list.join(' ')}"
+  nim_s = "nim -o cust -a script=#{new_resource.script} -a async=#{local_async} #{target_list.join(' ')}"
   # converge here
   converge_by("nim: script customization operation \"#{nim_s}\"") do
     nim = Mixlib::ShellOut.new(nim_s)
@@ -215,16 +215,16 @@ end
 # ACTION: allocate
 ##############################
 action :allocate do
-  Chef::Log.debug("targets: #{targets}")
-  Chef::Log.debug("lpp_source: #{lpp_source}")
+  Chef::Log.debug("targets: #{new_resource.targets}")
+  Chef::Log.debug("lpp_source: #{new_resource.lpp_source}")
 
   check_nim_info(node)
 
   # build list of targets
-  target_list = expand_targets(targets, node['nim']['clients'].keys)
+  target_list = expand_targets(new_resource.targets, node['nim']['clients'].keys)
   Chef::Log.debug("target_list: #{target_list}")
 
-  nim_s = "nim -o allocate -a lpp_source=#{lpp_source} #{target_list.join(' ')}"
+  nim_s = "nim -o allocate -a lpp_source=#{new_resource.lpp_source} #{target_list.join(' ')}"
   # converge here
   converge_by("nim: allocate operation \"#{nim_s}\"") do
     nim = Mixlib::ShellOut.new(nim_s)
@@ -241,16 +241,16 @@ end
 # ACTION: deallocate
 ##############################
 action :deallocate do
-  Chef::Log.debug("targets: #{targets}")
-  Chef::Log.debug("lpp_source: #{lpp_source}")
+  Chef::Log.debug("targets: #{new_resource.targets}")
+  Chef::Log.debug("lpp_source: #{new_resource.lpp_source}")
 
   check_nim_info(node)
 
   # build list of targets
-  target_list = expand_targets(targets, node['nim']['clients'].keys)
+  target_list = expand_targets(new_resource.targets, node['nim']['clients'].keys)
   Chef::Log.debug("target_list: #{target_list}")
 
-  nim_s = "nim -o deallocate -a lpp_source=#{lpp_source} #{target_list.join(' ')}"
+  nim_s = "nim -o deallocate -a lpp_source=#{new_resource.lpp_source} #{target_list.join(' ')}"
   # converge here
   converge_by("nim: deallocate operation \"#{nim_s}\"") do
     nim = Mixlib::ShellOut.new(nim_s)
@@ -267,20 +267,20 @@ end
 # ACTION: bos_inst
 ##############################
 action :bos_inst do
-  Chef::Log.debug("targets: #{targets}")
-  Chef::Log.debug("group: #{group}")
-  Chef::Log.debug("script: #{script}")
+  Chef::Log.debug("targets: #{new_resource.targets}")
+  Chef::Log.debug("group: #{new_resource.group}")
+  Chef::Log.debug("script: #{new_resource.script}")
 
   check_nim_info(node)
 
   # build list of targets
-  target_list = expand_targets(targets, node['nim']['clients'].keys)
+  target_list = expand_targets(new_resource.targets, node['nim']['clients'].keys)
   Chef::Log.debug("target_list: #{target_list}")
 
   # script
-  script_s = script.empty? ? '' : "-a script=#{script}"
+  script_s = new_resource.script.empty? ? '' : "-a script=#{new_resource.script}"
 
-  nim_s = "nim -o bos_inst -a source=mksysb -a group=#{group} #{script_s} #{target_list.join(' ')}"
+  nim_s = "nim -o bos_inst -a source=mksysb -a group=#{new_resource.group} #{script_s} #{target_list.join(' ')}"
   # converge here
   converge_by("nim: bos_inst operation \"#{nim_s}\"") do
     nim = Mixlib::ShellOut.new(nim_s)
@@ -297,10 +297,10 @@ end
 # ACTION: define_script
 ##############################
 action :define_script do
-  Chef::Log.debug("resource: #{resource}")
-  Chef::Log.debug("location: #{location}")
+  Chef::Log.debug("resource: #{new_resource.resource}")
+  Chef::Log.debug("location: #{new_resource.location}")
 
-  nim_s = "nim -o define -t script -a location=#{location} -a server=master #{resource}"
+  nim_s = "nim -o define -t script -a location=#{new_resource.location} -a server=master #{new_resource.resource}"
   # converge here
   converge_by("nim: define operation \"#{nim_s}\"") do
     nim = Mixlib::ShellOut.new(nim_s)
@@ -317,9 +317,9 @@ end
 # ACTION: remove
 ##############################
 action :remove do
-  Chef::Log.debug("resource: #{resource}")
+  Chef::Log.debug("resource: #{new_resource.resource}")
 
-  nim_s = "nim -o remove #{resource}"
+  nim_s = "nim -o remove #{new_resource.resource}"
   # converge here
   converge_by("nim: remove operation \"#{nim_s}\"") do
     nim = Mixlib::ShellOut.new(nim_s)
@@ -336,13 +336,13 @@ end
 # ACTION: reset
 ##############################
 action :reset do
-  Chef::Log.debug("resource: #{resource}")
-  Chef::Log.debug("force: #{force}")
+  Chef::Log.debug("resource: #{new_resource.resource}")
+  Chef::Log.debug("force: #{new_resource.force}")
 
-  force_s = force == true ? '-F' : ''
+  force_s = new_resource.force == true ? '-F' : ''
   Chef::Log.debug("force_s: #{force_s}")
 
-  nim_s = "nim #{force_s} -o reset #{resource}"
+  nim_s = "nim #{force_s} -o reset #{new_resource.resource}"
   # converge here
   converge_by("nim: reset operation \"#{nim_s}\"") do
     nim = Mixlib::ShellOut.new(nim_s)
@@ -359,12 +359,12 @@ end
 # ACTION: reboot
 ##############################
 action :reboot do
-  Chef::Log.debug("targets: #{targets}")
+  Chef::Log.debug("targets: #{new_resource.targets}")
 
   check_nim_info(node)
 
   # build list of targets
-  target_list = expand_targets(targets, node['nim']['clients'].keys)
+  target_list = expand_targets(new_resource.targets, node['nim']['clients'].keys)
   Chef::Log.debug("target_list: #{target_list}")
 
   nim_s = "nim -o reboot #{target_list.join(' ')}"
