@@ -423,7 +423,7 @@ Changes the attributes in the security stanza files.
 #### Properties
 
 - `file_name` (name_attribute) - security file to change
-- `attribute` - array of attribute to change
+- `attribute` - array of attributes to change
 - `stanza` - stanza to change
 
 #### Examples
