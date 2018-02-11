@@ -355,7 +355,7 @@ module AIXLVM
     end
 
     def mounted?
-      out = @system.run(format('mount | grep %s', @name))
+      out = @system.run(format('mount | grep -w %s', @name))
       !out.nil?
     end
 
