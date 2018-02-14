@@ -11,9 +11,13 @@ Lint/UselessAssignment:
 Metrics/BlockNesting:
   Max: 5
 
+Metrics/ParameterLists:
+  Max: 6
+
 Style/AccessorMethodName:
   Exclude:
     - 'libraries/storage_objects.rb'
+    - 'libraries/patch_mgmt.rb'
     - 'providers/altdisk.rb'
     - 'test/lvm/unittests/mock.rb'
 
@@ -39,6 +43,7 @@ Style/GuardClause:
     - 'resources/chsec.rb'
     - 'resources/nimclient.rb'
     - 'resources/no.rb'
+    - 'resources/nimviosupdate.rb'
 
 Style/IdenticalConditionalBranches:
   Exclude:
@@ -48,6 +53,13 @@ Style/IfInsideElse:
   Exclude:
     - 'libraries/storage_objects.rb'
 
+Style/Next:
+  Exclude:
+    - 'libraries/patch_mgmt.rb'
+    - 'resources/nimviosupdate.rb'
+
+# Cop supports --auto-correct.
+# Configuration parameters: IncludeSemanticChanges.
 Style/NonNilCheck:
   Exclude:
     - 'test/lvm/unittests/ts_all.rb'
