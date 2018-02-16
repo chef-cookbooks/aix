@@ -60,7 +60,7 @@ action :delete do
   if current_resource
     hostent_del_s = "hostent -d #{current_value.ip_address}"
     converge_by("hostent: delete #{current_value.ip_address}") do
-      Chef::Log.debug("etchosts: running #{hostent_del_s}")
+      Chef::Log.warn("etchosts: running #{hostent_del_s}")
       shell_out!(hostent_del_s)
     end
   end
@@ -103,7 +103,7 @@ action :change do
     # If IP or hostnames changed, converge
     if change
       converge_by("etchost: modifying #{new_resource.name} in /etc/hosts") do
-        Chef::Log.warn("etchosts: running #{hostent_change_s}")
+        Chef::Log.debug("etchosts: running #{hostent_change_s}")
         shell_out!(hostent_change_s)
       end
     end
@@ -116,7 +116,7 @@ action :delete_all do
   if so.exitstatus == 0
     hostent_del_all_s = 'hostent -X'
     converge_by('etchost: removing all entries') do
-      Chef::Log.debug("etchosts: running #{hostent_del_all_s}")
+      Chef::Log.warn("etchosts: running #{hostent_del_all_s}")
       shell_out!(hostent_del_all_s)
     end
   end
