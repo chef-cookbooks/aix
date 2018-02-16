@@ -76,4 +76,3 @@ end
 aix_etchosts '1.1.1.6' do
   action :delete
 end
-
