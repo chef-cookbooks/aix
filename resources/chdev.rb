@@ -51,6 +51,7 @@ action :update do
   new_resource.attributes.each do |attribute, value|
     # force string or else string comparison below does not work on integers
     value = value.to_s
+    attribute = attribute.downcase.to_sym unless attribute.is_a? Symbol
     # check if attribute exists for current device, if not raising error
     if current_value.attributes.key?(attribute)
       Chef::Log.debug("chdev #{current_value.name} attribute #{attribute} with value #{value}")
