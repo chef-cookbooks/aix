@@ -26,7 +26,7 @@ end
 # loading current resource
 def load_current_resource
   require_wpar_gem
-  @current_resource = Chef::Resource::AixWpar.new(@new_resource.name)
+  @current_resource = new_resource.class.new(@new_resource.name)
 
   # get all WPAR on the system
   wpars = ::WPAR::WPARS.new

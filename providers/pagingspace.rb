@@ -23,7 +23,7 @@ end
 
 # loading current resource
 def load_current_resource
-  @current_resource = Chef::Resource::AixPagingspace.new(@new_resource.name)
+  @current_resource = new_resource.class.new(@new_resource.name)
 
   lsps = shell_out("lsps -ca | grep ^#{@new_resource.name}")
   # lsps.error!
