@@ -2,6 +2,14 @@
 
 This file is used to list changes made in each version of the aix cookbook.
 
+## 2.3.0 (2018-05-10)
+
+- Resolve incompatibilities with Chef 13 & 14
+- Removed Chefspec matchers which are autogenerted by ChefSpec now
+- Added a new nimviosupdate resource
+- Update etchosts resource to update aliases if they are changed
+- Fixes to aix_chsec to use the name property of the resource and to better handle filesystem names
+
 ## 2.2.0 (2017-12-21)
 
 - Convert nimclient and toolboxpackage to custom resources
