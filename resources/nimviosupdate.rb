@@ -410,46 +410,44 @@ def get_vios_ssp_status(nim_vios, vios_list, vios_key, targets_status)
         end
 
         cluster_found = true
-        if line =~ /^(\S+):\S+:(\S+):\S+:\S+:(\S+):.*/
-          cur_ssp_name = Regexp.last_match(1)
-          cur_vios_name = Regexp.last_match(2)
-          cur_vios_ssp_status = Regexp.last_match(3)
+        next unless line =~ /^(\S+):\S+:(\S+):\S+:\S+:(\S+):.*/
+        cur_ssp_name = Regexp.last_match(1)
+        cur_vios_name = Regexp.last_match(2)
+        cur_vios_ssp_status = Regexp.last_match(3)
 
-          if vios_list.include?(cur_vios_name)
-            nim_vios[cur_vios_name]['ssp_vios_status'] = cur_vios_ssp_status
-            nim_vios[cur_vios_name]['ssp_name'] = cur_ssp_name
-            # single VIOS case
-            if vios_list.length == 1
-              return 0 unless cur_vios_ssp_status == 'OK'
+        next unless vios_list.include?(cur_vios_name)
+        nim_vios[cur_vios_name]['ssp_vios_status'] = cur_vios_ssp_status
+        nim_vios[cur_vios_name]['ssp_name'] = cur_ssp_name
+        # single VIOS case
+        if vios_list.length == 1
+          return 0 unless cur_vios_ssp_status == 'OK'
 
-              err_msg = "SSP is active for the single VIOS: #{cur_vios_name}. VIOS cannot be updated"
-              put_error(err_msg)
-              targets_status[vios_key] = err_label
-              return 1
-            end
-            # first VIOS in the pair
-            if ssp_name == ''
-              ssp_name = cur_ssp_name
-              vios_name = cur_vios_name
-              vios_ssp_status = cur_vios_ssp_status
-              next
-            end
+          err_msg = "SSP is active for the single VIOS: #{cur_vios_name}. VIOS cannot be updated"
+          put_error(err_msg)
+          targets_status[vios_key] = err_label
+          return 1
+        end
+        # first VIOS in the pair
+        if ssp_name == ''
+          ssp_name = cur_ssp_name
+          vios_name = cur_vios_name
+          vios_ssp_status = cur_vios_ssp_status
+          next
+        end
 
-            # both VIOSes found
-            if vios_ssp_status != cur_vios_ssp_status
-              err_msg = "SSP status is not the same for the both VIOSes: (#{vios_key}). VIOSes cannot be updated"
-              put_error(err_msg)
-              targets_status[vios_key] = err_label
-              return 1
-            elsif ssp_name != cur_ssp_name && cur_vios_ssp_status == 'OK'
-              err_msg = "Both VIOSes: #{vios_key} does not belong to the same SSP. VIOSes cannot be updated"
-              put_error(err_msg)
-              targets_status[vios_key] = err_label
-              return 1
-            else
-              return 0
-            end
-          end
+        # both VIOSes found
+        if vios_ssp_status != cur_vios_ssp_status
+          err_msg = "SSP status is not the same for the both VIOSes: (#{vios_key}). VIOSes cannot be updated"
+          put_error(err_msg)
+          targets_status[vios_key] = err_label
+          return 1
+        elsif ssp_name != cur_ssp_name && cur_vios_ssp_status == 'OK'
+          err_msg = "Both VIOSes: #{vios_key} does not belong to the same SSP. VIOSes cannot be updated"
+          put_error(err_msg)
+          targets_status[vios_key] = err_label
+          return 1
+        else
+          return 0
         end
       end
     end
@@ -863,65 +861,65 @@ action :update do
 
     ###############
     # Alternate disk cleanup operation
-    if new_resource.action_list.include?('altdisk_cleanup')
-      log_info('VIOS UPDATE - action=altdisk_cleanup')
-      log_info("VIOS UPDATE - altdisks=#{new_resource.altdisks}")
-      log_info("Alternate disk cleanup for VIOS tuple: #{target_tuple}")
+    next unless new_resource.action_list.include?('altdisk_cleanup')
+    log_info('VIOS UPDATE - action=altdisk_cleanup')
+    log_info("VIOS UPDATE - altdisks=#{new_resource.altdisks}")
+    log_info("Alternate disk cleanup for VIOS tuple: #{target_tuple}")
 
-      # check previous status and skip if failure
-      if new_resource.action_list.include?('update') && targets_status[vios_key] != 'SUCCESS-UPDT' ||
-         !new_resource.action_list.include?('update') && new_resource.action_list.include?('altdisk_copy') && targets_status[vios_key] != 'SUCCESS-ALTDC' ||
-         !new_resource.action_list.include?('update') && !new_resource.action_list.include?('altdisk_copy') && new_resource.action_list.include?('check') && targets_status[vios_key] != 'SUCCESS-HC'
-        put_warn("Alternate disk cleanup for #{vios_key} VIOSes skipped (previous status: #{targets_status[vios_key]}")
-        next
+    # check previous status and skip if failure
+    if new_resource.action_list.include?('update') && targets_status[vios_key] != 'SUCCESS-UPDT' ||
+       !new_resource.action_list.include?('update') && new_resource.action_list.include?('altdisk_copy') && targets_status[vios_key] != 'SUCCESS-ALTDC' ||
+       !new_resource.action_list.include?('update') && !new_resource.action_list.include?('altdisk_copy') && new_resource.action_list.include?('check') && targets_status[vios_key] != 'SUCCESS-HC'
+      put_warn("Alternate disk cleanup for #{vios_key} VIOSes skipped (previous status: #{targets_status[vios_key]}")
+      next
+    end
+
+    # find the altinst_rootvg disk
+    ret = 0
+    vios_list.each do |vios|
+      log_info("Alternate disk cleanup, get the alternate rootvg disk for vios #{vios}")
+      begin
+        ret = vio_server.get_altinst_rootvg_disk(nim_vios, vios, altdisk_hash)
+      rescue AltDiskFindError => e
+        put_error(msg)
+        ret = 1
+        targets_status[vios_key] = if vios == vios1
+                                     'FAILURE-ALTDCLEAN1'
+                                   else
+                                     'FAILURE-ALTDCLEAN2'
+                                   end
       end
+      put_warn("Failed to get the alternate disk on #{vios}") unless ret == 0
+    end
 
-      # find the altinst_rootvg disk
-      ret = 0
-      vios_list.each do |vios|
-        log_info("Alternate disk cleanup, get the alternate rootvg disk for vios #{vios}")
+    # perform the alternate disk cleanup
+    vios_list.select { |k| altdisk_hash[k] != '' }.each do |vios|
+      converge_by("vios: cleanup altinst_rootvg disk on vios '#{vios}'\n") do
+        targets_status[vios_key] = if vios == vios1
+                                     'FAILURE-ALTDCOPY1'
+                                   else
+                                     'FAILURE-ALTDCOPY2'
+                                   end
         begin
-          ret = vio_server.get_altinst_rootvg_disk(nim_vios, vios, altdisk_hash)
-        rescue AltDiskFindError => e
+          ret = vio_server.altdisk_copy_cleanup(nim_vios, vios, altdisk_hash)
+        rescue AltDiskCleanError => e
+          msg = "Cleanup failed: #{e.message}"
           put_error(msg)
-          ret = 1
-          targets_status[vios_key] = if vios == vios1
-                                       'FAILURE-ALTDCLEAN1'
-                                     else
-                                       'FAILURE-ALTDCLEAN2'
-                                     end
         end
-        put_warn("Failed to get the alternate disk on #{vios}") unless ret == 0
-      end
-
-      # perform the alternate disk cleanup
-      vios_list.select { |k| altdisk_hash[k] != '' }.each do |vios|
-        converge_by("vios: cleanup altinst_rootvg disk on vios '#{vios}'\n") do
+        if ret == 0
           targets_status[vios_key] = if vios == vios1
-                                       'FAILURE-ALTDCOPY1'
+                                       'SUCCESS-ALTDCLEAN1'
                                      else
-                                       'FAILURE-ALTDCOPY2'
+                                       'SUCCESS-ALTDCLEAN2'
                                      end
-          begin
-            ret = vio_server.altdisk_copy_cleanup(nim_vios, vios, altdisk_hash)
-          rescue AltDiskCleanError => e
-            msg = "Cleanup failed: #{e.message}"
-            put_error(msg)
-          end
-          if ret == 0
-            targets_status[vios_key] = if vios == vios1
-                                         'SUCCESS-ALTDCLEAN1'
-                                       else
-                                         'SUCCESS-ALTDCLEAN2'
-                                       end
-            log_info("Alternate disk cleanup succeeded on #{altdisk_hash[vios]} of #{vios}")
-          else
-            put_warn("Failed to clean the alternate disk on #{altdisk_hash[vios]} of #{vios}") unless ret == 0
-          end
+          log_info("Alternate disk cleanup succeeded on #{altdisk_hash[vios]} of #{vios}")
+        else
+          put_warn("Failed to clean the alternate disk on #{altdisk_hash[vios]} of #{vios}") unless ret == 0
         end
       end
+    end
 
-      log_info("Alternate disk cleanup status for #{vios_key}: #{targets_status[vios_key]}")
-    end # altdisk_cleanup
+    log_info("Alternate disk cleanup status for #{vios_key}: #{targets_status[vios_key]}")
+    # altdisk_cleanup
   end # target_list.each
 end

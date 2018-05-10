@@ -644,11 +644,10 @@ module AIX
               next
             end
             # ip
-            if line =~ /^\s+if1\s*=\s*\S+\s*(\S*)\s*.*$/
-              ip = Regexp.last_match(1)
-              info_hash[obj_key]['ip'] = ip
-              next
-            end
+            next unless line =~ /^\s+if1\s*=\s*\S+\s*(\S*)\s*.*$/
+            ip = Regexp.last_match(1)
+            info_hash[obj_key]['ip'] = ip
+            next
           end
         end
 
@@ -700,19 +699,18 @@ module AIX
             end
 
             # For VIOS store the management profile
-            if lpar_type == 'vios'
-              if line =~ /^\s+mgmt_profile1\s+=\s+(.*)$/
-                match_mgmtprof = Regexp.last_match(1)
-                mgmt_elts = match_mgmtprof.split
-                if mgmt_elts.size == 3
-                  info_hash[obj_key]['mgmt_hmc_id'] = mgmt_elts[0]
-                  info_hash[obj_key]['mgmt_vios_id'] = mgmt_elts[1]
-                  info_hash[obj_key]['mgmt_cec_serial'] = mgmt_elts[2]
-                end
+            next unless lpar_type == 'vios'
+            if line =~ /^\s+mgmt_profile1\s+=\s+(.*)$/
+              match_mgmtprof = Regexp.last_match(1)
+              mgmt_elts = match_mgmtprof.split
+              if mgmt_elts.size == 3
+                info_hash[obj_key]['mgmt_hmc_id'] = mgmt_elts[0]
+                info_hash[obj_key]['mgmt_vios_id'] = mgmt_elts[1]
+                info_hash[obj_key]['mgmt_cec_serial'] = mgmt_elts[2]
               end
-              if line =~ /^\s+if1\s+=\s+\S+\s+(\S+)\s+.*$/
-                info_hash[obj_key]['vios_ip'] = Regexp.last_match(1)
-              end
+            end
+            if line =~ /^\s+if1\s+=\s+\S+\s+(\S+)\s+.*$/
+              info_hash[obj_key]['vios_ip'] = Regexp.last_match(1)
             end
           end
         end
@@ -935,13 +933,12 @@ module AIX
 
             next if line.start_with?('NAME') # skip header
             line.chomp!
-            if line =~ /^(hdisk\S+)\s+(\S+)\s+([0-9]+)/
-              pv_name = Regexp.last_match(1)
-              nim_vios[vios]['free_pvs'][pv_name] = {}
-              nim_vios[vios]['free_pvs'][pv_name]['pvid'] = Regexp.last_match(2)
-              nim_vios[vios]['free_pvs'][pv_name]['size'] = Regexp.last_match(3).to_i
-              log_debug("got free PV #{pv_name} of #{nim_vios[vios]['free_pvs'][pv_name]['size']} MB with PVID: #{nim_vios[vios]['free_pvs'][pv_name]['pvid']}")
-            end
+            next unless line =~ /^(hdisk\S+)\s+(\S+)\s+([0-9]+)/
+            pv_name = Regexp.last_match(1)
+            nim_vios[vios]['free_pvs'][pv_name] = {}
+            nim_vios[vios]['free_pvs'][pv_name]['pvid'] = Regexp.last_match(2)
+            nim_vios[vios]['free_pvs'][pv_name]['size'] = Regexp.last_match(3).to_i
+            log_debug("got free PV #{pv_name} of #{nim_vios[vios]['free_pvs'][pv_name]['size']} MB with PVID: #{nim_vios[vios]['free_pvs'][pv_name]['pvid']}")
           end
         end
 
@@ -1036,11 +1033,10 @@ module AIX
 
           # check an alternate disk not already exists
           nim_vios[vios]['pvs'].each do |pv_name, pv|
-            if pv['vg'] == 'altinst_rootvg'
-              targets_status[vios_key] = "#{err_label} an alternate disk (#{pv_name}) already exists on #{vios}"
-              put_error("An alternate rootvg already exists on disk #{pv_name} on #{vios}")
-              return 1
-            end
+            next unless pv['vg'] == 'altinst_rootvg'
+            targets_status[vios_key] = "#{err_label} an alternate disk (#{pv_name}) already exists on #{vios}"
+            put_error("An alternate rootvg already exists on disk #{pv_name} on #{vios}")
+            return 1
           end
 
           begin

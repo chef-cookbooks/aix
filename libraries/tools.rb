@@ -41,7 +41,7 @@ module AIXLVM
         return nil
       end
     rescue
-      return nil
+      nil
     end
   end
 end

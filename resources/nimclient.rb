@@ -41,7 +41,7 @@ property :installp_flags, String
 # nimclient -o showres -a resource=7100-03-05-1524-lpp_source                        # showres
 # nimclient -o deallocate                                                            # deallocate
 # nimclient -d                                                                       # synchronize date with the nim master
-# nimclient -p									     # enable push operation
+# nimclient -p                                                                       # enable push operation
 # nimclient -P                                                                       # disable push operation
 
 # ACTIONS:

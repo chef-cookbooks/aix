@@ -4,27 +4,38 @@ Lint/FormatParameterMismatch:
   Exclude:
     - 'test/lvm/unittests/mock.rb'
 
+Lint/InterpolationCheck:
+  Exclude:
+    - 'examples/update_by_altdisk.rb'
+    - 'examples/update_by_multibos.rb'
+    - 'libraries/patch_mgmt.rb'
+
 Lint/UselessAssignment:
   Exclude:
     - 'resources/nimclient.rb'
 
 Metrics/BlockNesting:
-  Max: 5
+  Max: 4
 
 Metrics/ParameterLists:
   Max: 6
 
-Style/AccessorMethodName:
+Naming/AccessorMethodName:
   Exclude:
-    - 'libraries/storage_objects.rb'
     - 'libraries/patch_mgmt.rb'
+    - 'libraries/storage_objects.rb'
     - 'providers/altdisk.rb'
     - 'test/lvm/unittests/mock.rb'
 
-Style/ClassAndModuleCamelCase:
+Naming/ClassAndModuleCamelCase:
   Exclude:
     - 'test/lvm/unittests/tc_aix_storage_objects.rb'
     - 'test/lvm/unittests/tc_storage_objects.rb'
+
+Naming/PredicateName:
+  Exclude:
+    - 'spec/**/*'
+    - 'resources/nimclient.rb'
 
 Style/For:
   Exclude:
@@ -32,39 +43,31 @@ Style/For:
     - 'libraries/storage_objects.rb'
     - 'test/lvm/unittests/mock.rb'
 
-Style/GuardClause:
-  Exclude:
-    - 'libraries/lvmobj_fs.rb'
-    - 'libraries/storage_objects.rb'
-    - 'libraries/tools.rb'
-    - 'providers/altdisk.rb'
-    - 'providers/etchosts.rb'
-    - 'resources/chdev.rb'
-    - 'resources/chsec.rb'
-    - 'resources/nimclient.rb'
-    - 'resources/no.rb'
-    - 'resources/nimviosupdate.rb'
-
-Style/IdenticalConditionalBranches:
-  Exclude:
-    - 'providers/etchosts.rb'
-
 Style/IfInsideElse:
   Exclude:
     - 'libraries/storage_objects.rb'
 
-Style/Next:
+Style/IfUnlessModifier:
   Exclude:
+    - 'libraries/lvmobj_fs.rb'
+    - 'libraries/lvmobj_lv.rb'
+    - 'libraries/lvmobj_vg.rb'
     - 'libraries/patch_mgmt.rb'
+    - 'providers/altdisk.rb'
+    - 'providers/bootlist.rb'
+    - 'providers/multibos.rb'
+    - 'providers/subsystem.rb'
+    - 'resources/chdev.rb'
+    - 'resources/inittab.rb'
+    - 'resources/nimclient.rb'
     - 'resources/nimviosupdate.rb'
+    - 'resources/no.rb'
+    - 'resources/tunables.rb'
+    - 'test/lvm/unittests/mock.rb'
 
-# Cop supports --auto-correct.
-# Configuration parameters: IncludeSemanticChanges.
 Style/NonNilCheck:
   Exclude:
     - 'test/lvm/unittests/ts_all.rb'
 
-Style/PredicateName:
-  Exclude:
-    - 'spec/**/*'
-    - 'resources/nimclient.rb'
+Metrics/LineLength:
+  Max: 242
