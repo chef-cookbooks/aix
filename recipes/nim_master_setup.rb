@@ -8,13 +8,7 @@ new_nim_server = 'pollux6c'
 nim_script_res_name  = "chef_nim_setup_script_#{new_nim_server}"
 nim_script_file_name = "/tmp/#{nim_script_res_name}.sh"
 mount_point = '/mnt_chef_master_setup'
-
-cmd = Mixlib::ShellOut.new("lsnim -l #{lpp_source} | grep location | awk '{ print $NF }'")
-cmd.run_command
-cmd.valid_exit_codes = 0
-if cmd.error?
-end
-nim_res_path = cmd.stdout.chomp
+nim_res_path = shell_out!("lsnim -l #{lpp_source} | grep location | awk '{ print $NF }'").stdout.chomp
 
 # Create the script to set the new nim master.
 file nim_script_file_name do
