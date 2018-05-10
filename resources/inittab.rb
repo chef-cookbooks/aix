@@ -18,30 +18,25 @@ property :identifier, String, name_property: true
 property :runlevel, String, required: true
 property :processaction, String, required: true, equal_to: %w(respawn wait once boot bootwait powerfail off hold ondemand initdefault sysinit)
 property :command, String, required: true
-
 property :follows, String
-property :exists, [true, false], desired_state: false
 
 load_current_value do |new_resource|
-  exists false
   so = shell_out("lsitab #{new_resource.identifier}")
-  unless so.error?
-    exists true
-    fields = so.stdout.lines.first.chomp.split(':')
-    # perfstat:2:once:/usr/lib/perf/libperfstat_updt_dictionary >/dev/console 2>&1
-    identifier(fields[0])
-    runlevel(fields[1])
-    processaction(fields[2])
-    command(fields[3])
-  end
+  current_value_does_not_exist! if so.error?
+
+  fields = so.stdout.lines.first.chomp.split(':')
+  # perfstat:2:once:/usr/lib/perf/libperfstat_updt_dictionary >/dev/console 2>&1
+  identifier(fields[0])
+  runlevel(fields[1])
+  processaction(fields[2])
+  command(fields[3])
 end
 
 action :install do
   converge_if_changed(:runlevel, :processaction, :command) do
     converge_by('Install or update inittab') do
-      if current_resource.exists
-        shell_out("rmitab #{current_resource.identifier}")
-      end
+      shell_out("rmitab #{current_resource.identifier}") if current_resource
+
       follow = "-i #{new_resource.follows} " if new_resource.follows
       shell_out("mkitab #{follow}\"#{[new_resource.identifier, new_resource.runlevel, new_resource.processaction, new_resource.command].join(':')}\"")
     end
@@ -49,7 +44,7 @@ action :install do
 end
 
 action :remove do
-  if current_resource.exists
+  if current_resource
     converge_by('Remove inittab entry') do
       shell_out("rmitab #{current_resource.identifier}")
     end
