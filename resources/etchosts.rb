@@ -15,8 +15,8 @@
 #
 
 # When modifying /etc/hosts, the hostent command treats hostnames and aliases as equivelent
-property :ip_address, [String, nil], default: nil
-property :new_hostname, [String, nil], default: nil
+property :ip_address, String
+property :new_hostname, String
 property :aliases, Array, default: []
 
 load_current_value do |desired|
