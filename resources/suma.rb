@@ -28,8 +28,6 @@ property :sched_time, String
 property :task_id, Integer
 property :preview_only, [true, false], default: false
 
-default_action :download
-
 ##############################
 # load_current_value
 ##############################
