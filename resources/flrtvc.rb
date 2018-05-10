@@ -40,12 +40,6 @@ property :download_only, [true, false], default: false
 default_action :patch
 
 ##############################
-# load_current_value
-##############################
-load_current_value do
-end
-
-##############################
 # DEFINITIONS
 ##############################
 class FlrtvcNotFound < StandardError
