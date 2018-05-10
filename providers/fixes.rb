@@ -23,7 +23,7 @@ end
 
 # loading current resource
 def load_current_resource
-  @current_resource = Chef::Resource::AixFixes.new(@new_resource.name)
+  @current_resource = new_resource.class.new(@new_resource.name)
 
   emgr = shell_out('/usr/sbin/emgr -l')
   Chef::Log.fatal('emgr: error while running emgr') if emgr.error?
