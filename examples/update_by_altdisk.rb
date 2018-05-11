@@ -25,7 +25,7 @@ end
 
 # mounting /mnt
 mount '/var/tmp/mnt' do
-  device '#{node[:nim_server]}:/export/nim/lpp_source'
+  device "#{node[:nim_server]}:/export/nim/lpp_source"
   fstype 'nfs'
   action :mount
 end
