@@ -37,12 +37,6 @@ Naming/PredicateName:
     - 'spec/**/*'
     - 'resources/nimclient.rb'
 
-Style/For:
-  Exclude:
-    - 'libraries/lvmobj_vg.rb'
-    - 'libraries/storage_objects.rb'
-    - 'test/lvm/unittests/mock.rb'
-
 Style/IfInsideElse:
   Exclude:
     - 'libraries/storage_objects.rb'

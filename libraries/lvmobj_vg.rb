@@ -37,7 +37,7 @@ module AIXLVM
       if !@mirror_pool_name.nil? && @mirror_pool_name !~ /^[0-9a-zA-Z]{1,15}$/
         raise AIXLVM::LVMException, 'illegal_mirror_pool_name!'
       end
-      for current_pv in @physical_volumes
+      @physical_volumes.each do |current_pv|
         pv_obj = StObjPV.new(@system, current_pv)
         unless pv_obj.exist?
           raise AIXLVM::LVMException, format('physical volume "%s" does not exist!', current_pv)
@@ -75,13 +75,13 @@ module AIXLVM
             ret.push(format("Modify '%s'", @name))
           end
         end
-        for sub_pv in @physical_volumes.sort
+        @physical_volumes.sort.each do |sub_pv|
           unless @current_physical_volumes.include?(sub_pv)
             ret.push(format("Extending '%s' to '%s'", sub_pv, @name))
             vg_obj.add_pv(sub_pv, @mirror_pool_name)
           end
         end
-        for old_pv in @current_physical_volumes.sort
+        @current_physical_volumes.sort.each do |old_pv|
           unless @physical_volumes.include?(old_pv)
             ret.push(format("Reducing '%s' to '%s'", old_pv, @name))
             vg_obj.delete_pv(old_pv)

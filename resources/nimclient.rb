@@ -210,7 +210,7 @@ action :allocate do
   lpp_source = new_resource.lpp_source
   unless lpp_source.nil?
     if resource_exists(lpp_source)
-      unless is_resource_allocated(lpp_source, 'lpp_source')
+      unless resource_allocated?(lpp_source, 'lpp_source')
         nimclient_s = nimclient_s << ' -a lpp_source=' << lpp_source
       end
     end
@@ -219,7 +219,7 @@ action :allocate do
   spot = new_resource.spot
   unless spot.nil?
     if resource_exists(spot)
-      unless is_resource_allocated(spot, 'spot')
+      unless resource_allocated?(spot, 'spot')
         nimclient_s = nimclient_s << ' -a spot=' << spot
       end
     end
@@ -228,7 +228,7 @@ action :allocate do
   installp_bundle = new_resource.installp_bundle
   unless installp_bundle.nil?
     if resource_exists(installp_bundle)
-      unless is_resource_allocated(installp_bundle, 'installp_bundle')
+      unless resource_allocated?(installp_bundle, 'installp_bundle')
         nimclient_s = nimclient_s << ' -a installp_bundle=' << installp_bundle
       end
     end
@@ -456,7 +456,7 @@ action_class do
   end
 
   # check if a resource is already allocated to the client
-  def is_resource_allocated(resource, type)
+  def resource_allocated?(resource, type)
     allocated = false
     standalone = shell_out("nimclient -ll #{node['hostname']}").stdout
     standalone.each_line do |standalone_l|

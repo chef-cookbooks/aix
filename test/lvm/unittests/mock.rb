@@ -32,7 +32,7 @@ class MockSystem < AIXLVM::BaseSystem
 
   def residual
     res = ''
-    for val in @out_retrun
+    @out_retrun.each do |val|
       res += format("%s => %s\n", val)
     end
     res

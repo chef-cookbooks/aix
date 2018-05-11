@@ -118,13 +118,13 @@ module AIXLVM
       if !out.nil?
         mirror_pool = nil
         reg_exp = /^.*#{@name}\s+([^\s]*)$/
-        for line in out.split("\n")
+        out.split("\n").each do |line|
           current_pool = line[reg_exp, 1]
           current_pool = '' if current_pool.nil?
           if mirror_pool.nil?
             mirror_pool = current_pool
-          else
-            mirror_pool = '???' if mirror_pool != current_pool
+          elsif mirror_pool != current_pool
+            mirror_pool = '???'
           end
         end
         return mirror_pool
