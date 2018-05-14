@@ -1443,7 +1443,7 @@ module AIX
       return 'TL' if oslevel =~ /^([0-9]{4}-[0-9]{2})(|-00|-00-0000)$/
       return 'SP' if oslevel =~ /^([0-9]{4}-[0-9]{2}-[0-9]{2})(|-[0-9]{4})$/
       # else raise exception
-      raise InvalidOsLevelProperty, 'Invalid Oslevel: "#{oslevel}"'
+      raise InvalidOsLevelProperty, "Invalid Oslevel: '#{oslevel}'"
     end
 
     # -----------------------------------------------------------------

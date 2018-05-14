@@ -8,16 +8,10 @@ new_nim_server = 'pollux6c'
 nim_script_res_name  = "chef_nim_setup_script_#{new_nim_server}"
 nim_script_file_name = "/tmp/#{nim_script_res_name}.sh"
 mount_point = '/mnt_chef_master_setup'
+nim_res_path = shell_out!("lsnim -l #{lpp_source} | grep location | awk '{ print $NF }'").stdout.chomp
 
-cmd = Mixlib::ShellOut.new("lsnim -l #{lpp_source} | grep location | awk '{ print $NF }'")
-cmd.run_command
-cmd.valid_exit_codes = 0
-if cmd.error?
-end
-nim_res_path = cmd.stdout.chomp
-
-# Create the script to set the new nim master
-file nim_script_file_name.to_s do
+# Create the script to set the new nim master.
+file nim_script_file_name do
   content "#!/bin/ksh\nexport LANG=C\nmkdir #{mount_point}\nmount #{nim_server}:#{nim_res_path} #{mount_point}\nnim_master_setup -a mk_resource=no -B -a device=#{mount_point}\numount #{mount_point}\nrmdir #{mount_point}\n"
   mode '0777'
   owner 'root'
@@ -26,15 +20,15 @@ end
 
 # Define the script nim resource
 aix_nim 'define_script_resource' do
-  resource nim_script_res_name.to_s
-  location nim_script_file_name.to_s
+  resource nim_script_res_name
+  location nim_script_file_name
   action :define_script
 end
 
 # Allocate the required lpp_source
 aix_nim 'Allocate lpp_source' do
-  lpp_source lpp_source.to_s
-  targets new_nim_server.to_s
+  lpp_source lpp_source
+  targets new_nim_server
   action :allocate
 end
 
@@ -46,26 +40,26 @@ end
 
 # Setup the nim master
 aix_nim 'setup_master' do
-  script nim_script_res_name.to_s
-  targets new_nim_server.to_s
+  script nim_script_res_name
+  targets new_nim_server
   async false
   action :script
 end
 
 # Deallocate the resource on the old nim server
 aix_nim 'Deallocate lpp_source' do
-  lpp_source lpp_source.to_s
-  targets new_nim_server.to_s
+  lpp_source lpp_source
+  targets new_nim_server
   action :deallocate
 end
 
 # Remove the script resource
 aix_nim 'remove_script_resource' do
-  resource nim_script_res_name.to_s
+  resource nim_script_res_name
   action :remove
 end
 
 # Remove the script file
-file nim_script_file_name.to_s do
+file nim_script_file_name do
   action :delete
 end

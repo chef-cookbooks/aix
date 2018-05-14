@@ -1,9 +1,13 @@
 ---
+##################
+# Make sure to install the kitchen-wpar gem first
+##################
+
 driver:
   name: wpar
   aix_host: aixlpar2
   aix_user: root
-  wpar_address: 10.10.10.10 
+  wpar_address: 10.10.10.10
 
 provisioner:
   name: chef_solo

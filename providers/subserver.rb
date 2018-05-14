@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-use_inline_resources
+use_inline_resources # ~FC113
 
 # Support whyrun
 def whyrun_supported?

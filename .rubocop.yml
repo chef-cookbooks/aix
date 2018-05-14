@@ -1,14 +1,6 @@
-# Note: If you want to tackle fixing some of these it would be greatly appreciated
-
 Lint/FormatParameterMismatch:
   Exclude:
     - 'test/lvm/unittests/mock.rb'
-
-Lint/InterpolationCheck:
-  Exclude:
-    - 'examples/update_by_altdisk.rb'
-    - 'examples/update_by_multibos.rb'
-    - 'libraries/patch_mgmt.rb'
 
 Lint/UselessAssignment:
   Exclude:
@@ -32,21 +24,6 @@ Naming/ClassAndModuleCamelCase:
     - 'test/lvm/unittests/tc_aix_storage_objects.rb'
     - 'test/lvm/unittests/tc_storage_objects.rb'
 
-Naming/PredicateName:
-  Exclude:
-    - 'spec/**/*'
-    - 'resources/nimclient.rb'
-
-Style/For:
-  Exclude:
-    - 'libraries/lvmobj_vg.rb'
-    - 'libraries/storage_objects.rb'
-    - 'test/lvm/unittests/mock.rb'
-
-Style/IfInsideElse:
-  Exclude:
-    - 'libraries/storage_objects.rb'
-
 Style/IfUnlessModifier:
   Exclude:
     - 'libraries/lvmobj_fs.rb'
@@ -58,7 +35,6 @@ Style/IfUnlessModifier:
     - 'providers/multibos.rb'
     - 'providers/subsystem.rb'
     - 'resources/chdev.rb'
-    - 'resources/inittab.rb'
     - 'resources/nimclient.rb'
     - 'resources/nimviosupdate.rb'
     - 'resources/no.rb'
@@ -68,6 +44,3 @@ Style/IfUnlessModifier:
 Style/NonNilCheck:
   Exclude:
     - 'test/lvm/unittests/ts_all.rb'
-
-Metrics/LineLength:
-  Max: 242

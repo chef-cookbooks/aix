@@ -67,7 +67,7 @@ action :cust do
   do_not_converge = false
 
   # getting lpp_source
-  lpp_source = @new_resource.lpp_source
+  lpp_source = new_resource.lpp_source
   unless lpp_source.nil?
     if lpp_source == 'next_sp' || lpp_source == 'next_tl' || lpp_source == 'latest_tl' || lpp_source == 'latest_sp'
       lpp_source_array = lpp_source.split('_')
@@ -81,13 +81,13 @@ action :cust do
   end
 
   # getting spot (not need to find here)
-  spot = @new_resource.spot
+  spot = new_resource.spot
   unless spot.nil?
     nimclient_s = nimclient_s << ' -a spot=' << spot if resource_exists(spot)
   end
 
   # getting installp bundle
-  installp_bundle = @new_resource.installp_bundle
+  installp_bundle = new_resource.installp_bundle
   unless installp_bundle.nil?
     if resource_exists(installp_bundle)
       nimclient_s = nimclient_s << ' -a installp_bundle=' << installp_bundle
@@ -95,17 +95,17 @@ action :cust do
   end
 
   # getting installp flags
-  installp_flags = @new_resource.installp_flags
+  installp_flags = new_resource.installp_flags
   unless installp_flags.nil?
     nimclient_s = nimclient_s << ' -a installp_flags="' << installp_flags << '"'
   end
 
   # getting fixes
-  fixes = @new_resource.fixes
+  fixes = new_resource.fixes
   nimclient_s = nimclient_s << ' -a fixes="' << fixes << '"' unless fixes.nil?
 
   # getting filesets
-  filesets = @new_resource.filesets
+  filesets = new_resource.filesets
   unless filesets.nil?
     filesets = check_filesets(filesets, lpp_source)
     if filesets.any?
@@ -207,28 +207,28 @@ action :allocate do
   # Example of nimclient
   # nimclient -o allocate -a lpp_source=mylpp_source -a spot=my_spot -a installp_bundler=my_installpbundle
   nimclient_s = 'nimclient -o allocate'
-  lpp_source = @new_resource.lpp_source
+  lpp_source = new_resource.lpp_source
   unless lpp_source.nil?
     if resource_exists(lpp_source)
-      unless is_resource_allocated(lpp_source, 'lpp_source')
+      unless resource_allocated?(lpp_source, 'lpp_source')
         nimclient_s = nimclient_s << ' -a lpp_source=' << lpp_source
       end
     end
   end
 
-  spot = @new_resource.spot
+  spot = new_resource.spot
   unless spot.nil?
     if resource_exists(spot)
-      unless is_resource_allocated(spot, 'spot')
+      unless resource_allocated?(spot, 'spot')
         nimclient_s = nimclient_s << ' -a spot=' << spot
       end
     end
   end
 
-  installp_bundle = @new_resource.installp_bundle
+  installp_bundle = new_resource.installp_bundle
   unless installp_bundle.nil?
     if resource_exists(installp_bundle)
-      unless is_resource_allocated(installp_bundle, 'installp_bundle')
+      unless resource_allocated?(installp_bundle, 'installp_bundle')
         nimclient_s = nimclient_s << ' -a installp_bundle=' << installp_bundle
       end
     end
@@ -261,7 +261,7 @@ action :maint_boot do
     end
   end
 
-  spot = @new_resource.spot
+  spot = new_resource.spot
   nimclient_s = 'nimclient -o maint_boot'
   unless spot.nil?
     nimclient_s = nimclient_s << ' -a spot=' << spot if resource_exists(spot)
@@ -296,12 +296,12 @@ action :bos_inst do
 
   nimclient_s = 'nimclient -o bos_inst -a accept_licenses=yes'
 
-  spot = @new_resource.spot
+  spot = new_resource.spot
   unless spot.nil?
     nimclient_s = nimclient_s << ' -a spot=' << spot if resource_exists(spot)
   end
 
-  lpp_source = @new_resource.lpp_source
+  lpp_source = new_resource.lpp_source
   unless lpp_source.nil?
     if resource_exists(lpp_source)
       nimclient_s = nimclient_s << ' -a lpp_source=' << lpp_source
@@ -456,7 +456,7 @@ action_class do
   end
 
   # check if a resource is already allocated to the client
-  def is_resource_allocated(resource, type)
+  def resource_allocated?(resource, type)
     allocated = false
     standalone = shell_out("nimclient -ll #{node['hostname']}").stdout
     standalone.each_line do |standalone_l|
