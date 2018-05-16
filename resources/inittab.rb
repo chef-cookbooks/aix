@@ -26,10 +26,10 @@ load_current_value do |new_resource|
 
   fields = so.stdout.lines.first.chomp.split(':')
   # perfstat:2:once:/usr/lib/perf/libperfstat_updt_dictionary >/dev/console 2>&1
-  identifier(fields[0])
-  runlevel(fields[1])
-  processaction(fields[2])
-  command(fields[3])
+  identifier fields[0]
+  runlevel fields[1]
+  processaction fields[2]
+  command fields[3]
 end
 
 action :install do
