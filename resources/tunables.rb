@@ -68,13 +68,13 @@ action :update do
   # for each tunables ...
   new_resource.tunables.each do |tunable, value|
     # raise error if tunable doesn't exist
-    unless current_value.tunables.key?(tunable.to_sym)
+    unless current_resource.tunables.key?(tunable.to_sym)
       raise "#{cmd}: #{tunable} does not exist"
     end
 
     Chef::Log.debug("#{cmd}: setting tunable #{tunable} with value #{value}")
     # next if value already set
-    if current_value.tunables[tunable.to_sym][:current] == value.to_s
+    if current_resource.tunables[tunable.to_sym][:current] == value.to_s
       Chef::Log.info("#{cmd}: tunable #{tunable} is already set to value #{value}")
     else
       Chef::Log.debug("#{cmd}: #{tunable} will be set to value #{value}")
@@ -86,7 +86,7 @@ action :update do
         string_shell_out = string_shell_out << '-p ' if new_resource.permanent
         string_shell_out = string_shell_out << "-o #{tunable}=#{value}"
         # if type is bosboot or reboot
-        if current_value.tunables[tunable]['type'] == 'R' || current_value.tunables[tunable]['type'] == 'B'
+        if current_resource.tunables[tunable]['type'] == 'R' || current_resource.tunables[tunable]['type'] == 'B'
           string_shell_out.sub! '-p', '-r'
         end
         # TODO: here if type == B do a bosboot. Did not find any tunables with B type not implementing this
@@ -102,14 +102,13 @@ end
 action :reset do
   cmd = new_resource.mode
   # for each tunables ...
-  Chef::Log.debug(new_resource.tunables)
   new_resource.tunables.each do |tunable, value|
     # raise error if tunable doesn't exist
-    unless current_value.tunables.key?(tunable.to_sym)
+    unless current_resource.tunables.key?(tunable.to_sym)
       raise "#{cmd}: #{tunable} does not exist"
     end
 
-    if current_value.tunables[tunable.to_sym][:current] == value.to_s
+    if current_resource.tunables[tunable.to_sym][:current] == value.to_s
       Chef::Log.info("#{cmd}: tunable #{tunable} is already set to default value #{value}")
     else
       Chef::Log.debug("#{cmd}: resetting tunable #{tunable}")
@@ -121,7 +120,7 @@ action :reset do
         # append -d to set tunable to default
         string_shell_out = string_shell_out << "-d #{tunable}"
         # if type is bosboot or reboot or incremental
-        if current_value.tunables[tunable]['type'] == 'R' || current_value.tunables[tunable]['type'] == 'B' || current_value.tunables[tunable]['type'] == 'I'
+        if current_resource.tunables[tunable]['type'] == 'R' || current_resource.tunables[tunable]['type'] == 'B' || current_resource.tunables[tunable]['type'] == 'I'
           string_shell_out.sub! '-p', '-r'
         end
         # TODO: here if type == B do a bosboot. Did not find any tunables with B type not implementing this

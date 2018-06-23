@@ -72,7 +72,7 @@ action :update do
   # iterating trough the hash table of sec attributes
   new_resource.attributes.each do |key, value|
     # checking if value has to be changed
-    if new_resource.attributes[key] == current_value.attributes[key]
+    if new_resource.attributes[key] == current_resource.attributes[key]
       Chef::Log.debug("chsec: value of #{key} already set to #{value} for stanza #{new_resource.stanza}")
     else
       change = true

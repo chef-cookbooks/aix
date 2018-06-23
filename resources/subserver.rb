@@ -39,7 +39,7 @@ load_current_value do |desired|
       else
         service_enabled = true
       end
-      # next unless current_value.servicename == line_array[0] && current_value.protocol == line_array[2]
+      # next unless current_resource.servicename == line_array[0] && current_resource.protocol == line_array[2]
       next unless desired.servicename == line_array[0] && desired.protocol == line_array[2]
       enabled service_enabled
       servicename line_array[0]
@@ -56,18 +56,18 @@ load_current_value do |desired|
 end
 
 action :enable do
-  if current_value.enabled
-    if current_value.type != new_resource.type ||
-       current_value.wait != new_resource.wait ||
-       current_value.user != new_resource.user ||
-       current_value.program != new_resource.program ||
-       current_value.args != new_resource.args
-      cmd = "chsubserver -c -v #{current_value.servicename} -p #{current_value.protocol}"
-      cmd << " -T #{new_resource.type}" if current_value.type != new_resource.type
-      cmd << " -W #{new_resource.wait}" if current_value.wait != new_resource.wait
-      cmd << " -U #{new_resource.user}" if current_value.user != new_resource.user
-      cmd << " -G #{new_resource.program}" if current_value.program !- new_resource.program
-      cmd << " -P #{new_resource.protocol}" if current_value.protocol != new_resource.protocol
+  if current_resource.enabled
+    if current_resource.type != new_resource.type ||
+       current_resource.wait != new_resource.wait ||
+       current_resource.user != new_resource.user ||
+       current_resource.program != new_resource.program ||
+       current_resource.args != new_resource.args
+      cmd = "chsubserver -c -v #{current_resource.servicename} -p #{current_resource.protocol}"
+      cmd << " -T #{new_resource.type}" if current_resource.type != new_resource.type
+      cmd << " -W #{new_resource.wait}" if current_resource.wait != new_resource.wait
+      cmd << " -U #{new_resource.user}" if current_resource.user != new_resource.user
+      cmd << " -G #{new_resource.program}" if current_resource.program !- new_resource.program
+      cmd << " -P #{new_resource.protocol}" if current_resource.protocol != new_resource.protocol
       # Note, you can't change args using chsubserver, probably because args can contain spaces
       converge_by('change subserver entry') do
         shell_out(cmd)
@@ -87,9 +87,9 @@ action :enable do
 end
 
 action :disable do
-  if current_value.enabled
+  if current_resource.enabled
     converge_by('disable subserver') do
-      shell_out("chsubserver -d -v #{current_value.servicename} -p #{current_value.protocol}")
+      shell_out("chsubserver -d -v #{current_resource.servicename} -p #{current_resource.protocol}")
     end
   end
 end

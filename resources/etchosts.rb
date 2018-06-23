@@ -58,8 +58,8 @@ end
 # delete
 action :delete do
   if current_resource
-    hostent_del_s = "hostent -d #{current_value.ip_address}"
-    converge_by("hostent: delete #{current_value.ip_address}") do
+    hostent_del_s = "hostent -d #{current_resource.ip_address}"
+    converge_by("hostent: delete #{current_resource.ip_address}") do
       Chef::Log.warn("etchosts: running #{hostent_del_s}")
       shell_out!(hostent_del_s)
     end
@@ -73,7 +73,7 @@ action :change do
 
     # Initialize hostent command.
     # It is keyed off of the IP existing in /etc/hosts from load_current_value
-    hostent_change_s = "hostent -c #{current_value.ip_address} -h \""
+    hostent_change_s = "hostent -c #{current_resource.ip_address} -h \""
 
     # dup array so it can be modified
     hostnames_a = new_resource.aliases.dup
@@ -82,11 +82,11 @@ action :change do
     hostnames_a.unshift(new_resource.new_hostname) unless new_resource.new_hostname.nil?
 
     # join hostnames so they can be easily compared and used in command string
-    aliases_current_s = current_value.aliases.join(' ')
+    aliases_current_s = current_resource.aliases.join(' ')
     aliases_new_s = hostnames_a.join(' ')
 
     # Check if IP address is changing
-    if !new_resource.ip_address.nil? && new_resource.ip_address != current_value.ip_address
+    if !new_resource.ip_address.nil? && new_resource.ip_address != current_resource.ip_address
       if property_is_set?(:ip_address)
         hostent_change_s << aliases_current_s
         hostent_change_s << '"'
