@@ -45,28 +45,27 @@ end
 action :update do
   set_attr = false
   # the command will always begin with chdev -l
-  string_shell_out = 'chdev -l ' << current_value.name
+  string_shell_out = 'chdev -l ' << current_resource.name
   # for each attributes ...
-  Chef::Log.debug(new_resource.attributes)
   new_resource.attributes.each do |attribute, value|
     # force string or else string comparison below does not work on integers
     value = value.to_s
     # check if attribute exists for current device, if not raising error
-    if current_value.attributes.key?(attribute)
-      Chef::Log.debug("chdev #{current_value.name} attribute #{attribute} with value #{value}")
+    if current_resource.attributes.key?(attribute)
+      Chef::Log.debug("chdev #{current_resource.name} attribute #{attribute} with value #{value}")
       # ... if this one is already set to the desired value do nothing
-      current_resource_attr = current_value.attributes[attribute]
+      current_resource_attr = current_resource.attributes[attribute]
       Chef::Log.debug("comparing current resource #{attribute}=#{current_resource_attr} to value #{value}")
       if current_resource_attr == value
-        Chef::Log.debug("chdev: device #{current_value.name}.attribute is already set to value #{value}")
+        Chef::Log.debug("chdev: device #{current_resource.name}.attribute is already set to value #{value}")
       # ... if this one is not set to the desired value add it to the chdev command
       else
         set_attr = true
-        Chef::Log.warn("chdev: device #{current_value.name}.attribute will be set to value #{value} (previously #{current_resource_attr})")
+        Chef::Log.warn("chdev: device #{current_resource.name}.attribute will be set to value #{value} (previously #{current_resource_attr})")
         string_shell_out = string_shell_out << " -a #{attribute}=#{value}"
       end
     else
-      raise "chdev device #{current_value.name} has not attribute #{attribute}"
+      raise "chdev device #{current_resource.name} has not attribute #{attribute}"
     end
   end
   # if both -P and -U will be add raise an error (-P or -U not both)
