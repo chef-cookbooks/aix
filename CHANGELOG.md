@@ -2,6 +2,10 @@
 
 This file is used to list changes made in each version of the aix cookbook.
 
+## 2.3.2 (2018-07-24)
+
+- Change current_value to current_resource for Chef 14
+
 ## 2.3.1 (2018-05-16)
 
 - Don't .to_s strings

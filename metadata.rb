@@ -4,7 +4,7 @@ maintainer_email 'cookbooks@chef.io'
 license          'Apache-2.0'
 description      'Custom resources useful for AIX systems'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          '2.3.1'
+version          '2.3.2'
 source_url       'https://github.com/chef-cookbooks/aix'
 issues_url       'https://github.com/chef-cookbooks/aix/issues'
 
