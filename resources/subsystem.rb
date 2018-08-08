@@ -78,7 +78,7 @@ load_current_value do |desired|
 end
 
 action_class do
-# Returns true if current_resource is not equal to new_resource
+  # Returns true if current_resource is not equal to new_resource
   def resource_changed?
     (new_resource.subsystem_synonym && current_resource.subsystem_synonym != new_resource.subsystem_synonym) ||
       (new_resource.arguments && current_resource.arguments != new_resource.arguments) ||
@@ -124,7 +124,11 @@ action :create do
   cmd << ['-w', new_resource.wait_time] if new_resource.wait_time
   cmd << ['-G', new_resource.subsystem_group] if new_resource.subsystem_group
 
-  unless current_resource.nil?
+  if current_resource.nil?
+    converge_by('create subsystem entry') do
+      shell_out!(["mkssys -s #{new_resource.subsystem_name}"].concat(cmd).flatten.join(' '))
+    end
+  else
     unless current_resource.subsystem_name == new_resource.subsystem_name
       cmd << ['-s', new_resource.subsystem_name]
     end
@@ -132,10 +136,6 @@ action :create do
       converge_by('change subsystem entry') do
         shell_out!(["chssys -s #{current_resource.subsystem_name}"].concat(cmd).flatten.join(' '))
       end
-    end
-  else
-    converge_by('create subsystem entry') do
-      shell_out!(["mkssys -s #{new_resource.subsystem_name}"].concat(cmd).flatten.join(' '))
     end
   end
 end

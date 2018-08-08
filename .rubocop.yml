@@ -6,9 +6,11 @@ Lint/UselessAssignment:
   Exclude:
     - 'resources/nimclient.rb'
 
+# Configuration parameters: CountBlocks.
 Metrics/BlockNesting:
   Max: 4
 
+# Configuration parameters: CountKeywordArgs.
 Metrics/ParameterLists:
   Max: 6
 
@@ -24,6 +26,7 @@ Naming/ClassAndModuleCamelCase:
     - 'test/lvm/unittests/tc_aix_storage_objects.rb'
     - 'test/lvm/unittests/tc_storage_objects.rb'
 
+# Cop supports --auto-correct.
 Style/IfUnlessModifier:
   Exclude:
     - 'libraries/lvmobj_fs.rb'
@@ -38,9 +41,12 @@ Style/IfUnlessModifier:
     - 'resources/nimclient.rb'
     - 'resources/nimviosupdate.rb'
     - 'resources/no.rb'
+    - 'resources/subsystem.rb'
     - 'resources/tunables.rb'
     - 'test/lvm/unittests/mock.rb'
 
+# Cop supports --auto-correct.
+# Configuration parameters: IncludeSemanticChanges.
 Style/NonNilCheck:
   Exclude:
     - 'test/lvm/unittests/ts_all.rb'
