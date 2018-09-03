@@ -81,7 +81,6 @@ end
 action :install do
   fix_directory = @new_resource.directory
   if Dir.exist?(fix_directory)
-    Dir.chdir(fix_directory)
     packages = if @new_resource.fixes[0].downcase == 'all'
                  Dir.glob('*.epkg.Z')
                else
@@ -94,7 +93,7 @@ action :install do
       Chef::Log.debug("emgr: installing in preview mode efix #{fix} using command: #{emgr_install_string}")
       install_emgr = shell_out(emgr_install_string)
       if install_emgr.error?
-        Chef::Log.error("emgr: error during preview install, fix package: #{fix} skiped.")
+        Chef::Log.error("emgr: error during preview install, fix package: #{fix} skipped.")
         Chef::Log.info(install_emgr.stdout)
         next
       end
