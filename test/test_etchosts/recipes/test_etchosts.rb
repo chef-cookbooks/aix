@@ -1,4 +1,3 @@
-
 File.foreach('/etc/hosts') do |line|
   raise 'ERROR: Test IP addresses found in /etc/hosts. Aborting to prevent changes.' if line =~ /^1.1.1.[0123456]/
   raise 'ERROR: Test hostnames found in /etc/hosts. Aborting to prevent changes.' if line =~ /test[123456]/

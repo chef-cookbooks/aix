@@ -140,7 +140,7 @@ module AIX
                end
       levels.each do |k, v|
         levels[k] = v.collect do |oslevel|
-          if node['nim']['lpp_sources'].keys.include?("#{oslevel}-lpp_source")
+          if node['nim']['lpp_sources'].key?("#{oslevel}-lpp_source")
             oslevel + '*'
           else
             oslevel
