@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-actions :install, :remove
 default_action :install
 attr_accessor :exists
 

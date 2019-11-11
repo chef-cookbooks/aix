@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-actions :create, :cleanup, :rename, :wakeup, :sleep, :customize
 default_action :create
 attr_accessor :exists
 

@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-actions :update, :invalidate
 default_action :update
 attr_accessor :exists
 

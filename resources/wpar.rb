@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-actions :create, :start, :stop, :sync, :delete
 default_action :create
 attr_accessor :exists
 

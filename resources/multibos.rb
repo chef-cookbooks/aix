@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-actions :create, :remove, :update, :mount, :umount
 default_action :create
 attr_accessor :exists
 
