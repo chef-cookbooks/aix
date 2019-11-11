@@ -14,11 +14,6 @@
 # limitations under the License.
 #
 
-# Support whyrun
-def whyrun_supported?
-  true
-end
-
 def load_current_resource
   @logicalvol = AIXLVM::LogicalVolume.new(@new_resource.name, AIXLVM::System.new)
   @logicalvol.group = @new_resource.group

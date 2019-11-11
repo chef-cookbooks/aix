@@ -16,11 +16,6 @@
 
 include WPARHelper
 
-# support whyrun
-def whyrun_supported?
-  true
-end
-
 # loading current resource
 def load_current_resource
   require_wpar_gem

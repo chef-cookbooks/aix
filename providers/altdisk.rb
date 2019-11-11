@@ -14,11 +14,6 @@
 # limitations under the License.
 #
 
-# support whyrun
-def whyrun_supported?
-  true
-end
-
 # loading current resource
 def load_current_resource
   @current_resource = new_resource.class.new(@new_resource.name)

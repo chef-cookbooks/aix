@@ -17,11 +17,6 @@
 
 require 'etc'
 
-# Support whyrun
-def whyrun_supported?
-  true
-end
-
 def load_current_resource
   @current_resource = new_resource.class.new(@new_resource.name)
   @current_resource.exists = false

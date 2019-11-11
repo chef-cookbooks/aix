@@ -14,11 +14,6 @@
 # limitations under the License.
 #
 
-# Support whyrun
-def whyrun_supported?
-  true
-end
-
 def load_current_resource
   @volgroup = AIXLVM::VolumeGroup.new(@new_resource.name, AIXLVM::System.new)
   @volgroup.physical_volumes = @new_resource.physical_volumes
