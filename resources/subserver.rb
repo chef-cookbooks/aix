@@ -18,7 +18,7 @@ property :servicename, String, name_property: true, identity: true
 property :type, String, equal_to: %w(dgram stream sunrpc_udp sunrpc_tcp)
 property :protocol, String, required: true, equal_to: %w(tcp udp tcp6 udp6), desired_state: false
 property :wait, String, equal_to: %w(wait nowait SRC), default: 'nowait'
-property :user, String, required: true, default: 'root'
+property :user, String, required: true
 property :program, String
 property :args, String
 property :enabled, [true, false]
