@@ -1,10 +1,10 @@
-### Description
+<!--- Provide a short summary of your changes in the Title above -->
 
-[Describe what this change achieves]
+### Description
+<!--- Describe what this change achieves -->
 
 ### Issues Resolved
-
-[List any existing issues this PR resolves]
+<!--- List any existing issues this PR resolves -->
 
 ### Check List
 
