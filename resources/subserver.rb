@@ -21,8 +21,8 @@ property :wait, String, equal_to: %w(wait nowait SRC), default: 'nowait'
 property :user, String, required: true
 property :program, String
 property :args, String
-property :enabled, [true, false]
-property :running, [true, false]
+property :enabled, [TrueClass, FalseClass]
+property :running, [TrueClass, FalseClass]
 
 load_current_value do |desired|
   valid_protocols = %w(tcp udp tcp6 udp6)

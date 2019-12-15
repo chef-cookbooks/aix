@@ -22,13 +22,13 @@ include AIX::PatchMgmt
 property :desc, String, name_property: true
 property :lpp_source, String, required: true
 property :targets, String
-property :async, [true, false], default: false
+property :async, [TrueClass, FalseClass], default: false
 property :device, String, required: true
 property :script, String
 property :resource, String
 property :location, String
 property :group, String
-property :force, [true, false], default: false
+property :force, [TrueClass, FalseClass], default: false
 
 ##############################
 # ACTION: update

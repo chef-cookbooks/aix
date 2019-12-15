@@ -15,7 +15,7 @@
 #
 
 property :identifier, String, name_property: true
-property :immediate, [true, false], default: false
+property :immediate, [TrueClass, FalseClass], default: false
 
 action :enable do
   so = shell_out("egrep '^start /usr/(sbin|lib)/#{new_resource.identifier}' /etc/rc.tcpip")

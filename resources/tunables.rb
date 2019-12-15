@@ -16,8 +16,8 @@
 
 property :mode, Symbol, equal_to: %i(ioo vmo schedo no), identity: true, required: true, desired_state: false
 property :tunables, Hash
-property :permanent, [true, false], default: false
-property :nextboot, [true, false], default: false
+property :permanent, [TrueClass, FalseClass], default: false
+property :nextboot, [TrueClass, FalseClass], default: false
 
 load_current_value do |desired|
   # when property has "identity: true", it's available like this in the
