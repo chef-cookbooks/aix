@@ -23,11 +23,11 @@ property :user, String, default: 'root'
 property :standard_output, String
 property :standard_input, String
 property :standard_error, String
-property :auto_restart, [TrueClass, FalseClass], default: false
-property :multiple_instances, [TrueClass, FalseClass], default: false
-property :use_signals, [TrueClass, FalseClass], default: true
-property :use_sockets, [TrueClass, FalseClass], default: false
-property :use_message_queues, [TrueClass, FalseClass], default: false
+property :auto_restart, [true, false], default: false
+property :multiple_instances, [true, false], default: false
+property :use_signals, [true, false], default: true
+property :use_sockets, [true, false], default: false
+property :use_message_queues, [true, false], default: false
 property :message_queue_key, String
 property :message_type, String
 property :priority, Integer
@@ -35,7 +35,7 @@ property :priority, Integer
 property :normal_stop_signal, Integer, default: 15, equal_to: (1..34).to_a
 # default force_stop_signal is SIGKILL
 property :force_stop_signal, Integer, default: 9, equal_to: (1..34).to_a
-property :show_inactive, [TrueClass, FalseClass], default: true
+property :show_inactive, [true, false], default: true
 property :wait_time, Integer
 property :subsystem_group, String
 

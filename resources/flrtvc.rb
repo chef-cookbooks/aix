@@ -32,10 +32,10 @@ property :apar, ['sec', 'hiper', 'all', nil], default: nil
 property :filesets, String
 property :csv, String
 property :path, String
-property :verbose, [TrueClass, FalseClass], default: false
-property :clean, [TrueClass, FalseClass], default: true
-property :check_only, [TrueClass, FalseClass], default: false
-property :download_only, [TrueClass, FalseClass], default: false
+property :verbose, [true, false], default: false
+property :clean, [true, false], default: true
+property :check_only, [true, false], default: false
+property :download_only, [true, false], default: false
 
 default_action :patch
 

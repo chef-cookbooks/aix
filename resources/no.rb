@@ -15,7 +15,7 @@
 #
 
 property :tunables, Hash
-property :set_default, [TrueClass, FalseClass], default: false
+property :set_default, [true, false], default: false
 
 load_current_value do
   so = shell_out!('no -x')

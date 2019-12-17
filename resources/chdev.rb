@@ -16,8 +16,8 @@
 
 property :attributes, Hash
 # If both of these are specified, the resulting shellout command fails
-property :need_reboot, [TrueClass, FalseClass], default: false
-property :hot_change, [TrueClass, FalseClass], default: false
+property :need_reboot, [true, false], default: false
+property :hot_change, [true, false], default: false
 
 load_current_value do |desired|
   # does the device exists

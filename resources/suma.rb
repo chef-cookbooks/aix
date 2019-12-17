@@ -23,10 +23,10 @@ property :desc, String, name_property: true
 property :oslevel, String
 property :location, String
 property :targets, String
-property :save_it, [TrueClass, FalseClass], default: false
+property :save_it, [true, false], default: false
 property :sched_time, String
 property :task_id, Integer
-property :preview_only, [TrueClass, FalseClass], default: false
+property :preview_only, [true, false], default: false
 
 ##############################
 # load_current_value
