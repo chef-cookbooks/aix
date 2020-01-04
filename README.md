@@ -13,7 +13,7 @@ This cookbook contains useful resources for using Chef with AIX systems.
 
 ### Chef
 
-- Chef 12.7+
+- Chef 12.15+
 
 ### Cookbooks
 
