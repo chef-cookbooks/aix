@@ -22,7 +22,7 @@ module WPARHelper
     if WPAR::VERSION >= node['aix-wpar']['version']
       Chef::Log.debug("Node had aix-wpar #{WPAR::VERSION} installed. No need to install gems.")
     else
-      raise LoadError.new
+      raise LoadError.new, 'Unable to load specified version.'
     end
   rescue LoadError
     Chef::Log.debug('Did not find aix-wpar gem of the specified versions installed. Installing now')
