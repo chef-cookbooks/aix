@@ -652,9 +652,9 @@ module AIX
         end
 
         log_info('HMC information:')
-        info_hash.keys.each do |key|
+        info_hash.each_key do |key|
           log_info(key.to_s)
-          info_hash[key].keys.each do |k|
+          info_hash[key].each_key do |k|
             log_info("  #{k}: #{info_hash[key][k]}")
           end
         end
@@ -716,9 +716,9 @@ module AIX
         end
 
         log_info("NIM Clients for type: '#{lpar_type}'")
-        info_hash.keys.each do |key|
+        info_hash.each_key do |key|
           log_info(key.to_s)
-          info_hash[key].keys.each do |k|
+          info_hash[key].each_key do |k|
             log_info("  #{k}: #{info_hash[key][k]}")
           end
         end
@@ -896,7 +896,7 @@ module AIX
         end
 
         log_info('List of PVs:')
-        nim_vios[vios]['pvs'].keys.each do |k|
+        nim_vios[vios]['pvs'].each_key do |k|
           log_info("  #{vios}['pvs'][#{k}] = #{nim_vios[vios]['pvs'][k]}")
         end
       end
@@ -943,7 +943,7 @@ module AIX
         end
 
         log_info('List of free PVs:')
-        nim_vios[vios]['free_pvs'].keys.each do |k|
+        nim_vios[vios]['free_pvs'].each_key do |k|
           log_info("  #{vios}['free_pvs'][#{k}] = #{nim_vios[vios]['free_pvs'][k]}")
         end
       end
@@ -1197,7 +1197,7 @@ module AIX
           altdisk_hash[vios] = ''
         end
         if altdisk_hash[vios].empty?
-          nim_vios[vios]['pvs'].keys.each do |hdisk|
+          nim_vios[vios]['pvs'].each_key do |hdisk|
             if nim_vios[vios]['pvs'][hdisk]['vg'] == 'altinst_rootvg'
               if altdisk_hash[vios].empty?
                 altdisk_hash[vios] = hdisk
@@ -1293,7 +1293,7 @@ module AIX
     # -----------------------------------------------------------------
     def print_hash_by_columns(data)
       widths = {}
-      data.keys.each do |key|
+      data.each_key do |key|
         widths[key] = 5 # minimum column width
         # longest string len of values
         val_len = data[key].max_by { |v| v.to_s.length }.to_s.length
@@ -1303,22 +1303,22 @@ module AIX
       end
 
       result = '+'
-      data.keys.each { |key| result += ''.center(widths[key] + 2, '-') + '+' }
+      data.each_key { |key| result += ''.center(widths[key] + 2, '-') + '+' }
       result += "\n"
       result += '|'
-      data.keys.each { |key| result += key.to_s.center(widths[key] + 2) + '|' }
+      data.each_key { |key| result += key.to_s.center(widths[key] + 2) + '|' }
       result += "\n"
       result += '+'
-      data.keys.each { |key| result += ''.center(widths[key] + 2, '-') + '+' }
+      data.each_key { |key| result += ''.center(widths[key] + 2, '-') + '+' }
       result += "\n"
       length = data.values.max_by(&:length).length
       0.upto(length - 1).each do |i|
         result += '|'
-        data.keys.each { |key| result += data[key][i].to_s.center(widths[key] + 2) + '|' }
+        data.each_key { |key| result += data[key][i].to_s.center(widths[key] + 2) + '|' }
         result += "\n"
       end
       result += '+'
-      data.keys.each { |key| result += ''.center(widths[key] + 2, '-') + '+' }
+      data.each_key { |key| result += ''.center(widths[key] + 2, '-') + '+' }
       result += "\n"
       result
     end
@@ -1713,7 +1713,7 @@ module AIX
       case type
       when 'tl'
         # reading output until I have found the good tl
-        niminfo['nim']['lpp_sources'].keys.each do |key|
+        niminfo['nim']['lpp_sources'].each_key do |key|
           a_key = key.split('-')
           next unless a_key[0] == oslevel[0] && a_key[1] > oslevel[1]
           lppsource = key
@@ -1721,7 +1721,7 @@ module AIX
         end
       when 'sp'
         # reading output until I have found the good sp
-        niminfo['nim']['lpp_sources'].keys.each do |key|
+        niminfo['nim']['lpp_sources'].each_key do |key|
           a_key = key.split('-')
           next unless a_key[0] == oslevel[0] && a_key[1] == oslevel[1] && a_key[2] > oslevel[2]
           lppsource = key

@@ -28,19 +28,17 @@ module AIXLVM
 
     def get_vgname
       out = @system.run(format("lspv %s | grep 'VOLUME GROUP:'", @name))
-      if !out.nil?
-        return out[/VOLUME GROUP:\s*(.*)/, 1]
-      else
-        return nil
+      unless out.nil?
+        out[/VOLUME GROUP:\s*(.*)/, 1]
       end
     end
 
     def get_size
       out = @system.run(format('bootinfo -s %s', @name))
       if !out.nil?
-        return out.to_i
+        out.to_i
       else
-        return 0
+        0
       end
     end
   end
@@ -79,43 +77,35 @@ module AIXLVM
 
     def hot_spare?
       read
-      if !@descript.nil?
-        return @descript[/HOT SPARE:\s*([^\s]*)\s.*/, 1] != 'no'
-      else
-        return nil
+      unless @descript.nil?
+        @descript[/HOT SPARE:\s*([^\s]*)\s.*/, 1] != 'no'
       end
     end
 
     def get_ppsize
       read
-      if !@descript.nil?
-        return @descript[/PP SIZE:\s*(.*)\s*/, 1].to_i
-      else
-        return nil
+      unless @descript.nil?
+        @descript[/PP SIZE:\s*(.*)\s*/, 1].to_i
       end
     end
 
     def get_freepp
       read
-      if !@descript.nil?
-        return @descript[/FREE PPs:\s*(.*)\s*/, 1].to_i
-      else
-        return nil
+      unless @descript.nil?
+        @descript[/FREE PPs:\s*(.*)\s*/, 1].to_i
       end
     end
 
     def get_totalpp
       read
-      if !@descript.nil?
-        return @descript[/TOTAL PPs:\s*(.*)\s*/, 1].to_i
-      else
-        return nil
+      unless @descript.nil?
+        @descript[/TOTAL PPs:\s*(.*)\s*/, 1].to_i
       end
     end
 
     def get_mirrorpool
       out = @system.run(format("lspv -P | grep '%s'", @name))
-      if !out.nil?
+      unless out.nil?
         mirror_pool = nil
         reg_exp = /^.*#{@name}\s+([^\s]*)$/
         out.split("\n").each do |line|
@@ -127,18 +117,14 @@ module AIXLVM
             mirror_pool = '???'
           end
         end
-        return mirror_pool
-      else
-        return nil
+        mirror_pool
       end
     end
 
     def get_nbpv
       read
-      if !@descript.nil?
-        return @descript[/ACTIVE PVs:\s*(.*)\s*/, 1].to_i
-      else
-        return nil
+      unless @descript.nil?
+        @descript[/ACTIVE PVs:\s*(.*)\s*/, 1].to_i
       end
     end
 
@@ -150,7 +136,7 @@ module AIXLVM
             end
       out = @system.run(cmd)
       if !out.nil?
-        return out
+        out
       else
         raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
@@ -159,7 +145,7 @@ module AIXLVM
     def modify(hot_spot)
       out = @system.run(format('chvg -h %s %s', hot_spot, @name))
       if !out.nil?
-        return out
+        out
       else
         raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
@@ -173,7 +159,7 @@ module AIXLVM
             end
       out = @system.run(cmd)
       if !out.nil?
-        return out
+        out
       else
         raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
@@ -182,7 +168,7 @@ module AIXLVM
     def delete_pv(pvname)
       out = @system.run(format('reducevg -d %s %s', @name, pvname))
       if !out.nil?
-        return out
+        out
       else
         raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
@@ -207,58 +193,48 @@ module AIXLVM
 
     def get_vg
       read
-      if !@descript.nil?
-        return @descript[/VOLUME GROUP:\s*(.*)\s*/, 1]
-      else
-        return nil
+      unless @descript.nil?
+        @descript[/VOLUME GROUP:\s*(.*)\s*/, 1]
       end
     end
 
     def get_ppsize
       read
-      if !@descript.nil?
-        return @descript[/PP SIZE:\s*(.*)\s*/, 1].to_i
-      else
-        return nil
+      unless @descript.nil?
+        @descript[/PP SIZE:\s*(.*)\s*/, 1].to_i
       end
     end
 
     def get_nbpp
       read
-      if !@descript.nil?
-        return @descript[/PPs:\s*(.*)\s*/, 1].to_i
-      else
-        return nil
+      unless @descript.nil?
+        @descript[/PPs:\s*(.*)\s*/, 1].to_i
       end
     end
 
     def get_mount
       read
-      if !@descript.nil?
+      unless @descript.nil?
         val = @descript[/MOUNT POINT:\s*([^\s]*)\s/, 1]
         if val == 'N/A'
-          return ''
+          ''
         else
-          return val
+          val
         end
-      else
-        return nil
       end
     end
 
     def get_copies
       read
-      if !@descript.nil?
-        return @descript[/COPIES:\s*(.*)\s*/, 1].to_i
-      else
-        return nil
+      unless @descript.nil?
+        @descript[/COPIES:\s*(.*)\s*/, 1].to_i
       end
     end
 
     def create(vgname, nb_pp, copies)
       out = @system.run(format('mklv -c %d -t jfs2 -y %s %s %d', copies, @name, vgname, nb_pp))
       if !out.nil?
-        return out
+        out
       else
         raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
@@ -267,7 +243,7 @@ module AIXLVM
     def increase(diff_pp)
       out = @system.run(format('extendlv %s %d', @name, diff_pp))
       if !out.nil?
-        return out
+        out
       else
         raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
@@ -280,7 +256,7 @@ module AIXLVM
               @system.run(format('rmlvcopy %s %d', @name, -1 * copies))
             end
       if !out.nil?
-        return out
+        out
       else
         raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
@@ -305,41 +281,35 @@ module AIXLVM
 
     def get_size
       read
-      if !@descript.nil?
+      unless @descript.nil?
         lines = @descript.split("\n")
         vals = lines[1].split(':')
-        return vals[5].to_f / 2048
-      else
-        return nil
+        vals[5].to_f / 2048
       end
     end
 
     def get_format
       read
-      if !@descript.nil?
+      unless @descript.nil?
         lines = @descript.split("\n")
         vals = lines[1].split(':')
-        return vals[2]
-      else
-        return nil
+        vals[2]
       end
     end
 
     def readonly?
       read
-      if !@descript.nil?
+      unless @descript.nil?
         lines = @descript.split("\n")
         vals = lines[1].split(':')
-        return !vals[6].include?('rw')
-      else
-        return nil
+        !vals[6].include?('rw')
       end
     end
 
     def create(lvname)
       out = @system.run(format('crfs -v jfs2 -d %s -m %s -A yes', lvname, @name))
       if !out.nil?
-        return out
+        out
       else
         raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
@@ -348,7 +318,7 @@ module AIXLVM
     def modify(size)
       out = @system.run(format('chfs -a size=%dM %s', size, @name))
       if !out.nil?
-        return out
+        out
       else
         raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
@@ -362,7 +332,7 @@ module AIXLVM
     def mount
       out = @system.run(format('mount %s', @name))
       if !out.nil?
-        return out
+        out
       else
         raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
@@ -371,7 +341,7 @@ module AIXLVM
     def umount
       out = @system.run(format('umount %s', @name))
       if !out.nil?
-        return out
+        out
       else
         raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end
@@ -380,7 +350,7 @@ module AIXLVM
     def defragfs
       out = @system.run(format('defragfs %s', @name))
       if !out.nil?
-        return out
+        out
       else
         raise AIXLVM::LVMException, format('system error:%s', @system.last_error)
       end

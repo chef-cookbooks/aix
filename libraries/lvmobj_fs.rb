@@ -87,9 +87,9 @@ module AIXLVM
         raise AIXLVM::LVMException, "Filesystem doesn't exist!"
       end
       if is_mount
-        return !fs_obj.mounted?
+        !fs_obj.mounted?
       else
-        return fs_obj.mounted?
+        fs_obj.mounted?
       end
     end
 

@@ -233,16 +233,16 @@ def find_and_check_disk(type, value)
   end
   if disk == 'None'
     Chef::Log.debug('alt_disk: cannot find any disk usable for alt_disk')
-    return 'None'
+    'None'
   else
     Chef::Log.debug('alt_disk: checking size is BIGGER or EQUAL')
     test = check_disk_size(current_rootvg, disk)
     if test == 'BIGGER' || test == 'EQUAL'
       Chef::Log.debug('alt_disk: disk is BIGGER or EQUAL')
-      return disk
+      disk
     elsif test == 'LESSER'
       Chef::Log.debug('alt_disk: cannot find any disk usable for alt_disk')
-      return 'None'
+      'None'
     end
   end
 end
@@ -265,7 +265,7 @@ def check_disk_size(source, dest)
   end
   if int_dest_size == int_source_size
     Chef::Log.debug('alt_disk: size --> EQUAL')
-    return 'EQUAL'
+    'EQUAL'
   end
 end
 

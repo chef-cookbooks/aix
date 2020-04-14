@@ -1,6 +1,6 @@
 # update the VIOSES
 
-Chef::Recipe.send(:include, AIX::PatchMgmt)
+Chef::Recipe.include AIX::PatchMgmt
 
 aix_nimviosupdate 'Update the VIOSES' do
   targets '(gdrh9v1,gdrh9v2) (gdrh10v1,gdrh10v2)'

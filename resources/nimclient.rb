@@ -379,7 +379,7 @@ action_class do
     else
       Chef::Log.debug("nimclient: we found the #{time} lpp_source, #{lppsource} will be utilized")
       # chomp the return, we need to remove newline here
-      return lppsource.chomp
+      lppsource.chomp
     end
   end
 
