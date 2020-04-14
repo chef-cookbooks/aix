@@ -1,7 +1,7 @@
 # recipe example patch using flrtvc report
 # This recipe is interactive
 
-Chef::Recipe.send(:include, AIX::PatchMgmt)
+Chef::Recipe.include AIX::PatchMgmt
 
 puts '#########################################################'
 puts 'Available machines and their corresponding oslevel are:'

@@ -202,7 +202,7 @@ def vios_health_init(nim_vios, hmc_id, hmc_ip)
 
         # retrieve the vios with the vios_part_id and the cec_serial value
         # and store the UUIDs in the dictionaries
-        nim_vios.keys.each do |vios_key|
+        nim_vios.each_key do |vios_key|
           next unless nim_vios[vios_key]['mgmt_vios_id'] == vios_part_id && nim_vios[vios_key]['mgmt_cec_serial'] == cec_serial
 
           nim_vios[vios_key]['vios_uuid'] = vios_uuid
