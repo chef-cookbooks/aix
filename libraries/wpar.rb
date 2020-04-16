@@ -26,7 +26,7 @@ module WPARHelper
     chef_gem 'aix-wpar' do
       action :install
       version node['aix-wpar']['version']
-      compile_time true if Chef::Resource::ChefGem.method_defined?(:compile_time)
+      compile_time true
     end
 
     require 'wpars'
