@@ -4,6 +4,7 @@ This file is used to list changes made in each version of the aix cookbook.
 
 ## Unreleased
 
+- resolved cookstyle error: libraries/wpar.rb:29:7 refactor: `ChefModernize/RespondToCompileTime`
 - resolved cookstyle error: examples/patch_by_flrtvc.rb:4:14 warning: `Lint/SendWithMixinArgument`
 - resolved cookstyle error: examples/update_by_suma.rb:4:14 warning: `Lint/SendWithMixinArgument`
 - resolved cookstyle error: examples/update_by_suma_latest.rb:4:14 warning: `Lint/SendWithMixinArgument`
