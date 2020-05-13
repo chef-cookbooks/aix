@@ -1,18 +1,18 @@
 require 'fileutils'
 
-task :default => [ :clean_all, :copy_recipes, :install_fake, :run_nim, :run_lpp_source, :report, :deinstall_fake ]
-task :nim => [ :clean_all, :copy_recipes, :install_fake, :run_nim, :report, :deinstall_fake ]
-task :lpp_source => [ :clean_all, :copy_recipes, :install_fake, :run_lpp_source, :report, :deinstall_fake ]
+task default: [ :clean_all, :copy_recipes, :install_fake, :run_nim, :run_lpp_source, :report, :deinstall_fake ]
+task nim: [ :clean_all, :copy_recipes, :install_fake, :run_nim, :report, :deinstall_fake ]
+task lpp_source: [ :clean_all, :copy_recipes, :install_fake, :run_lpp_source, :report, :deinstall_fake ]
 
 # %n returns the file name without the extension and directory portions !
-test_nim_list = FileList.new('../test_nim/recipes/test_nim_*.rb').pathmap("%n")
-test_lpp_source_list = FileList.new('../test_nim/recipes/test_lpp_source_*.rb').pathmap("%n")
+test_nim_list = FileList.new('../test_nim/recipes/test_nim_*.rb').pathmap('%n')
+test_lpp_source_list = FileList.new('../test_nim/recipes/test_lpp_source_*.rb').pathmap('%n')
 
 ##########################################################
 ## Variable definition
 ##########################################################
 
-LOG_DIR = Time.new.strftime("%F_%H%M%S")
+LOG_DIR = Time.new.strftime('%F_%H%M%S')
 COOKBOOK_DIR = Dir.pwd + '/../../..'
 
 $success = 0
@@ -25,31 +25,31 @@ $total = 0
 
 desc 'Build client.rb file which is used to specify the configuration details for the chef-client.'
 def build_config_file(config)
-    ## Create LOGS Directory
-    FileUtils.mkdir_p(Dir.pwd + '/LOGS/log_' + LOG_DIR )
+  ## Create LOGS Directory
+  FileUtils.mkdir_p(Dir.pwd + '/LOGS/log_' + LOG_DIR)
 
-    ## Fill in client.rb
-    File.open("client.rb", "w") do |file|
-        file.puts 'cookbook_path "' + Dir.pwd + '/../../.."'
-        file.puts 'log_level :info'
-        file.puts 'log_location "' + Dir.pwd + '/LOGS/log_' + LOG_DIR + '/'+ config.to_s + '.log"'
-        file.puts 'verbose_logging true'
-    end
-    return 'client.rb'
+  ## Fill in client.rb
+  File.open('client.rb', 'w') do |file|
+    file.puts 'cookbook_path "' + Dir.pwd + '/../../.."'
+    file.puts 'log_level :info'
+    file.puts 'log_location "' + Dir.pwd + '/LOGS/log_' + LOG_DIR + '/' + config.to_s + '.log"'
+    file.puts 'verbose_logging true'
+  end
+  'client.rb'
 end
 
 desc 'Parse recipe file to extract expected values'
 def parse_expected_values(file)
   puts 'Expected values:'
-  expected_values = Hash.new
-  File.open(Dir.pwd + '/recipes/' + file + '.rb', "r") do |f|
+  expected_values = {}
+  File.open(Dir.pwd + '/recipes/' + file + '.rb', 'r') do |f|
     f.each_line do |line|
       line.chomp!
-      if line =~ /^# (.*?) : (.*?)$/
-        key, value = Regexp.last_match(1), Regexp.last_match(2)
-        expected_values[key] = value
-        puts "\t#{key} = #{value}"
-      end
+      next unless line =~ /^# (.*?) : (.*?)$/
+      key = Regexp.last_match(1)
+      value = Regexp.last_match(2)
+      expected_values[key] = value
+      puts "\t#{key} = #{value}"
     end
   end
   expected_values
@@ -68,7 +68,7 @@ def check_expected_values(rc, file, expected)
 
   unless expected['exception'].to_s == 'nil'
     found = false
-    File.open(log_file, "r") do |f|
+    File.open(log_file, 'r') do |f|
       f.each_line do |line|
         found = true if line =~ /#{expected['exception'].to_s}/
       end
@@ -80,17 +80,16 @@ def check_expected_values(rc, file, expected)
   end
 
   ['nim log info', 'nim log warn', 'nim cust', 'nim alloc', 'nim dealloc', 'nim script'].each do |key|
-    unless expected[key].to_s == ''
-      found = false
-      File.open(log_file, "r") do |f|
-        f.each_line do |line|
-          found = true if line =~ /#{Regexp.escape(expected[key].to_s)}/
-        end
+    next if expected[key].to_s == ''
+    found = false
+    File.open(log_file, 'r') do |f|
+      f.each_line do |line|
+        found = true if line =~ /#{Regexp.escape(expected[key].to_s)}/
       end
-      unless found
-        success = false
-        puts "\033[31mExpected trace #{expected[key].to_s} but did not found in #{log_file}"
-      end
+    end
+    unless found
+      success = false
+      puts "\033[31mExpected trace #{expected[key].to_s} but did not found in #{log_file}"
     end
   end
 
@@ -124,12 +123,12 @@ desc 'Clean SUMA tests directory'
 task :clean_all do
   puts '/////////////////////////////////////////////////////////////////////'
   puts 'Clean SUMA tests directory'
-  if File.exists? '/sumatest'
+  if File.exist? '/sumatest'
     puts 'Deleting /sumatest'
     FileUtils.rm_rf('/sumatest', secure: true)
   end
 
-  if File.exists? '/usr/sys/inst.images/'
+  if File.exist? '/usr/sys/inst.images/'
     puts 'Deleting /usr/sys/inst.images/'
     FileUtils.rm_rf('/usr/sys/inst.images/', secure: true)
   end
@@ -169,7 +168,7 @@ task :run_nim do
     puts "\033[45m" + '----- Running recipe: ' + fl + ' -----' + "\033[0m"
     puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
     expected_values = parse_expected_values(fl)
-    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |ok, res|
+    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |_ok, res|
       if check_expected_values(res.exitstatus, fl, expected_values)
         print_success
       else
@@ -190,7 +189,7 @@ task :run_lpp_source do
     puts "\033[45m" + '----- Running recipe: ' + fl + ' -----' + "\033[0m"
     puts "\033[45m" + '----------------------' + '-' * fl.length + '------' + "\033[0m"
     expected_values = parse_expected_values(fl)
-    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |ok, res|
+    sh 'chef-client --local-mode -c client.rb --runlist "recipe[aix::' + fl + ']"' do |_ok, res|
       if check_expected_values(res.exitstatus, fl, expected_values)
         print_success
       else
