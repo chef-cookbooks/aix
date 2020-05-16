@@ -5,7 +5,7 @@ end
 
 aix_wpar 'create wpar' do
   action :create
-  name 'testwpar'
+  wpar_name 'testwpar'
   hostname 'testwpar'
   cpu '10%-50%,100%'
   live_stream true
@@ -14,11 +14,11 @@ end
 
 aix_wpar 'stop wpar' do
   action :stop
-  name 'testwpar'
+  wpar_name 'testwpar'
   live_stream true
 end
 
 aix_wpar 'delete wpar' do
   action :delete
-  name 'testwpar'
+  wpar_name 'testwpar'
 end

@@ -16,6 +16,7 @@
 
 include WPARHelper
 
+property :wpar_name, String, name_property: true
 property :hostname, String
 property :address, String
 property :interface, String
@@ -34,7 +35,7 @@ load_current_value do |new_resource|
   require_wpar_gem
 
   # Get current WPAR on the system
-  wpar = ::WPAR::WPARS.new[new_resource.name]
+  wpar = ::WPAR::WPARS.new[new_resource.wpar_name]
   unless wpar.nil?
     wpar.live_stream = STDOUT if new_resource.live_stream
     current_resource.wpar_state = wpar.general.state
@@ -59,10 +60,10 @@ action :create do
   options = {}
   Chef::Log.debug("wpar #{current_resource.wpar_state} ")
   if current_resource
-    Chef::Log.info("wpar #{new_resource.name} already exist")
+    Chef::Log.info("wpar #{new_resource.wpar_name} already exist")
   else
     require_wpar_gem
-    wpar = WPAR::WPAR.new(name: new_resource.name)
+    wpar = WPAR::WPAR.new(name: new_resource.wpar_name)
     wpar.general.auto = new_resource.autostart || 'no'
     wpar.live_stream = STDOUT if new_resource.live_stream
     options[:rootvg] = new_resource.rootvg_disk if new_resource.rootvg
@@ -75,7 +76,7 @@ action :create do
     wpar.general.hostname = new_resource.hostname
     # create a network if specified
     if new_resource.address
-      wpar.networks.add(name: new_resource.name,
+      wpar.networks.add(name: new_resource.wpar_name,
                         address: new_resource.address,
                         interface: new_resource.interface)
     end
@@ -89,47 +90,47 @@ end
 # start action
 action :start do
   if current_resource && current_resource.wpar_state == 'D'
-    converge_by("Start wpar #{current_resource.name}") do
-      wpar = ::WPAR::WPARS.new[current_resource.name]
+    converge_by("Start wpar #{current_resource.wpar_name}") do
+      wpar = ::WPAR::WPARS.new[current_resource.wpar_name]
       wpar.start if wpar
     end
   else
-    Chef::Log.error("wpar #{new_resource.name} not in correct state")
+    Chef::Log.error("wpar #{new_resource.wpar_name} not in correct state")
   end
 end
 
 # stop action
 action :stop do
   if current_resource && current_resource.wpar_state == 'A'
-    converge_by("Stop wpar #{current_resource.name}") do
-      wpar = ::WPAR::WPARS.new[current_resource.name]
+    converge_by("Stop wpar #{current_resource.wpar_name}") do
+      wpar = ::WPAR::WPARS.new[current_resource.wpar_name]
       wpar.stop if wpar
     end
   else
-    Chef::Log.error("wpar #{new_resource.name} not in correct state")
+    Chef::Log.error("wpar #{new_resource.wpar_name} not in correct state")
   end
 end
 
 # action delete
 action :delete do
   if current_resource
-    converge_by("Delete wpar #{current_resource.name}") do
-      wpar = ::WPAR::WPARS.new[current_resource.name]
+    converge_by("Delete wpar #{current_resource.wpar_name}") do
+      wpar = ::WPAR::WPARS.new[current_resource.wpar_name]
       wpar.destroy(force: true) if wpar
     end
   else
-    Chef::Log.error("wpar #{new_resource.name} doesn't exist")
+    Chef::Log.error("wpar #{new_resource.wpar_name} doesn't exist")
   end
 end
 
 # action sync
 action :sync do
   if current_resource
-    converge_by("Sync wpar #{current_resource.name}") do
-      wpar = ::WPAR::WPARS.new[current_resource.name]
+    converge_by("Sync wpar #{current_resource.wpar_name}") do
+      wpar = ::WPAR::WPARS.new[current_resource.wpar_name]
       wpar.sync if wpar
     end
   else
-    Chef::Log.error("wpar #{new_resource.name} doesn't exist")
+    Chef::Log.error("wpar #{new_resource.wpar_name} doesn't exist")
   end
 end
