@@ -4,6 +4,9 @@ This file is used to list changes made in each version of the aix cookbook.
 
 ## Unreleased
 
+- resolved cookstyle error: resources/flrtvc.rb:368:6 refactor: `ChefModernize/ShellOutHelper`
+- resolved cookstyle error: resources/flrtvc.rb:432:8 refactor: `ChefModernize/ShellOutHelper`
+- resolved cookstyle error: resources/flrtvc.rb:433:13 refactor: `ChefModernize/ShellOutHelper`
 - resolved cookstyle error: test/test_nim/rakefile:3:6 convention: `Style/HashSyntax`
 - resolved cookstyle error: test/test_nim/rakefile:4:6 convention: `Style/HashSyntax`
 - resolved cookstyle error: test/test_nim/rakefile:5:6 convention: `Style/HashSyntax`

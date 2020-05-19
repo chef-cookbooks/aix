@@ -365,7 +365,7 @@ end
 # ACTION: install
 ##############################
 action :install do
-  if Mixlib::ShellOut.new('which unzip').run_command.error?
+  if shell_out('which unzip').error?
     unzip_file = ::File.join(Chef::Config[:file_cache_path], 'unzip-6.0-3.aix6.1.ppc.rpm')
 
     # download unzip
@@ -429,8 +429,8 @@ action :patch do
   ::FileUtils.mkdir_p(base_dir)
 
   # build list of targets
-  so = Mixlib::ShellOut.new("lsnim -t standalone | cut -d' ' -f1 | sort").run_command.stdout.split
-  so.concat Mixlib::ShellOut.new("lsnim -t vios | cut -d' ' -f1 | sort").run_command.stdout.split
+  so = shell_out("lsnim -t standalone | cut -d' ' -f1 | sort").stdout.split
+  so.concat shell_out("lsnim -t vios | cut -d' ' -f1 | sort").stdout.split
   target_list = expand_targets(new_resource.targets, so)
   Chef::Log.debug("target_list: #{target_list}")
 
