@@ -36,22 +36,22 @@ load_current_value do |new_resource|
 
   # Get current WPAR on the system
   wpar = ::WPAR::WPARS.new[new_resource.wpar_name]
-  unless wpar.nil?
-    wpar.live_stream = STDOUT if new_resource.live_stream
-    current_resource.wpar_state = wpar.general.state
-    current_resource.cpu = wpar.resource_control.cpu
-    unless wpar.networks.first.nil?
-      address wpar.networks.first.address
-      interface wpar.networks.first.interface
-    end
+  current_value_does_not_exist! if wpar.nil?
 
-    autostart true if wpar.general.auto == 'yes'
-    rootvg true if wpar.general.rootvgwpar == 'yes'
-    # get the hdisk used if it's a rootvg wpar
-    unless wpar.get_rootvg.empty?
-      rootvg true
-      rootvg_disk devices.get_rootvg.first.devname
-    end
+  wpar.live_stream = STDOUT if new_resource.live_stream
+  current_resource.wpar_state = wpar.general.state
+  current_resource.cpu = wpar.resource_control.cpu
+  unless wpar.networks.first.nil?
+    address wpar.networks.first.address
+    interface wpar.networks.first.interface
+  end
+
+  autostart true if wpar.general.auto == 'yes'
+  rootvg true if wpar.general.rootvgwpar == 'yes'
+  # get the hdisk used if it's a rootvg wpar
+  unless wpar.get_rootvg.empty?
+    rootvg true
+    rootvg_disk wpar.devices.get_rootvg.first.devname
   end
 end
 
