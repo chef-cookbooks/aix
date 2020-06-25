@@ -39,8 +39,8 @@ load_current_value do |new_resource|
   current_value_does_not_exist! if wpar.nil?
 
   wpar.live_stream = STDOUT if new_resource.live_stream
-  current_resource.wpar_state = wpar.general.state
-  current_resource.cpu = wpar.resource_control.cpu
+  wpar_state = wpar.general.state
+  cpu = wpar.resource_control.cpu
   unless wpar.networks.first.nil?
     address wpar.networks.first.address
     interface wpar.networks.first.interface
@@ -58,7 +58,6 @@ end
 # create action
 action :create do
   options = {}
-  Chef::Log.debug("wpar #{current_resource.wpar_state} ")
   if current_resource
     Chef::Log.info("wpar #{new_resource.wpar_name} already exist")
   else
