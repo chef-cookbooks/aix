@@ -1,7 +1,7 @@
 # recipe example update using suma and nim
 # This recipe is interactive and allows upgrade of AIX 7.1 and 7.2 machines
 
-Chef::Recipe.include AIX::PatchMgmt
+Chef::DSL::Recipe.include AIX::PatchMgmt
 
 puts '#########################################################'
 puts 'Available machines and their corresponding oslevel are:'

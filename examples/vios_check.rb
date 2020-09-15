@@ -1,5 +1,5 @@
 # Check the "health" of the given VIOSES
-Chef::Recipe.include AIX::PatchMgmt
+Chef::DSL::Recipe.include AIX::PatchMgmt
 
 aix_nimviosupdate 'check VIOS healtheness' do
   targets '(gdrh9v1,gdrh9v2) (gdrh10v1,gdrh10v2)'

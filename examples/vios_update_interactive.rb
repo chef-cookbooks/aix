@@ -1,6 +1,6 @@
 # recipe example update
 
-Chef::Recipe.include AIX::PatchMgmt
+Chef::DSL::Recipe.include AIX::PatchMgmt
 
 puts '#########################################################'
 puts 'Available VIOS and their corresponding oslevel are:'

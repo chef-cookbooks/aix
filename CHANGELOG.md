@@ -4,6 +4,13 @@ This file is used to list changes made in each version of the aix cookbook.
 
 ## Unreleased
 
+- resolved cookstyle error: examples/patch_by_flrtvc.rb:4:1 refactor: `ChefCorrectness/IncorrectLibraryInjection`
+- resolved cookstyle error: examples/update_by_suma.rb:4:1 refactor: `ChefCorrectness/IncorrectLibraryInjection`
+- resolved cookstyle error: examples/update_by_suma_latest.rb:4:1 refactor: `ChefCorrectness/IncorrectLibraryInjection`
+- resolved cookstyle error: examples/vios_altdisk_copy.rb:3:1 refactor: `ChefCorrectness/IncorrectLibraryInjection`
+- resolved cookstyle error: examples/vios_check.rb:2:1 refactor: `ChefCorrectness/IncorrectLibraryInjection`
+- resolved cookstyle error: examples/vios_update.rb:3:1 refactor: `ChefCorrectness/IncorrectLibraryInjection`
+- resolved cookstyle error: examples/vios_update_interactive.rb:3:1 refactor: `ChefCorrectness/IncorrectLibraryInjection`
 - resolved cookstyle error: resources/flrtvc.rb:368:6 refactor: `ChefModernize/ShellOutHelper`
 - resolved cookstyle error: resources/flrtvc.rb:432:8 refactor: `ChefModernize/ShellOutHelper`
 - resolved cookstyle error: resources/flrtvc.rb:433:13 refactor: `ChefModernize/ShellOutHelper`
