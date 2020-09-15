@@ -1,7 +1,7 @@
 # recipe example update to latest sp or tl using suma and nim
 # This recipe is interactive
 
-Chef::Recipe.include AIX::PatchMgmt
+Chef::DSL::Recipe.include AIX::PatchMgmt
 
 puts '#########################################################'
 puts 'Available machines and their corresponding oslevel are:'
