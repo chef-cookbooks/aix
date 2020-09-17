@@ -509,7 +509,7 @@ action :patch do
           end
           stderr.each_line do |line|
             line.chomp!
-            STDERR.puts line
+            warn line
             Chef::Log.info("[STDERR] #{line}")
           end
           wait_thr.value # Process::Status object returned.
@@ -525,7 +525,7 @@ action :patch do
         begin
           nim.perform_efix_vios_customization(lpp_source, m, efixes_basenames.join(' '))
         rescue NimCustError => e
-          STDERR.puts e.message
+          warn e.message
           Chef::Log.warn("[#{m}] Failed installing some efixes. See /var/adm/ras/emgr.log on #{m} for details")
         end
         nim.remove_resource(lpp_source) if new_resource.clean == true
@@ -538,7 +538,7 @@ action :patch do
         begin
           nim.perform_efix_customization(lpp_source, m, efixes_basenames.join(' '))
         rescue NimCustError => e
-          STDERR.puts e.message
+          warn e.message
           Chef::Log.warn("[#{m}] Failed installing some efixes. See /var/adm/ras/emgr.log on #{m} for details")
         end
         nim.remove_resource(lpp_source) if new_resource.clean == true

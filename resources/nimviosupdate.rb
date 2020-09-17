@@ -102,7 +102,7 @@ def check_lpp_source(lpp_source)
       location = Regexp.last_match(1) if line =~ /.*location\s+=\s+(\S+)\s*/
     end
     stderr.each_line do |line|
-      STDERR.puts line
+      warn line
       log_info("[STDERR] #{line.chomp}")
     end
     wait_thr.value # Process::Status object returned.
@@ -139,7 +139,7 @@ def vios_health_init(nim_vios, hmc_id, hmc_ip)
   Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
     stderr.each_line do |line|
       # nothing is print on stderr so far but log anyway
-      STDERR.puts line
+      warn line
       log_info("[STDERR] #{line.chomp}")
     end
     unless wait_thr.value.success?
@@ -249,7 +249,7 @@ def vios_health_check(nim_vios, hmc_ip, vios_list)
 
   Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
     stderr.each_line do |line|
-      STDERR.puts line
+      warn line
       log_info("[STDERR] #{line.chomp}")
     end
     ret = 1 unless wait_thr.value.success?
@@ -344,7 +344,7 @@ def nim_updateios(vios, cmd_s)
   exit_status = Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
     stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
     stderr.each_line do |line|
-      STDERR.puts line
+      warn line
       log_info("[STDERR] #{line.chomp}")
     end
     wait_thr.value # Process::Status object returned.
@@ -381,7 +381,7 @@ def get_vios_ssp_status(nim_vios, vios_list, vios_key, targets_status)
     log_debug("ssp_status: '#{cmd_s}'")
     Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
       stderr.each_line do |line|
-        STDERR.puts line
+        warn line
         log_info("[STDERR] #{line.chomp}")
       end
       unless wait_thr.value.success?
@@ -483,7 +483,7 @@ def ssp_stop_start(vios_list, vios, nim_vios, action)
   log_debug("ssp_stop_start: '#{cmd_s}'")
   Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
     stderr.each_line do |line|
-      STDERR.puts line
+      warn line
       log_info("[STDERR] #{line.chomp}")
     end
     unless wait_thr.value.success?
@@ -513,7 +513,7 @@ action :update do
   log_info("VIOS UPDATE - action_list=\"#{new_resource.action_list}\"")
   log_info("VIOS UPDATE - targets=#{new_resource.targets}")
   STDOUT.puts ''
-  STDERR.puts '' # TBC - needed for message presentation
+  warn '' # TBC - needed for message presentation
 
   # check the action_list property
   allowed_action = %w(check altdisk_copy update altdisk_cleanup)
@@ -710,7 +710,7 @@ action :update do
             begin
               ret = nim.wait_alt_disk_install(vios)
             rescue NimLparInfoError => e
-              STDERR.puts e.message
+              warn e.message
               log_warn("[#{vios}] #{e.message}")
               ret = 1
             end
@@ -719,14 +719,14 @@ action :update do
               log_info("[#{vios}] VIOS altdisk copy succeeded on #{altdisk_hash[vios]}")
             else
               if ret == 1
-                STDERR.puts e.message
+                warn e.message
                 msg = "Alternate disk copy failed on #{altdisk_hash[vios]} of vios #{vios}"
                 put_error(msg)
                 ret = 1
               else
                 msg = "Alternate disk copy failed on #{altdisk_hash[vios]}: timed out"
                 put_warn(msg)
-                STDERR.puts "#{msg} on vios #{vios}"
+                warn "#{msg} on vios #{vios}"
               end
               ret = 1
 

@@ -65,7 +65,7 @@ module AIX
 
       Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
         stderr.each_line do |line|
-          STDERR.puts line
+          warn line
           log_info("[STDERR] #{line.chomp}")
         end
         unless wait_thr.value.success?
@@ -178,7 +178,7 @@ module AIX
 
     def put_error(message)
       Chef::Log.error(message)
-      STDERR.puts("\033[0;31mERROR: " + message + "\033[0m")
+      warn("\033[0;31mERROR: " + message + "\033[0m")
     end
 
     #############################
@@ -363,7 +363,7 @@ module AIX
           end
           stderr.each_line do |line|
             log_warn("Created task #{Regexp.last_match(1)}") if line =~ /Task ID ([0-9]+) created./
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           wait_thr.value # Process::Status object returned.
@@ -387,7 +387,7 @@ module AIX
           stderr.each_line do |line|
             do_not_error = true if line =~ /0500-035 No fixes match your query./
             log_warn("Created task #{Regexp.last_match(1)}") if line =~ /Task ID ([0-9]+) created./
-            STDERR.puts line unless line =~ /(#{Regexp.quote('****************************************')}|Performing preview download.)/
+            warn line unless line =~ /(#{Regexp.quote('****************************************')}|Performing preview download.)/
             log_info("[STDERR] #{line.chomp}")
           end
           wait_thr.value # Process::Status object returned.
@@ -428,7 +428,7 @@ module AIX
           end
           stderr.each_line do |line|
             log_warn("Created task #{Regexp.last_match(1)}") if line =~ /Task ID ([0-9]+) created./
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           thr.exit
@@ -462,7 +462,7 @@ module AIX
             log_info("[STDOUT] #{line.chomp}")
           end
           stderr.each_line do |line|
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           wait_thr.value # Process::Status object returned.
@@ -479,7 +479,7 @@ module AIX
             log_info("[STDOUT] #{line.chomp}")
           end
           stderr.each_line do |line|
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           wait_thr.value # Process::Status object returned.
@@ -499,7 +499,7 @@ module AIX
             log_info("[STDOUT] #{line.chomp}")
           end
           stderr.each_line do |line|
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           wait_thr.value # Process::Status object returned.
@@ -522,7 +522,7 @@ module AIX
           end
           stderr.each_line do |line|
             do_not_error = true if line =~ /Either the software is already at the same level as on the media, or/
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           wait_thr.value # Process::Status object returned.
@@ -554,7 +554,7 @@ module AIX
           end
           stderr.each_line do |line|
             line.chomp!
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line}")
           end
           thr.exit
@@ -586,7 +586,7 @@ module AIX
           end
           stderr.each_line do |line|
             line.chomp!
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line}")
           end
           thr.exit
@@ -609,7 +609,7 @@ module AIX
         log_debug("get_hmc_info: #{cmd_s}")
         Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
           stderr.each_line do |line|
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           unless wait_thr.value.success?
@@ -675,7 +675,7 @@ module AIX
         log_debug("get_nim_clients_info: '#{cmd_s}'")
         Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
           stderr.each_line do |line|
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           unless wait_thr.value.success?
@@ -740,7 +740,7 @@ module AIX
         exit_status = Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
           stderr.each_line do |line|
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           wait_thr.value # Process::Status object returned.
@@ -785,7 +785,7 @@ module AIX
 
           Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
             stderr.each_line do |line|
-              STDERR.puts line
+              warn line
               log_info("[STDERR] #{line.chomp}")
             end
             unless wait_thr.value.success?
@@ -868,7 +868,7 @@ module AIX
         log_debug("get_pvs: '#{cmd_s}'")
         Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
           stderr.each_line do |line|
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           unless wait_thr.value.success?
@@ -916,7 +916,7 @@ module AIX
         log_debug("get_free_pvs: '#{cmd_s}'")
         Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
           stderr.each_line do |line|
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           unless wait_thr.value.success?
@@ -961,7 +961,7 @@ module AIX
         log_info("get_vg_size: '#{cmd_s}'")
         Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
           stderr.each_line do |line|
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           unless wait_thr.value.success?
@@ -1246,7 +1246,7 @@ module AIX
         exit_status = Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
           stderr.each_line do |line|
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           wait_thr.value # Process::Status object returned.
@@ -1263,7 +1263,7 @@ module AIX
         exit_status = Open3.popen3({ 'LANG' => 'C' }, cmd_s) do |_stdin, stdout, stderr, wait_thr|
           stdout.each_line { |line| log_info("[STDOUT] #{line.chomp}") }
           stderr.each_line do |line|
-            STDERR.puts line
+            warn line
             log_info("[STDERR] #{line.chomp}")
           end
           wait_thr.value # Process::Status object returned.
@@ -1389,7 +1389,7 @@ module AIX
           log_info("[STDOUT] #{line.chomp}")
         end
         stderr.each_line do |line|
-          STDERR.puts line
+          warn line
           log_info("[STDERR] #{line.chomp}")
         end
         wait_thr.value # Process::Status object returned.
@@ -1411,7 +1411,7 @@ module AIX
           log_info("[STDOUT] #{line.chomp}")
         end
         stderr.each_line do |line|
-          STDERR.puts line
+          warn line
           log_info("[STDERR] #{line.chomp}")
         end
         wait_thr.value # Process::Status object returned.
@@ -1659,7 +1659,7 @@ module AIX
       params['RqName'] = rq_name
 
       # metadata does not match any fixe
-      return nil if params['RqName'].nil? || params['RqName'].empty?
+      return if params['RqName'].nil? || params['RqName'].empty?
 
       # compute suma filter ml based on targets property
       filter_ml = compute_filter_ml(target_list, rq_name, niminfo)
