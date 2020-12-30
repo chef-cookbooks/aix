@@ -17,7 +17,6 @@
 default_action :create
 attr_accessor :exists
 
-attribute :name, name_attribute: true, kind_of: String
 attribute :group, kind_of: String, required: true
 attribute :size, kind_of: Integer, required: true
 attribute :copies, kind_of: Integer, default: 1, equal_to: [1, 2, 3]

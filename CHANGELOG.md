@@ -4,6 +4,20 @@ This file is used to list changes made in each version of the aix cookbook.
 
 ## Unreleased
 
+- resolved cookstyle error: resources/bootlist.rb:20:1 refactor: `Chef/RedundantCode/UnnecessaryNameProperty`
+- resolved cookstyle error: resources/bootlist.rb:20:1 convention: `Layout/EmptyLines`
+- resolved cookstyle error: resources/filesystem.rb:20:1 refactor: `Chef/RedundantCode/UnnecessaryNameProperty`
+- resolved cookstyle error: resources/filesystem.rb:20:1 convention: `Layout/EmptyLines`
+- resolved cookstyle error: resources/fixes.rb:20:1 refactor: `Chef/RedundantCode/UnnecessaryNameProperty`
+- resolved cookstyle error: resources/fixes.rb:20:1 convention: `Layout/EmptyLines`
+- resolved cookstyle error: resources/logical_volume.rb:20:1 refactor: `Chef/RedundantCode/UnnecessaryNameProperty`
+- resolved cookstyle error: resources/logical_volume.rb:20:1 convention: `Layout/EmptyLines`
+- resolved cookstyle error: resources/niminit.rb:20:1 refactor: `Chef/RedundantCode/UnnecessaryNameProperty`
+- resolved cookstyle error: resources/niminit.rb:20:1 convention: `Layout/EmptyLines`
+- resolved cookstyle error: resources/pagingspace.rb:24:1 refactor: `Chef/RedundantCode/UnnecessaryNameProperty`
+- resolved cookstyle error: resources/pagingspace.rb:24:1 convention: `Layout/EmptyLines`
+- resolved cookstyle error: resources/volume_group.rb:20:1 refactor: `Chef/RedundantCode/UnnecessaryNameProperty`
+- resolved cookstyle error: resources/volume_group.rb:20:1 convention: `Layout/EmptyLines`
 - resolved cookstyle error: examples/patch_by_flrtvc.rb:4:1 refactor: `ChefCorrectness/IncorrectLibraryInjection`
 - resolved cookstyle error: examples/update_by_suma.rb:4:1 refactor: `ChefCorrectness/IncorrectLibraryInjection`
 - resolved cookstyle error: examples/update_by_suma_latest.rb:4:1 refactor: `ChefCorrectness/IncorrectLibraryInjection`
