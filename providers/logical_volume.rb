@@ -22,12 +22,10 @@ def load_current_resource
 end
 
 action :create do
-  begin
-    if @logicalvol.check_to_change
-      converge_by(@logicalvol.create.join(' | ')) do
-      end
+  if @logicalvol.check_to_change
+    converge_by(@logicalvol.create.join(' | ')) do
     end
-  rescue AIXLVM::LVMException => e
-    Chef::Log.fatal(e.message)
   end
+rescue AIXLVM::LVMException => e
+  Chef::Log.fatal(e.message)
 end

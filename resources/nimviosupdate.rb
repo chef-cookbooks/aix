@@ -822,17 +822,15 @@ action :update do
           break_required = false
           cmd_to_run = cmd + vios
           converge_by("nim: perform NIM updateios for vios '#{vios}'\n") do
-            begin
-              put_info("Start NIM updateios for vios '#{vios}'.")
-              nim_updateios(vios, cmd_to_run)
-            rescue ViosUpdateError => e
-              put_error(e.message)
-              targets_status[vios_key] = err_label
-              put_info("Finish NIM updateios for vios '#{vios}': #{targets_status[vios_key]}.")
+            put_info("Start NIM updateios for vios '#{vios}'.")
+            nim_updateios(vios, cmd_to_run)
+          rescue ViosUpdateError => e
+            put_error(e.message)
+            targets_status[vios_key] = err_label
+            put_info("Finish NIM updateios for vios '#{vios}': #{targets_status[vios_key]}.")
 
-              # in case of failure try to restart the SSP if needed
-              break_required = true
-            end
+            # in case of failure try to restart the SSP if needed
+            break_required = true
           end
 
           # if needed restart the SSP for the VIOS

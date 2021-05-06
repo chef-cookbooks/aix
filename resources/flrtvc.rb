@@ -481,12 +481,10 @@ action :patch do
       basename = efix['Filename'].split('/')[-1]
       efixes_basenames << basename
       converge_by("[#{m}] #{efix['Type']} fix '#{basename}' meets level pre-requisite for fileset '#{efix['Fileset']}'") do
-        begin
-          ::FileUtils.cp_r(efix['Filename'], lpp_source_dir)
-        rescue Errno::ENOSPC
-          increase_filesystem(lpp_source_dir)
-          ::FileUtils.cp_r(efix['Filename'], lpp_source_dir)
-        end
+        ::FileUtils.cp_r(efix['Filename'], lpp_source_dir)
+      rescue Errno::ENOSPC
+        increase_filesystem(lpp_source_dir)
+        ::FileUtils.cp_r(efix['Filename'], lpp_source_dir)
       end
     end
     # sort the efix basenames array

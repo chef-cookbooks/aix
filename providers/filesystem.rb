@@ -21,45 +21,37 @@ def load_current_resource
 end
 
 action :create do
-  begin
-    if @filesystem.check_to_change
-      converge_by(@filesystem.create.join(' | ')) do
-      end
+  if @filesystem.check_to_change
+    converge_by(@filesystem.create.join(' | ')) do
     end
-  rescue AIXLVM::LVMException => e
-    Chef::Log.fatal(e.message)
   end
+rescue AIXLVM::LVMException => e
+  Chef::Log.fatal(e.message)
 end
 
 action :mount do
-  begin
-    if @filesystem.check_to_mount(true)
-      converge_by(@filesystem.mount.join(' | ')) do
-      end
+  if @filesystem.check_to_mount(true)
+    converge_by(@filesystem.mount.join(' | ')) do
     end
-  rescue AIXLVM::LVMException => e
-    Chef::Log.fatal(e.message)
   end
+rescue AIXLVM::LVMException => e
+  Chef::Log.fatal(e.message)
 end
 
 action :umount do
-  begin
-    if @filesystem.check_to_mount(false)
-      converge_by(@filesystem.umount.join(' | ')) do
-      end
+  if @filesystem.check_to_mount(false)
+    converge_by(@filesystem.umount.join(' | ')) do
     end
-  rescue AIXLVM::LVMException => e
-    Chef::Log.fatal(e.message)
   end
+rescue AIXLVM::LVMException => e
+  Chef::Log.fatal(e.message)
 end
 
 action :defragfs do
-  begin
-    if @filesystem.check_to_defrag
-      converge_by(@filesystem.defragfs.join(' | ')) do
-      end
+  if @filesystem.check_to_defrag
+    converge_by(@filesystem.defragfs.join(' | ')) do
     end
-  rescue AIXLVM::LVMException => e
-    Chef::Log.fatal(e.message)
   end
+rescue AIXLVM::LVMException => e
+  Chef::Log.fatal(e.message)
 end
