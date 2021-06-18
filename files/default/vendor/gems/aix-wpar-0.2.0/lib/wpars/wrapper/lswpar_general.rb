@@ -8,15 +8,15 @@ module WPAR
     include Constants
     include Converter
     class LswparGeneral < Lswpar
-
       def initialize(options)
         @command = "#{options[:command]} #{Constants::LSWPAR}G #{options[:name]}"
       end
 
       private
+
       def parse(output) #:nodoc:
         generals = []
-        
+
         # remove sharp character
         output.slice!(0)
 
@@ -24,7 +24,7 @@ module WPAR
           general = General.new(gen)
           generals << general
         end
-        return generals
+        generals
       end
     end
   end

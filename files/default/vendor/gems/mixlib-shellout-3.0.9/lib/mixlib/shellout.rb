@@ -16,23 +16,22 @@
 # limitations under the License.
 #
 
-require "etc"
-require "tmpdir"
-require "fcntl"
-require_relative "shellout/exceptions"
+require 'etc'
+require 'tmpdir'
+require 'fcntl'
+require_relative 'shellout/exceptions'
 
 module Mixlib
-
   class ShellOut
     READ_WAIT_TIME = 0.01
     READ_SIZE = 4096
     DEFAULT_READ_TIMEOUT = 600
 
     if RUBY_PLATFORM =~ /mswin|mingw32|windows/
-      require_relative "shellout/windows"
+      require_relative 'shellout/windows'
       include ShellOut::Windows
     else
-      require_relative "shellout/unix"
+      require_relative 'shellout/unix'
       include ShellOut::Unix
     end
 
@@ -40,7 +39,7 @@ module Mixlib
     attr_accessor :user
     attr_accessor :domain
     attr_accessor :password
-    # TODO remove
+    # TODO: remove
     attr_accessor :with_logon
 
     # Whether to simulate logon as the user. Normally set via options passed to new
@@ -167,7 +166,9 @@ module Mixlib
     #   cmd = Mixlib::ShellOut.new("apachectl", "start", :user => 'www', :env => nil, :cwd => '/tmp')
     #   cmd.run_command # etc.
     def initialize(*command_args)
-      @stdout, @stderr, @process_status = "", "", ""
+      @stdout = ''
+      @stderr = ''
+      @process_status = ''
       @live_stdout = @live_stderr = nil
       @input = nil
       @log_level = :debug
@@ -209,7 +210,7 @@ module Mixlib
     # given as a username, it is converted to a uid by Etc.getpwnam
     # TODO migrate to shellout/unix.rb
     def uid
-      return nil unless user
+      return unless user
 
       user.is_a?(Integer) ? user : Etc.getpwnam(user.to_s).uid
     end
@@ -232,9 +233,9 @@ module Mixlib
     # showing the exact command executed. Used by +invalid!+ to show command
     # results when the command exited with an unexpected status.
     def format_for_exception
-      return "Command execution failed. STDOUT/STDERR suppressed for sensitive resource" if sensitive
+      return 'Command execution failed. STDOUT/STDERR suppressed for sensitive resource' if sensitive
 
-      msg = ""
+      msg = ''
       msg << "#{@terminate_reason}\n" if @terminate_reason
       msg << "---- Begin output of #{command} ----\n"
       msg << "STDOUT: #{stdout.strip}\n"
@@ -264,7 +265,7 @@ module Mixlib
     #   within +timeout+ seconds (default: 600s)
     def run_command
       if logger
-        log_message = (log_tag.nil? ? "" : "#{@log_tag} ") << "sh(#{@command})"
+        log_message = (log_tag.nil? ? '' : "#{@log_tag} ") << "sh(#{@command})"
         logger.send(log_level, log_message)
       end
       super
@@ -296,7 +297,7 @@ module Mixlib
     # === Raises
     # ShellCommandFailed  always
     def invalid!(msg = nil)
-      msg ||= "Command produced unexpected results"
+      msg ||= 'Command produced unexpected results'
       raise ShellCommandFailed, msg + "\n" + format_for_exception
     end
 
@@ -311,48 +312,48 @@ module Mixlib
     def parse_options(opts)
       opts.each do |option, setting|
         case option.to_s
-        when "cwd"
+        when 'cwd'
           self.cwd = setting
-        when "domain"
+        when 'domain'
           self.domain = setting
-        when "password"
+        when 'password'
           self.password = setting
-        when "user"
+        when 'user'
           self.user = setting
           self.with_logon = setting
-        when "group"
+        when 'group'
           self.group = setting
-        when "umask"
+        when 'umask'
           self.umask = setting
-        when "timeout"
+        when 'timeout'
           self.timeout = setting
-        when "returns"
+        when 'returns'
           self.valid_exit_codes = Array(setting)
-        when "live_stream"
+        when 'live_stream'
           self.live_stdout = self.live_stderr = setting
-        when "live_stdout"
+        when 'live_stdout'
           self.live_stdout = setting
-        when "live_stderr"
+        when 'live_stderr'
           self.live_stderr = setting
-        when "input"
+        when 'input'
           self.input = setting
-        when "logger"
+        when 'logger'
           self.logger = setting
-        when "log_level"
+        when 'log_level'
           self.log_level = setting
-        when "log_tag"
+        when 'log_tag'
           self.log_tag = setting
-        when "environment", "env"
-          if setting
-            self.environment = Hash[setting.map { |(k, v)| [k.to_s, v] }]
-          else
-            self.environment = {}
-          end
-        when "login"
+        when 'environment', 'env'
+          self.environment = if setting
+                               Hash[setting.map { |(k, v)| [k.to_s, v] }]
+                             else
+                               {}
+                             end
+        when 'login'
           self.login = setting
-        when "elevated"
+        when 'elevated'
           self.elevated = setting
-        when "sensitive"
+        when 'sensitive'
           self.sensitive = setting
         else
           raise InvalidCommandOption, "option '#{option.inspect}' is not a valid option for #{self.class.name}"
@@ -364,7 +365,7 @@ module Mixlib
 
     def validate_options(opts)
       if login && !user
-        raise InvalidCommandOption, "cannot set login without specifying a user"
+        raise InvalidCommandOption, 'cannot set login without specifying a user'
       end
 
       super

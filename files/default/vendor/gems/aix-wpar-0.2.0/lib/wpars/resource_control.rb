@@ -1,7 +1,7 @@
 module WPAR
   class ResourceControl
     attr_reader :name, :state, :active, :rset
-    attr_reader  :procvirtmem, :totalvirtmem, :totalprocesses
+    attr_reader :procvirtmem, :totalvirtmem, :totalprocesses
     attr_reader :totalptys, :totallargepages, :pct_msgids, :pct_semids
     attr_reader :pct_pinmem, :totalthreads, :pct_shmids
     attr_accessor :shares_cpu, :cpu, :shares_memory, :memory
@@ -29,7 +29,7 @@ module WPAR
     end
 
     def empty?
-      wpar_attributes.all?{|k,v| self.send(k).nil?}
+      wpar_attributes.all? { |k, _v| send(k).nil? }
     end
 
     def wpar_attributes

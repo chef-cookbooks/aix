@@ -19,16 +19,15 @@
 module Mixlib
   class ShellOut
     module Unix
-
       # "1.8.7" as a frozen string. We use this with a hack that disables GC to
       # avoid segfaults on Ruby 1.8.7, so we need to allocate the fewest
       # objects we possibly can.
-      ONE_DOT_EIGHT_DOT_SEVEN = "1.8.7".freeze
+      ONE_DOT_EIGHT_DOT_SEVEN = '1.8.7'.freeze
 
       # Option validation that is unix specific
       def validate_options(opts)
         if opts[:elevated]
-          raise InvalidCommandOption, "Option `elevated` is supported for Powershell commands only"
+          raise InvalidCommandOption, 'Option `elevated` is supported for Powershell commands only'
         end
       end
 
@@ -41,7 +40,7 @@ module Mixlib
       def all_seconderies
         ret = []
         Etc.endgrent
-        while ( g = Etc.getgrent )
+        while (g = Etc.getgrent)
           ret << g
         end
         Etc.endgrent
@@ -52,7 +51,7 @@ module Mixlib
       # Currently valid only if login is used, and is set
       # to the user's secondary groups
       def sgids
-        return nil unless using_login?
+        return unless using_login?
 
         user_name = Etc.getpwuid(uid).name
         all_seconderies.select { |g| g.mem.include?(user_name) }.map(&:gid)
@@ -67,7 +66,7 @@ module Mixlib
         # According to `man su`, the set fields are:
         #  $HOME, $SHELL, $USER, $LOGNAME, $PATH, and $IFS
         # Values are copied from "shadow" package in Ubuntu 14.10
-        { "HOME" => entry.dir, "SHELL" => entry.shell, "USER" => entry.name, "LOGNAME" => entry.name, "PATH" => "/sbin:/bin:/usr/sbin:/usr/bin", "IFS" => "\t\n" }
+        { 'HOME' => entry.dir, 'SHELL' => entry.shell, 'USER' => entry.name, 'LOGNAME' => entry.name, 'PATH' => '/sbin:/bin:/usr/sbin:/usr/bin', 'IFS' => "\t\n" }
       end
 
       # Merges the two environments for the process
@@ -194,7 +193,10 @@ module Mixlib
       end
 
       def initialize_ipc
-        @stdin_pipe, @stdout_pipe, @stderr_pipe, @process_status_pipe = IO.pipe, IO.pipe, IO.pipe, IO.pipe
+        @stdin_pipe = IO.pipe
+        @stdout_pipe = IO.pipe
+        @stderr_pipe = IO.pipe
+        @process_status_pipe = IO.pipe
         @process_status_pipe.last.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
       end
 
@@ -287,7 +289,7 @@ module Mixlib
       end
 
       def read_stdout_to_buffer
-        while ( chunk = child_stdout.read_nonblock(READ_SIZE) )
+        while (chunk = child_stdout.read_nonblock(READ_SIZE))
           @stdout << chunk
           @live_stdout << chunk if @live_stdout
         end
@@ -297,7 +299,7 @@ module Mixlib
       end
 
       def read_stderr_to_buffer
-        while ( chunk = child_stderr.read_nonblock(READ_SIZE) )
+        while (chunk = child_stderr.read_nonblock(READ_SIZE))
           @stderr << chunk
           @live_stderr << chunk if @live_stderr
         end
@@ -307,7 +309,7 @@ module Mixlib
       end
 
       def read_process_status_to_buffer
-        while ( chunk = child_process_status.read_nonblock(READ_SIZE) )
+        while (chunk = child_process_status.read_nonblock(READ_SIZE))
           @process_status << chunk
         end
       rescue Errno::EAGAIN
@@ -342,7 +344,7 @@ module Mixlib
           begin
             command.is_a?(Array) ? exec(*command, close_others: true) : exec(command, close_others: true)
 
-            raise "forty-two" # Should never get here
+            raise 'forty-two' # Should never get here
           rescue Exception => e
             Marshal.dump(e, process_status_pipe.last)
             process_status_pipe.last.flush
@@ -358,7 +360,7 @@ module Mixlib
       def propagate_pre_exec_failure
         attempt_buffer_read until child_process_status.eof?
         e = Marshal.load(@process_status)
-        raise(Exception === e ? e : "unknown failure: #{e.inspect}")
+        raise(e.is_a?(Exception) ? e : "unknown failure: #{e.inspect}")
       rescue ArgumentError # If we get an ArgumentError error, then the exec was successful
         true
       ensure
@@ -369,12 +371,12 @@ module Mixlib
       def reap_errant_child
         return if attempt_reap
 
-        @terminate_reason = "Command exceeded allowed execution time, process terminated"
-        logger.error("Command exceeded allowed execution time, sending TERM") if logger
+        @terminate_reason = 'Command exceeded allowed execution time, process terminated'
+        logger.error('Command exceeded allowed execution time, sending TERM') if logger
         Process.kill(:TERM, child_pgid)
         sleep 3
         attempt_reap
-        logger.error("Command exceeded allowed execution time, sending KILL") if logger
+        logger.error('Command exceeded allowed execution time, sending KILL') if logger
         Process.kill(:KILL, child_pgid)
         reap
 
@@ -410,11 +412,8 @@ module Mixlib
         if results
           @reaped = true
           @status = results.last
-        else
-          nil
         end
       end
-
     end
   end
 end

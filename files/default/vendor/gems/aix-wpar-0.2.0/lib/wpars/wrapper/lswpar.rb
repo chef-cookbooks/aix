@@ -1,14 +1,13 @@
 module WPAR
   module Wrapper
     class Lswpar
-
       def list
         data = parse(External.cmd(cmd: @command))
 
         if block_given?
-          return data.each { |obj| yield obj }
+          data.each { |obj| yield obj }
         else
-          return data
+          data
         end
       end
 

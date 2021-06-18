@@ -18,13 +18,12 @@
 # limitations under the License.
 #
 
-require "win32/process"
-require_relative "windows/core_ext"
+require 'win32/process'
+require_relative 'windows/core_ext'
 
 module Mixlib
   class ShellOut
     module Windows
-
       include Process::Functions
       include Process::Constants
 
@@ -33,19 +32,19 @@ module Mixlib
       # Option validation that is windows specific
       def validate_options(opts)
         if opts[:user] && !opts[:password]
-          raise InvalidCommandOption, "You must supply a password when supplying a user in windows"
+          raise InvalidCommandOption, 'You must supply a password when supplying a user in windows'
         end
 
         if !opts[:user] && opts[:password]
-          raise InvalidCommandOption, "You must supply a user when supplying a password in windows"
+          raise InvalidCommandOption, 'You must supply a user when supplying a password in windows'
         end
 
         if opts[:elevated] && !opts[:user] && !opts[:password]
-          raise InvalidCommandOption, "`elevated` option should be passed only with `username` and `password`."
+          raise InvalidCommandOption, '`elevated` option should be passed only with `username` and `password`.'
         end
 
         if opts[:elevated] && opts[:elevated] != true && opts[:elevated] != false
-          raise InvalidCommandOption, "Invalid value passed for `elevated`. Please provide true/false."
+          raise InvalidCommandOption, 'Invalid value passed for `elevated`. Please provide true/false.'
         end
       end
 
@@ -80,7 +79,7 @@ module Mixlib
           }
           create_process_args[:cwd] = cwd if cwd
           # default to local account database if domain is not specified
-          create_process_args[:domain] = domain.nil? ? "." : domain
+          create_process_args[:domain] = domain.nil? ? '.' : domain
           create_process_args[:with_logon] = with_logon if with_logon
           create_process_args[:password] = password if password
           create_process_args[:elevated] = elevated if elevated
@@ -106,20 +105,20 @@ module Mixlib
               case wait_status
               when WAIT_OBJECT_0
                 # Get process exit code
-                exit_code = [0].pack("l")
+                exit_code = [0].pack('l')
                 unless GetExitCodeProcess(process.process_handle, exit_code)
                   raise get_last_error
                 end
 
                 @status = ThingThatLooksSortOfLikeAProcessStatus.new
-                @status.exitstatus = exit_code.unpack("l").first
+                @status.exitstatus = exit_code.unpack1('l')
 
                 return self
               when WAIT_TIMEOUT
                 # Kill the process
                 if (Time.now - start_wait) > timeout
                   begin
-                    require "wmi-lite/wmi"
+                    require 'wmi-lite/wmi'
                     wmi = WmiLite::Wmi.new
                     kill_process_tree(process.process_id, wmi, logger)
                     Process.kill(:KILL, process.process_id)
@@ -128,7 +127,7 @@ module Mixlib
                   end
 
                   raise Mixlib::ShellOut::CommandTimeout, [
-                    "command timed out:",
+                    'command timed out:',
                     format_for_exception,
                     format_process(process, app_name, command_line, timeout),
                   ].join("\n")
@@ -138,16 +137,13 @@ module Mixlib
               else
                 raise "Unknown response from WaitForSingleObject(#{process.process_handle}, #{timeout * 1000}): #{wait_status}"
               end
-
             end
-
           ensure
             CloseHandle(process.thread_handle) if process.thread_handle
             CloseHandle(process.process_handle) if process.process_handle
             Process.unload_user_profile(token, profile) if profile
             CloseHandle(token) if token
           end
-
         ensure
           #
           # Consume all remaining data from the pipes until they are closed
@@ -238,7 +234,7 @@ module Mixlib
           else
             arg
           end
-        end.join(" ")
+        end.join(' ')
       end
 
       def command_to_run(command)
@@ -269,16 +265,16 @@ module Mixlib
       # https://github.com/chef/mixlib-shellout/pull/2#issuecomment-4837859
       # http://ss64.com/nt/syntax-esc.html
       def run_under_cmd(command)
-        [ ENV["COMSPEC"], "cmd /c \"#{command}\"" ]
+        [ ENV['COMSPEC'], "cmd /c \"#{command}\"" ]
       end
 
       # FIXME: this extracts ARGV[0] but is it correct?
       def candidate_executable_for_command(command)
         if command =~ /^\s*"(.*?)"/ || command =~ /^\s*([^\s]+)/
           # If we have quotes, do an exact match, else pick the first word ignoring the leading spaces
-          $1
+          Regexp.last_match(1)
         else
-          ""
+          ''
         end
       end
 
@@ -320,9 +316,9 @@ module Mixlib
               quote = nil
             end
             next
-          when ">", "<", "|", "&", "\n"
+          when '>', '<', '|', '&', "\n"
             return true unless quote
-          when "%"
+          when '%'
             return true if env
 
             env = env_first_char = true
@@ -342,7 +338,7 @@ module Mixlib
 
       # FIXME: reduce code duplication with chef/chef
       def which(cmd)
-        exts = ENV["PATHEXT"] ? ENV["PATHEXT"].split(";") + [""] : [""]
+        exts = ENV['PATHEXT'] ? ENV['PATHEXT'].split(';') + [''] : ['']
         # windows always searches '.' first
         exts.each do |ext|
           filename = "#{cmd}#{ext}"
@@ -350,7 +346,7 @@ module Mixlib
         end
         # only search through the path if the Filename does not contain separators
         if File.basename(cmd) == cmd
-          paths = ENV["PATH"].split(File::PATH_SEPARATOR)
+          paths = ENV['PATH'].split(File::PATH_SEPARATOR)
           paths.each do |path|
             exts.each do |ext|
               filename = File.join(path, "#{cmd}#{ext}")
@@ -363,13 +359,13 @@ module Mixlib
 
       def system_required_processes
         [
-          "System Idle Process",
-          "System",
-          "spoolsv.exe",
-          "lsass.exe",
-          "csrss.exe",
-          "smss.exe",
-          "svchost.exe",
+          'System Idle Process',
+          'System',
+          'spoolsv.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'smss.exe',
+          'svchost.exe',
         ]
       end
 

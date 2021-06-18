@@ -4,27 +4,25 @@ module WPAR
   module Wrapper
     include Constants
     class MkWpar
-
       def self.create(options = {})
         cmd = build_mkwpar_command(options)
         puts "debug: #{cmd}" unless options[:debug].nil?
         External.cmd(cmd: cmd, live_stream: options[:live_stream])
       end
 
-      private
       def self.build_mkwpar_command(options = {})
         wpar = options[:wpar]
         cmd = "#{options[:command]} #{Constants::MKWPAR} -s -n #{wpar.name}"
 
-        if options[:start] == "yes"
-          cmd += " -a"
+        if options[:start] == 'yes'
+          cmd += ' -a'
         end
 
-        if wpar.general.auto == "yes"
-          cmd += " -A"
+        if wpar.general.auto == 'yes'
+          cmd += ' -A'
         end
 
-        unless (wpar.general.hostname.nil? or wpar.general.hostname.empty?)
+        unless wpar.general.hostname.nil? || wpar.general.hostname.empty?
           cmd += " -h #{wpar.general.hostname}"
         end
 
@@ -46,7 +44,7 @@ module WPAR
             next
           end
 
-          cmd += " -N"
+          cmd += ' -N'
 
           unless net.address.nil?
             cmd += " address=#{net.address}"
@@ -66,7 +64,7 @@ module WPAR
         end
 
         unless wpar.resource_control.empty?
-          cmd += " -R"
+          cmd += ' -R'
           unless wpar.resource_control.cpu.nil?
             cmd += " CPU=#{wpar.resource_control.cpu}"
           end

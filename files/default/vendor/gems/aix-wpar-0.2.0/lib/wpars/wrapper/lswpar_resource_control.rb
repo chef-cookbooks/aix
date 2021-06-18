@@ -8,12 +8,12 @@ module WPAR
     include Constants
     include Converter
     class LswparResourceControl < Lswpar
-
       def initialize(options)
         @command = "#{options[:command]} #{Constants::LSWPAR}R #{options[:name]}"
       end
 
       private
+
       def parse(output) #:nodoc:
         resources = []
         # remove sharp character
@@ -23,7 +23,7 @@ module WPAR
           resource = ResourceControl.new(rsc)
           resources << resource
         end
-        return resources
+        resources
       end
     end
   end
