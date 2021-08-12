@@ -128,8 +128,8 @@ def run_flrtvc(m, apar, filesets, csv, path, verbose)
   puts out_v if verbose
 
   # clean temporary files
-  #::File.delete(lslpp_file) if clean == true
-  #::File.delete(emgr_file) if clean == true
+  # ::File.delete(lslpp_file) if clean == true
+  # ::File.delete(emgr_file) if clean == true
 
   out_c
 end

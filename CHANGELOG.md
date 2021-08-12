@@ -4,6 +4,8 @@ This file is used to list changes made in each version of the aix cookbook.
 
 ## Unreleased
 
+- resolved cookstyle error: resources/flrtvc.rb:131:3 convention: `Layout/LeadingCommentSpace`
+- resolved cookstyle error: resources/flrtvc.rb:132:3 convention: `Layout/LeadingCommentSpace`
 - resolved cookstyle error: resources/bootlist.rb:20:1 refactor: `Chef/RedundantCode/UnnecessaryNameProperty`
 - resolved cookstyle error: resources/bootlist.rb:20:1 convention: `Layout/EmptyLines`
 - resolved cookstyle error: resources/filesystem.rb:20:1 refactor: `Chef/RedundantCode/UnnecessaryNameProperty`
