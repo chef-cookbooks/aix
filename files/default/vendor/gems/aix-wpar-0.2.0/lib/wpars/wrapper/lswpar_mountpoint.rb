@@ -8,12 +8,12 @@ module WPAR
     include Constants
     include Converter
     class LswparMountpoint < Lswpar
-
       def initialize(options)
         @command = "#{options[:command]} #{Constants::LSWPAR}M #{options[:name]}"
       end
 
       private
+
       def parse(output) #:nodoc:
         mountpoints = []
         # remove sharp character
@@ -23,7 +23,7 @@ module WPAR
           mountpoint = Mountpoint.new(mnt)
           mountpoints << mountpoint
         end
-        return mountpoints
+        mountpoints
       end
     end
   end

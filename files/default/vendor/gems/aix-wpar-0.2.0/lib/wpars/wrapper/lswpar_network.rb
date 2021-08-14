@@ -8,12 +8,12 @@ module WPAR
     include Constants
     include Converter
     class LswparNetwork < Lswpar
-
       def initialize(options)
         @command = "#{options[:command]} #{Constants::LSWPAR}N #{options[:name]}"
       end
 
       private
+
       def parse(output) #:nodoc:
         networks = []
         # remove sharp character
@@ -23,7 +23,7 @@ module WPAR
           network = Network.new(net)
           networks << network
         end
-        return networks
+        networks
       end
     end
   end

@@ -17,10 +17,10 @@ module WPAR
     VALID_OPTIONS = [
       :command,
       :version,
-      :debug
+      :debug,
     ]
 
-    def initialize(options={})
+    def initialize(options = {})
       # handy, thanks net-ssh!
       invalid_options = options.keys - VALID_OPTIONS
       if invalid_options.any?
@@ -41,9 +41,9 @@ module WPAR
 
     def [](name)
       if get_generals(name).nil?
-        return nil
+        return
       end
-      wpar = WPAR.new(name: name,
+      WPAR.new(name: name,
                       command: @command,
                       general: get_generals(name),
                       networks: get_networks(name),
@@ -51,7 +51,6 @@ module WPAR
                       mountpoints: get_mountpoints(name),
                       resource_controls: get_resource_controls(name),
                       securities: get_securities(name))
-      return wpar
     end
 
     def version
@@ -60,27 +59,27 @@ module WPAR
 
     def get_generals(name)
       begin
-        @generals.select {|o| o.name == name}.first
+        @generals.select { |o| o.name == name }.first
       rescue
-       nil
+        nil
       end
     end
 
     def get_networks(name)
-       @networks.select {|o| o.name == name}
+      @networks.select { |o| o.name == name }
     end
 
     def get_devices(name)
-       @devices.select {|o| o.name == name}
+      @devices.select { |o| o.name == name }
     end
 
     def get_mountpoints(name)
-       @mountpoints.select {|o| o.name == name}
+      @mountpoints.select { |o| o.name == name }
     end
 
     def get_resource_controls(name)
       begin
-        @resource_controls.select {|o| o.name == name}.first
+        @resource_controls.select { |o| o.name == name }.first
       rescue
         nil
       end
@@ -88,7 +87,7 @@ module WPAR
 
     def get_securities(name)
       begin
-        @securities.select {|o| o.name == name}.first
+        @securities.select { |o| o.name == name }.first
       rescue
         nil
       end

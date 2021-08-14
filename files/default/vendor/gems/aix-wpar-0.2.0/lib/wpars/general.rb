@@ -17,7 +17,7 @@ module WPAR
       @directory = params[:directory]
       @owner = params[:owner]
       @script = params[:script]
-      @auto = params[:auto] || "no"
+      @auto = params[:auto] || 'no'
       @privateusr = params[:privateusr]
       @checkpointable = params[:checkpointable]
       @application = params[:application]
@@ -26,6 +26,5 @@ module WPAR
       @architecture = params[:architecture]
       @uuid = params[:uuid]
     end
-
   end
 end

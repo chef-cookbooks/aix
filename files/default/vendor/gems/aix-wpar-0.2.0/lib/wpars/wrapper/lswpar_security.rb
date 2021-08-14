@@ -8,12 +8,12 @@ module WPAR
     include Constants
     include Converter
     class LswparSecurity < Lswpar
-
       def initialize(options)
         @command = "#{options[:command]} #{Constants::LSWPAR}S #{options[:name]}"
       end
 
       private
+
       def parse(output) #:nodoc:
         securities = []
         # remove sharp character
@@ -23,7 +23,7 @@ module WPAR
           security = Security.new(sec)
           securities << security
         end
-        return securities
+        securities
       end
     end
   end

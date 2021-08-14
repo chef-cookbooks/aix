@@ -8,12 +8,12 @@ module WPAR
     include Constants
     include Converter
     class LswparDevice < Lswpar
-
       def initialize(options)
         @command = "#{options[:command]} #{Constants::LSWPAR}D #{options[:name]}"
       end
 
       private
+
       def parse(output) #:nodoc:
         devices = []
         # remove sharp character
@@ -23,7 +23,7 @@ module WPAR
           device = Device.new(dev)
           devices << device
         end
-        return devices
+        devices
       end
     end
   end

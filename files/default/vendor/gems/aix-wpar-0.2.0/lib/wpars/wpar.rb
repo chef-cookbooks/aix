@@ -33,12 +33,12 @@ module WPAR
       @networks = options[:networks] || Array.new([Network.new(name: @name)])
       @devices = options[:devices] || Array.new([Device.new(name: @name)])
       @mountpoints = options[:mountpoints] || Array.new([Mountpoint.new(name: @name)])
-      @resource_control = options[:resource_controls] ||ResourceControl.new(name: @name)
+      @resource_control = options[:resource_controls] || ResourceControl.new(name: @name)
       @security = options[:securities] || Security.new(name: @name)
     end
 
     def create(options = {})
-      MkWpar.create(  name: @name,
+      MkWpar.create(name: @name,
                       command: @command,
                       wpar: self,
                       start: options[:start],
@@ -46,7 +46,7 @@ module WPAR
                       wparvg: options[:wparvg],
                       backupimage: options[:backupimage],
                       live_stream: @live_stream)
-      #update
+      # update
       update(options)
     end
 
@@ -55,21 +55,21 @@ module WPAR
     end
 
     def stop(force: nil)
-      StopWpar.stop( name: @name, force: force, command: @command, live_stream: @live_stream)
+      StopWpar.stop(name: @name, force: force, command: @command, live_stream: @live_stream)
 
-      #update status
+      # update status
       @general = LswparGeneral.new(command: @command).filter(@name)
     end
 
-    def start()
-      StartWpar.start( name: @name, command: @command, live_stream: @live_stream)
+    def start
+      StartWpar.start(name: @name, command: @command, live_stream: @live_stream)
 
-      #update status
+      # update status
       @general = LswparGeneral.new(command: @command).filter(@name)
     end
 
     def sync(directory: nil)
-      SyncWpar.sync( name: @name, command: @command, directory: directory, live_stream: @live_stream)
+      SyncWpar.sync(name: @name, command: @command, directory: directory, live_stream: @live_stream)
     end
 
     def update(options = {})
@@ -83,7 +83,7 @@ module WPAR
     end
 
     def add(address: nil, interface: nil, mask_prefix: nil, broadcast: nil)
-      params={}
+      params = {}
       params[:name] = @name
       params[:address] = address
       params[:interface] = interface
@@ -95,7 +95,7 @@ module WPAR
     end
 
     def get_rootvg
-      @devices.select { |o| o.rootvg == "yes"}
+      @devices.select { |o| o.rootvg == 'yes' }
     end
   end
 end
